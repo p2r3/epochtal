@@ -15,7 +15,7 @@ module.exports = async function (args, request) {
     case "leaderboard":
     case "config": {
 
-      const context = archive(["get", name]);
+      const context = await archive(["get", name]);
       if (!context) return "ERR_NAME";
 
       if (command === "leaderboard") return context.data.leaderboard;
