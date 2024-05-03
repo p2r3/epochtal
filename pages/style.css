@@ -266,11 +266,11 @@ input:checked+.slider:before {
   right: 5%;
   top: 50%;
   transform: translateY(-50%);
-  color: white;
 }
 .lb-icons i {
   font-size: 1.2rem;
   padding: 7px;
+  color: white;
 }
 
 .lb-rank1 { color: #f3d635 }

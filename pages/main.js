@@ -182,6 +182,13 @@ var homepageInit = async function () {
         placement ++;
       }
 
+      let downloadURL = `/api/archive/demo/${leaderboardArchiveSelect.value}/"${run.steamid}"/${category}`;
+      if (run.proof === "video") {
+        try {
+          downloadURL = await (await fetch(downloadURL)).text();
+        } catch (e) { } // Too bad ¯\_(ツ)_/¯
+      }
+
       const portalCount = "portals" in run ? `, ${run.portals} portal${run.portals === 1 ? "" : "s"}` : "";
 
       const suffix = placement < 4 ? suffixes[placement - 1] : "th";
@@ -191,8 +198,9 @@ var homepageInit = async function () {
   <p class="lb-text">${user.name}</p>
   <p class="lb-text font-light">${placement}${suffix} place in ${ticksToString(run.time)}${portalCount}</p>
   <div class="lb-icons">
-    ${run.note ? `<i class="fa-solid fa-comment" onmouseover="showTooltip('${run.note}')" onmouseleave="hideTooltip()"></i>` : ""}
     ${run.segmented ? `<i class="fa-solid fa-link" onmouseover="showTooltip('Segmented submission')" onmouseleave="hideTooltip()"></i>` : ""}
+    ${run.note ? `<i class="fa-solid fa-comment" onmouseover="showTooltip('${run.note}')" onmouseleave="hideTooltip()"></i>` : ""}
+    ${run.proof ? `<a href='${downloadURL}' target="_blank"><i class="fa-solid fa-${run.proof === "demo" ? "file-arrow-down" : "video"}" onmouseover="showTooltip('${run.proof === "demo" ? "Download demo" : "Watch video"}')" onmouseleave="hideTooltip()"></i></a>` : ""}
   </div>
 </div>`;
 

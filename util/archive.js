@@ -11,7 +11,8 @@ async function getArchiveContext (path) {
     leaderboard: Bun.file(`${path}/leaderboard.json`),
     users: epochtal.file.users,
     week: Bun.file(`${path}/week.json`),
-    log: `${path}/week.log`
+    log: `${path}/week.log`,
+    demos: `${path}/demos`
   };
 
   context.data = {
@@ -19,6 +20,26 @@ async function getArchiveContext (path) {
     users: epochtal.data.users,
     week: await context.file.week.json()
   };
+
+  for (const category in context.data.leaderboard) {
+    for (const run of context.data.leaderboard[category]) {
+
+      const demoPath = `${path}/demos/${run.steamid}_${category}.dem.xz`;
+      const linkPath = `${path}/demos/${run.steamid}_${category}.link`;
+  
+      if (fs.existsSync(demoPath)) {
+        run.proof = "demo";
+        continue;
+      }
+      if (fs.existsSync(linkPath)) {
+        run.proof = "video";
+        continue;
+      }
+
+      run.proof = null;
+
+    }
+  }
 
   return context;
 
@@ -33,6 +54,12 @@ module.exports = async function (args, context = epochtal) {
   }
 
   switch (command) {
+
+    case "list": {
+
+      return fs.readdirSync(`${__dirname}/../pages/archive`);
+      
+    }
 
     case "get": {
 
@@ -91,10 +118,22 @@ module.exports = async function (args, context = epochtal) {
 
     }
 
-    case "list": {
+    case "demo": {
 
-      return fs.readdirSync(`${__dirname}/../pages/archive`);
-      
+      const [steamid, category] = args.slice(2);
+      if (!steamid || !category) throw new UtilError("ERR_ARGS", args, context);
+
+      const archivePath = `${__dirname}/../pages/archive/${name}`;
+      if (!fs.existsSync(archivePath)) throw new UtilError("ERR_NAME", args, context);
+
+      const demoPath = `${archivePath}/demos/${steamid}_${category}.dem.xz`;
+      const linkPath = `${archivePath}/demos/${steamid}_${category}.link`;
+
+      if (fs.existsSync(demoPath)) return Bun.file(demoPath);
+      if (fs.existsSync(linkPath)) return Bun.file(linkPath);
+
+      throw new UtilError("ERR_NOTFOUND", args, context);
+
     }
   
   }
