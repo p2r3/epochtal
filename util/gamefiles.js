@@ -46,8 +46,13 @@ async function getSAR () {
     if (request.status !== 200) throw "ERR_GITHUBAPI";
 
     const currPath = await tmppath();
-    output.push({ name: asset.name, output: currPath });
     await Bun.write(currPath, request);
+
+    output.push({
+      name: asset.name,
+      output: currPath,
+      crc32: getChecksum(currPath)
+    });
 
   }
 
@@ -129,7 +134,7 @@ async function buildFiles (context) {
   let checksums = "\n// Epochtal files";
 
   const files = fs.readdirSync(portal2, { recursive: true });
-  const checkExtensions = ["nut", "dll", "so", "vpk"];
+  const checkExtensions = ["nut", "vpk", "cfg"];
 
   for (let i = 0; i < files.length; i ++) {
 
@@ -145,7 +150,12 @@ async function buildFiles (context) {
 
   // Write additional checksums to MDP whitelist
   const filesum = await Bun.file(`./defaults/filesum_whitelist.txt`).text();
-  await Bun.write("./mdp/filesum_whitelist.txt", filesum + checksums);
+  await Bun.write(`${__dirname}/../bin/mdp-json/filesum_whitelist.txt`, filesum + checksums);
+
+  // Write SAR checksums to MDP whitelist
+  let sarsums = "";
+  for (let i = 0; i < sar.length; i ++) sarsums += sar[i].crc32 + "\n";
+  await Bun.write(`${__dirname}/../bin/mdp-json/sar_whitelist.txt`, sarsums);
 
   // Prepare map(s) BSP for simulated co-op
   for (let i = 0; i < mapPaths.length; i ++) {
