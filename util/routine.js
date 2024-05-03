@@ -30,7 +30,7 @@ module.exports = async function (args, context = epochtal) {
         try {
           await routines[routine][func](context);
         } catch (e) {
-          if (!(e instanceof UtilError)) e = new UtilError("ERR_UNKNOWN", args, context, "routine", e.stack);
+          if (!(e instanceof UtilError)) e = new UtilError("ERR_UNKNOWN: " + e.message, args, context, "routine", e.stack);
           await discord(["report", `Scheduled routine \`${routine}(${func})\` failed:\`\`\`${e}\`\`\``], context);
         }
       });

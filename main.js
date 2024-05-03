@@ -72,7 +72,7 @@ const fetchHandler = async function (req) {
         return Response.json(err.message);
       }
       // Otherwise, it's probably much worse, so pass the full stack
-      err = new UtilError("ERR_UNKNOWN", args, epochtal, urlPath[1], err.stack);
+      err = new UtilError("ERR_UNKNOWN: " + err.message, args, epochtal, urlPath[1], err.stack);
       return Response.json(err.toString(), { status: 500 });
     }
 
@@ -107,7 +107,7 @@ const fetchHandler = async function (req) {
       result = await util(args);
     } catch (err) {
       if (!(err instanceof UtilError)) {
-        err = new UtilError("ERR_UNKNOWN", args, epochtal, urlPath[1], err.stack);
+        err = new UtilError("ERR_UNKNOWN: " + err.message, args, epochtal, urlPath[1], err.stack);
       }
       return Response.json(err.toString());
     }
