@@ -116,7 +116,12 @@ const fetchHandler = async function (req) {
 
   }
 
-  const file = Bun.file("pages" + decodeURIComponent(urlPathname));
+  let urlPathnameDecoded = decodeURIComponent(urlPathname);
+  while (urlPathnameDecoded.includes("../")) {
+    urlPathnameDecoded = urlPathnameDecoded.replace("../", "/");
+  }
+
+  const file = Bun.file("pages" + urlPathnameDecoded);
 
   if (file.size === 0) {
     return Response("404!", { status: 404 });
