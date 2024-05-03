@@ -199,3 +199,8 @@ bin
 
 # State secrets (shhh)
 util/workshopper.js
+maps.json
+
+# Utility logs
+util.error
+util.print

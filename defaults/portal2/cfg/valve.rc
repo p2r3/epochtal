@@ -1,0 +1,24 @@
+exec joystick.cfg
+plugin_load epochtal_sar
+alias plugin_load
+
+sar_fast_load_preset full
+
+exec autoexec.cfg
+stuffcmds
+
+exec epochtal_category
+execifexists epochtal_category_override
+
+alias sar_speedrun_category
+alias sar_speedrun_offset
+alias sar_speedrun_cc_start
+alias sar_speedrun_cc_rule
+alias sar_speedrun_cc_finish
+
+developer 1
+con_drawnotify 0
+
+sar_alias do_reset restart_level
+
+exec epochtal_map

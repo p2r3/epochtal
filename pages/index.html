@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+  <html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Repochtal</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://kit.fontawesome.com/fc2642e2d1.js" crossorigin="anonymous"></script>
+    <script src="tools.js"></script>
+  </head>
+  <body>
+
+    <div id="bg-anim-container">
+      <div id="bg-anim-bg"></div>
+      <canvas id="bg-anim"></canvas>
+      <div id="bg-anim-blur"></div>
+      <script src="bg.js"></script>
+    </div>
+
+    <div id="page-content">
+      
+      <header>
+
+        <div id="header-left">
+          <div class="header-block" onclick="smoothScroll('#intro')">Epochtal</div>
+        </div>
+
+        <div id="header-right">
+          <div class="header-block" onclick="smoothScroll('#leaderboard')">Leaderboard</div>
+          <div class="header-block" onclick="smoothScroll('#submit')">Submit</div>
+          <div class="header-block" onclick="smoothScroll('#voting')">Voting</div>
+          <div class="header-block" onclick="window.open('https://docs.google.com/document/d/1PF8zeVcsUE9MSAbZ6MS47Nd4LvlBgag0hDR5s9er9v4', '_blank')">Rules</div>
+          <div class="header-block" onclick="window.location.href = '/api/auth/login'" id="login-button">Log in</div>
+        </div>
+
+      </header>
+      
+      <div class="section" id="intro">
+      
+        <h1 class="margin0">Epochtal Tournament System</h1>
+        <h3 class="margin0 font-medium font-spaced">week <span id="intro-week">...</span></h3>
+      
+        <p class="marginy marginx justify-center">
+          Welcome to the weekly tournament!<br><br>This is an open Portal 2 speedrunning competition where players of any
+          skill level
+          can compete on workshop maps curated weekly. If you're new here, check <a
+            href="https://docs.google.com/document/d/1YzlEXzPsy2zfw0WRXhjeZUZXPbfVmGfHhg0plFdaszo" target="_blank">this
+            guide</a> to learn how to participate.
+        </p>
+      
+      </div>
+      
+      <div class="section" id="leaderboard">
+      
+        <h1 class="margin0 marginb center">Leaderboard for category <span id="leaderboard-category">...</span></h1>
+
+        <div class="marginx" id="leaderboard-container">
+          
+          <div id="leaderboard-archive-select-container">
+            <h3 class="center" style="margin: 0 0 10px 0">Select Archive</h3>
+            <select name="category" id="leaderboard-archive-select">
+              <option value="" disabled="" selected="" hidden="">Select Archive</option>
+            </select>
+          </div>
+
+          <div id="leaderboard-category-select-container">
+            <h3 class="center" style="margin: 0 0 10px 0">Select Category</h3>
+            <select name="category" id="leaderboard-category-select">
+              <option value="" disabled="" selected="" hidden="">Select Category</option>
+            </select>
+          </div>
+
+          <div id="leaderboard-data"></div>
+
+        </div>
+        
+
+      </div>
+      
+      <div class="section" id="submit">
+      
+        <h1 class="margin0 marginb center">Submit Speedrun</h1>
+      
+        <p class="marginy marginx justify-center">
+          This is where you can submit your speedrun. Depending on the category, you can provide either a demo file or a YouTube
+          link. For demo files, the system will fill in the time and portal count for you.
+        </p>
+
+        <div class="submit-container">
+
+          <button id="submit-demo">Select Demo File</button>
+          <span id="submit-link-container">
+            <h3 class="inline-block">&nbsp; or &nbsp;</h3>
+            <input type="text" id="submit-link" placeholder="Enter YouTube Link">
+          </span>
+
+          <br><br>
+
+          <select name="category" id="submit-category">
+            <option value="" disabled="" selected="" hidden="">Select Category</option>
+          </select>
+
+          <div id="submit-link-info" style="display: none">
+            <br><br>
+            <input type="text" id="submit-time" placeholder="Enter Run Time">
+            <input type="text" id="submit-portals" style="display: none" placeholder="Enter Portal Count">
+          </div>
+
+          <br><br>
+          
+          <textarea id="submit-note" cols="25" rows="5" placeholder="run comment"></textarea>
+          <br><br>
+          <button id="submit-button" style="min-width: 150px">Submit</button>
+
+          <br><br>
+
+        </div>
+      
+      </div>
+
+      <div class="section" id="voting">
+
+        <h1 class="margin0 marginb center">Vote for Future Maps</h1>
+
+        <p class="marginy marginx justify-center">
+          One of the maps seen here will be selected for next week's tournament. You have the opportunity to evaluate
+          the options ahead of time. Cast votes for your favorites, and downvote those you wouldn't want to play.
+        </p>
+
+        <div id="votes-container"></div>
+        
+        <div class="center">
+          <a href="epochtal-voting.sppkg" download><button>Play as Spplice Package</button></a>
+        </div>
+
+      </div>
+
+      <footer></footer>
+      
+      <h3 class="center marginy">
+        Disable Background Animation&nbsp;
+        <label class="switch">
+          <input type="checkbox" id="power-saving">
+          <span class="slider"></span>
+        </label>
+      </h3>
+      
+      <div id="global-popup">
+        <h2 id="global-popup-title">ERR_STYLE</h2>
+        <p id="global-popup-text">You should not be seeing this.</p>
+        <button onclick="hidePopup()">OK</button>
+      </div>
+
+      <div id="global-tooltip"></div>
+
+    </div>
+
+    <script src="main.js"></script>
+
+  </body>
+</html>

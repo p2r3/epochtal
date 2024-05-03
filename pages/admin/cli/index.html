@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Epochtal Utility CLI</title>
+
+    <style>
+      body {
+        color-scheme: unset;
+        margin: 0;
+      }
+      #cli-output {
+        position: absolute;
+        width: 100%;
+        height: calc(100% - 2rem);
+        color: white;
+        font-family: monospace;
+        margin: 0;
+        padding: 5px;
+        box-sizing: border-box;
+        overflow: scroll;
+        background-color: black;
+      }
+      #cli-input {
+        position: absolute;
+        bottom: 0;
+        width: 100%;
+        height: 2rem;
+        padding: 5px;
+        box-sizing: border-box;
+        border: 0;
+        outline: none;
+        font-size: 1rem;
+        color: white;
+        font-family: monospace;
+        background-color: rgb(60, 60, 60);
+      }
+      .highlight {
+        color: #faa81a;
+      }
+    </style>
+    
+  </head>
+
+  <body>
+    
+    <div id="cli-container">
+      <p id="cli-output"></p>
+      <input type="text" name="cli-input" id="cli-input">
+    </div>
+
+    <script>
+
+      const output = document.getElementById("cli-output");
+      const input = document.getElementById("cli-input");
+
+      input.focus();
+
+      function formatResponse (response, depth = 0) {
+
+        switch (typeof response) {
+
+          case "boolean":
+            if (response) return "true";
+            return "false";
+
+          case "number":
+            return response;
+
+          case "string":
+            return response.replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll("\n", "<br>").replaceAll("  ", " &nbsp;");
+
+          case "object": {
+
+            let outputstr = "";
+
+            if (Array.isArray(response)) {
+
+              for (let i = 0; i < response.length; i++) {
+
+                if (i === 0 && response[i]?.constructor === Object) outputstr += "<br>";
+                outputstr += formatResponse(response[i], depth);
+
+                if (i !== response.length - 1) {
+                  outputstr += ", ";
+                  if (response[i]?.constructor === Object) outputstr += "<br>";
+                }
+
+              }
+              return outputstr;
+
+            }
+
+            let depthPadding = "";
+
+            for (let i = 0; i < depth; i ++) {
+              depthPadding += "│&nbsp;";
+            }
+
+            const keys = Object.keys(response);
+            for (let i = 0; i < keys.length; i ++) {
+
+              outputstr += depthPadding;
+
+              if (i === keys.length - 1) outputstr += "└";
+              else if (i === 0) outputstr += "┌";
+              else outputstr += "│";
+
+              outputstr += ` ${keys[i]}: `;
+              if (response[keys[i]]?.constructor === Object) outputstr += "<br>";
+
+              outputstr += formatResponse(response[keys[i]], depth + 1);
+
+              if (i !== keys.length - 1) outputstr += "<br>";
+
+            }
+
+            return outputstr;
+
+          }
+
+        }
+
+      }
+
+      var commandHistory = [];
+      var commandHistoryIndex = 0;
+
+      async function submitCommand (command) {
+
+        commandHistory.push(command);
+        commandHistoryIndex = commandHistory.length;
+
+        output.innerHTML += `<span class="highlight">&gt; ${command}</span><br>`;
+        output.scrollTop = output.scrollHeight;
+
+        command = command.trim();
+        while (command.includes("  ")) command.replace("  ", " ");
+
+        if (command === "clear") {
+          output.innerHTML = "";
+          return;
+        } else if (command === "exit") {
+          window.close();
+        }
+
+        command = command.split(" ");
+
+        const util = command[0];
+        const args = command.slice(1);
+
+        for (let i = 0; i < args.length; i ++) {
+
+          if (!isNaN(args[i]) && args[i] < Number.MAX_SAFE_INTEGER) continue;
+          if (args[i] === "true" || args[i] === "false") continue;
+          args[i] = encodeURIComponent(`"${args[i].replaceAll("&", "&amp;").replaceAll("/", "&sol;")}"`);
+
+        }
+
+        const response = await fetch(`/util/${util}/${args.join("/")}`);
+        console.log(response);
+
+        if (response.status === 404) return output.innerHTML += "Command or module not found.<br>";
+        if (response.status !== 200) return output.innerHTML += `An unknown server error occurred.<br>Status: ${response.status}<br>`;
+        
+        output.innerHTML += formatResponse(await response.json()) + "<br>";
+        output.scrollTop = output.scrollHeight;
+
+      }
+
+      input.addEventListener("keypress", function (e) {
+
+        if (e.key === "Enter") {
+
+          if (input.value === "") {
+            output.innerHTML += "<span class=\"highlight\">&gt;</span><br>";
+            output.scrollTop = output.scrollHeight;
+            return;
+          }
+
+          submitCommand(input.value);
+          input.value = "";
+        
+        }
+
+      });
+
+      window.addEventListener("keypress", function (e) {
+
+        if (document.activeElement === input) return;
+
+        input.focus();
+        input.value += String.fromCharCode(e.charCode);
+
+      });
+
+      window.addEventListener("keydown", function (e) {
+
+        if (e.key === "ArrowUp") {
+
+          if (commandHistoryIndex <= 0) return;
+          input.value = commandHistory[--commandHistoryIndex];
+
+        } else if (e.key === "ArrowDown") {
+
+          if (commandHistoryIndex >= commandHistory.length - 1) return;
+          input.value = commandHistory[++commandHistoryIndex];
+
+        }
+
+      });
+
+    </script>
+
+  </body>
+
+</html>
