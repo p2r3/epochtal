@@ -139,8 +139,9 @@ async function buildFiles (context) {
   for (let i = 0; i < files.length; i ++) {
 
     const file = files[i];
+    if (!fs.lstatSync(`${portal2}/${file}`).isFile()) continue;
+    
     const extension = file.split(".").pop();
-
     if (!(checkExtensions.find(c => c === extension))) continue;
 
     const checksum = await getChecksum(`${portal2}/${file}`);
