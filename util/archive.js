@@ -28,6 +28,10 @@ module.exports = async function (args, context = epochtal) {
 
   const [command, name] = args;
 
+  if (command !== "list" && (!name || name.includes("..") || name.includes("/"))) {
+    throw new UtilError("ERR_NAME", args, context);
+  }
+
   switch (command) {
 
     case "get": {
