@@ -154,6 +154,8 @@ var homepageInit = async function () {
 
   async function displayLeaderboard (category) {
 
+    leaderboardCategorySelect.value = category;
+
     const categoryData = config.categories.find(curr => curr.name === category);
     const leaderboardData = leaderboard[categoryData.name];
 
@@ -211,13 +213,13 @@ var homepageInit = async function () {
 
     if (archive === "active") {
 
-      var config = await (await fetch("/api/config/get")).json();
-      var leaderboard = await (await fetch("/api/leaderboard/get")).json();
+      config = await (await fetch("/api/config/get")).json();
+      leaderboard = await (await fetch("/api/leaderboard/get")).json();
 
     } else {
 
-      var config = await (await fetch(`/api/archive/config/${archive}`)).json();
-      var leaderboard = await (await fetch(`/api/archive/leaderboard/${archive}`)).json();
+      config = await (await fetch(`/api/archive/config/${archive}`)).json();
+      leaderboard = await (await fetch(`/api/archive/leaderboard/${archive}`)).json();
     
     }
 
