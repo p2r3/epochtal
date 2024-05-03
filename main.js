@@ -29,6 +29,7 @@ discordClient.once("ready", function () {
 });
 
 const fs = require("node:fs");
+const path = require("node:path");
 
 const utilsdir = fs.readdirSync("./util");
 const utils = {};
@@ -49,8 +50,7 @@ const UtilError = utils["error"];
 const fetchHandler = async function (req) {
 
   const url = new URL(req.url);
-  const urlPathname = url.pathname === "/" ? url.pathname + "index.html" : url.pathname;
-  const urlPath = urlPathname.split("/").slice(1);
+  const urlPath = url.pathname.split("/").slice(1);
 
   if (urlPath[0] === "api") {
 
@@ -116,12 +116,15 @@ const fetchHandler = async function (req) {
 
   }
 
-  let urlPathnameDecoded = decodeURIComponent(urlPathname);
-  while (urlPathnameDecoded.includes("../")) {
-    urlPathnameDecoded = urlPathnameDecoded.replace("../", "/");
+  let pathDecoded = decodeURIComponent(url.pathname);
+  if (pathDecoded.endsWith("/")) pathDecoded += "index.html";
+
+  // Detects probable path traversal attempts, better safe than sorry
+  if (path.normalize(pathDecoded) !== pathDecoded) {
+    return Response("404!", { status: 404 });
   }
 
-  const file = Bun.file("pages" + urlPathnameDecoded);
+  const file = Bun.file("pages" + pathDecoded);
 
   if (file.size === 0) {
     return Response("404!", { status: 404 });
