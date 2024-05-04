@@ -29,6 +29,7 @@ module.exports = async function (args, request) {
     case "submit": {
 
       if (categoryData.lock) return "ERR_LOCKED";
+      if (categoryData.proof === "video") return "ERR_PROOF";
 
       const user = await api_users(["whoami"], request);
       if (!user) return "ERR_LOGIN";
@@ -80,6 +81,7 @@ module.exports = async function (args, request) {
     case "submitlink": {
 
       if (categoryData.lock) return "ERR_LOCKED";
+      if (categoryData.proof === "demo") return "ERR_PROOF";
 
       const user = await api_users(["whoami"], request);
       if (!user) return "ERR_LOGIN";

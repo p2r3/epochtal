@@ -82,6 +82,8 @@ module.exports = async function (args, context = epochtal) {
         if (args[i] === undefined) throw new UtilError("ERR_ARGS", args, context);
       }
 
+      if (isNaN(time) || time <= 0) throw new UtilError("ERR_TIME", args, context);
+
       if (note.length > 200) throw new UtilError("ERR_NOTE", args, context);
       
       if (!("portals" in categoryData)) throw new UtilError("ERR_CATEGORY", args, context);
