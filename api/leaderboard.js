@@ -5,12 +5,18 @@ const tmppath = require("../util/tmppath.js");
 const demo = require("../util/demo.js");
 const discord = require("../util/discord.js");
 const leaderboard = require("../util/leaderboard.js");
+const categories = require("../util/categories.js");
 
 const api_users = require("./users.js");
 
 module.exports = async function (args, request) {
 
   const [command, category] = args;
+
+  let categoryData;
+  if (category) {
+    categoryData = await categories(["get", category]);
+  }
 
   switch (command) {
 
@@ -21,6 +27,8 @@ module.exports = async function (args, request) {
     }
 
     case "submit": {
+
+      if (categoryData.lock) return "ERR_LOCKED";
 
       const user = await api_users(["whoami"], request);
       if (!user) return "ERR_LOGIN";
@@ -70,6 +78,8 @@ module.exports = async function (args, request) {
     }
 
     case "submitlink": {
+
+      if (categoryData.lock) return "ERR_LOCKED";
 
       const user = await api_users(["whoami"], request);
       if (!user) return "ERR_LOGIN";

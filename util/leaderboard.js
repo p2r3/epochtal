@@ -10,9 +10,13 @@ module.exports = async function (args, context = epochtal) {
   const data = context.data.leaderboard;
   const file = context.file.leaderboard;
 
-  let lb;
+  let categoryData;
+  if (category) {
+    categoryData = await categories(["get", category], context);
+  }
 
-  if (context.data.week.categories.find(curr => curr.name === category)) {
+  let lb;
+  if (categoryData) {
     if (!(category in data)) data[category] = [];
     lb = data[category];
   }
@@ -70,7 +74,8 @@ module.exports = async function (args, context = epochtal) {
     case "add": {
     
       if (lb === undefined) throw new UtilError("ERR_CATEGORY", args, context);
-    
+      if (categoryData.lock) throw new UtilError("ERR_LOCKED", args, context);
+
       const [time, note, portals, segmented] = args.slice(3);
 
       for (let i = 2; i <= 4; i ++) {
@@ -79,7 +84,6 @@ module.exports = async function (args, context = epochtal) {
 
       if (note.length > 200) throw new UtilError("ERR_NOTE", args, context);
       
-      const categoryData = await categories(["get", category], context);
       if (!("portals" in categoryData)) throw new UtilError("ERR_CATEGORY", args, context);
       const countPortals = categoryData.portals;
       
