@@ -36,7 +36,7 @@ function parseLog (buffer, categoryList) {
     // 3 bytes - seconds since start of the week
     entry.timestamp = 0;
     for (let j = 0; j < 3; j ++) {
-      entry.timestamp += buffer[curr + 14 + j] * Math.pow(256, 3 - j);
+      entry.timestamp += buffer[curr + 14 + j] * Math.pow(256, 2 - j);
     }
 
     // this pattern marks the removal of an entry
