@@ -10,6 +10,7 @@ async function getArchiveContext (path) {
   context.file = {
     leaderboard: Bun.file(`${path}/leaderboard.json`),
     users: epochtal.file.users,
+    profiles: epochtal.file.profiles,
     week: Bun.file(`${path}/week.json`),
     log: `${path}/week.log`,
     demos: `${path}/demos`
@@ -49,10 +50,6 @@ module.exports = async function (args, context = epochtal) {
 
   const [command, name] = args;
 
-  if (command !== "list" && (!name || name.includes("..") || name.includes("/"))) {
-    throw new UtilError("ERR_NAME", args, context);
-  }
-
   switch (command) {
 
     case "list": {
@@ -63,6 +60,8 @@ module.exports = async function (args, context = epochtal) {
 
     case "get": {
 
+      if (!name || name.includes("..") || name.includes("/")) throw new UtilError("ERR_NAME", args, context);
+
       const archivePath = `${__dirname}/../pages/archive/${name}`;
       if (!fs.existsSync(archivePath)) throw new UtilError("ERR_NAME", args, context);
 
@@ -71,6 +70,8 @@ module.exports = async function (args, context = epochtal) {
     }
 
     case "assume": {
+
+      if (!name || name.includes("..") || name.includes("/")) throw new UtilError("ERR_NAME", args, context);
 
       const archivePath = `${__dirname}/../pages/archive/${name}`;
       if (!fs.existsSync(archivePath)) throw new UtilError("ERR_NAME", args, context);
@@ -93,6 +94,8 @@ module.exports = async function (args, context = epochtal) {
 
     case "create": {
 
+      if (name && (name.includes("..") || name.includes("/"))) throw new UtilError("ERR_NAME", args, context);
+      
       const archivePath = `${__dirname}/../pages/archive/${name || ("week" + context.data.week.number)}`;
 
       if (fs.existsSync(archivePath)) throw new UtilError("ERR_EXISTS", args, context);
