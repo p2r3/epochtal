@@ -74,13 +74,13 @@ function encodeLogEntry (entry, categoryList) {
   buffer[8] = categoryList.findIndex(curr => curr.name === entry.category);
 
   for (let i = 0; i < 4; i ++) {
-    buffer[i] = entry.time % (256 ** (4 - i)) / (256 ** (3 - i));
+    buffer[9 + i] = entry.time % (256 ** (4 - i)) / (256 ** (3 - i));
   }
 
   buffer[13] = entry.portals;
 
   for (let i = 0; i < 3; i ++) {
-    buffer[i] = entry.timestamp % (256 ** (3 - i)) / (256 ** (2 - i));
+    buffer[14 + i] = entry.timestamp % (256 ** (3 - i)) / (256 ** (2 - i));
   }
 
   return buffer;
