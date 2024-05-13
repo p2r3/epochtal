@@ -51,7 +51,7 @@ async function getSAR () {
     output.push({
       name: asset.name,
       output: currPath,
-      crc32: getChecksum(currPath)
+      crc32: await getChecksum(currPath)
     });
 
   }
