@@ -182,9 +182,24 @@ var homepageInit = async function () {
       const run = leaderboardData[i];
       const user = users[run.steamid];
 
+      run.note = run.note.replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll("&", "&amp;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("\n", "<br>")
+        .replaceAll("\r", "")
+        .replaceAll("\\", "\\\\")
+        .replaceAll("'", "\\'");
+
+      const username = user.name.replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll("&", "&amp;");
+
       if (i !== 0 && run.time !== leaderboardData[i - 1].time) {
         placement ++;
       }
+
+      const isArchive = leaderboardArchiveSelect.value !== "active";
 
       let downloadURL = `/api/archive/demo/${leaderboardArchiveSelect.value}/"${run.steamid}"/${category}`;
       if (run.proof === "video") {
@@ -199,7 +214,7 @@ var homepageInit = async function () {
 
       output += `
 <div class="lb-entry lb-rank${placement}">
-  <p class="lb-text">${user.name}</p>
+  <p class="lb-text">${username}</p>
   <p class="lb-text font-light">${placement}${suffix} place in ${ticksToString(run.time)}${portalCount}</p>
   <div class="lb-icons">
     ${!isArchive && whoami && run.steamid === whoami.steamid ? `<i class="fa-solid fa-pen-to-square pointer" onmouseover="showTooltip('Edit comment')" onmouseleave="hideTooltip()" onclick="editComment('${category}')"></i>` : ""}
