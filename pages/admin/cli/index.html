@@ -156,7 +156,7 @@
 
           if (!isNaN(args[i]) && args[i] < Number.MAX_SAFE_INTEGER) continue;
           if (args[i] === "true" || args[i] === "false") continue;
-          args[i] = encodeURIComponent(`"${args[i].replaceAll("&", "&amp;").replaceAll("/", "&sol;")}"`);
+          args[i] = encodeURIComponent(`"${args[i]}"`);
 
         }
 
