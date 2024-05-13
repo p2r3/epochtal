@@ -158,6 +158,10 @@ async function releaseMap (context) {
     context.data.week.votes = {};
     context.data.week.partners = {};
 
+    for (let i = 0; i < context.data.week.categories.length; i ++) {
+      context.data.week.categories[i].lock = false;
+    }
+
     context.data.leaderboard = {};
 
     weekString = JSON.stringify(context.data.week);
