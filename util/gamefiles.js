@@ -46,7 +46,11 @@ async function getSAR () {
     if (request.status !== 200) throw "ERR_GITHUBAPI";
 
     const currPath = await tmppath();
-    await Bun.write(currPath, request);
+
+    // Causes a memory leak
+    // await Bun.write(currPath, request);
+    
+    await $`wget ${asset.browser_download_url} -O ${currPath}`.quiet();
 
     output.push({
       name: asset.name,
@@ -72,7 +76,10 @@ async function getMap (mapid) {
   const request = await fetch(data.file_url);
   if (request.status !== 200) throw "ERR_STEAMAPI";
 
-  await Bun.write(output, request);
+  // Causes a memory leak
+  // await Bun.write(output, request);
+  
+  await $`wget ${data.file_url} -O ${output}`.quiet();
   return { output, workshop, bsp };
 
 }
