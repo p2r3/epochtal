@@ -64,10 +64,11 @@ module.exports = async function (args, request) {
         return "ERR_STEAMID";
       }
       
-      const lbadd = await leaderboard(["add", category, data.steamid, data.time, note, data.portals, false]);
-      if (lbadd !== "SUCCESS") {
+      try {
+        await leaderboard(["add", category, data.steamid, data.time, note, data.portals, false]);
+      } catch (e) {
         fs.rmSync(path);
-        return lbadd;
+        throw e;
       }
 
       const newPath = `${epochtal.file.demos}/${data.steamid}_${category}.dem`;
@@ -98,8 +99,7 @@ module.exports = async function (args, request) {
         portals: portals
       };
 
-      const lbadd = await leaderboard(["add", category, data.steamid, data.time, note, data.portals, true]);
-      if (lbadd !== "SUCCESS") return lbadd;
+      await leaderboard(["add", category, data.steamid, data.time, note, data.portals, true]);
 
       const newPath = `${epochtal.file.demos}/${data.steamid}_${category}.link`;
       await Bun.write(newPath, link);

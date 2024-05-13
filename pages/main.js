@@ -325,6 +325,12 @@ var homepageInit = async function () {
           return showPopup("Verification failed", "Your run failed to pass verification. Contact the organizers if you think this is a mistake.", POPUP_ERROR);
         case "ERR_STEAMID":
           return showPopup("SteamID mismatch", "This demo does not appear to belong to your Steam account.", POPUP_ERROR);
+        case "ERR_LOCKED":
+          return showPopup("Leaderboard locked", "The leaderboard for this category is locked.", POPUP_ERROR);
+        case "ERR_TIME":
+          return showPopup("Invalid time format", "The time you provided could not be parsed. Please provide time in the format \"min:sec.ms\".", POPUP_ERROR);
+        case "ERR_PROOF":
+          return showPopup("Invalid proof type", "This category does not accept demo submissions.", POPUP_ERROR);
       
         default:
           throw data;
@@ -337,10 +343,10 @@ var homepageInit = async function () {
 
     }
 
-    var leaderboard = await (await fetch("/api/leaderboard/get")).json();
+    leaderboard = await (await fetch("/api/leaderboard/get")).json();
     displayLeaderboard(leaderboardCategorySelect.value);
 
-    return showPopup("Success", "Your run has been submitted!");
+    return showPopup("Success", "Your run has been submitted!<br>Time: " + ticksToString(data));
 
   }
 
@@ -383,12 +389,16 @@ var homepageInit = async function () {
           return showPopup("Not logged in", "Please log in via Steam before submitting runs.", POPUP_ERROR);
         case "ERR_ILLEGAL":
           return showPopup("Verification failed", "Your run failed to pass verification. Contact the organizers if you think this is a mistake.", POPUP_ERROR);
+        case "ERR_LOCKED":
+          return showPopup("Leaderboard locked", "The leaderboard for this category is locked.", POPUP_ERROR);
+        case "ERR_TIME":
+          return showPopup("Invalid time format", "The time you provided could not be parsed. Please provide time in the format \"min:sec.ms\".", POPUP_ERROR);
+        case "ERR_PROOF":
+          return showPopup("Invalid proof type", "This category does not accept link submissions.", POPUP_ERROR);
       
         default:
           throw data;
       }
-
-      document.querySelector("#demo-data").innerHTML = JSON.stringify(data);
 
     } catch (e) {
 
@@ -397,10 +407,10 @@ var homepageInit = async function () {
     
     }
 
-    var leaderboard = await (await fetch("/api/leaderboard/get")).json();
+    leaderboard = await (await fetch("/api/leaderboard/get")).json();
     displayLeaderboard(leaderboardCategorySelect.value);
 
-    return showPopup("Success", "Your run has been submitted!");
+    return showPopup("Success", "Your run has been submitted!<br>Time: " + ticksToString(data));
 
   }
 

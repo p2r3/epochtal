@@ -59,13 +59,12 @@ module.exports = async function (args, context = epochtal) {
         return curr.steamid === steamid;
       });
       
-      if (idx === -1) throw new UtilError("ERR_STEAMID", args, context);
+      if (idx === -1) throw new UtilError("ERR_NOTFOUND", args, context);
       
       data[category].splice(idx, 1);
       if (file) Bun.write(file, JSON.stringify(data));
       
-      const logres = await log(["add", steamid, category, 0, 0], context);
-      if (logres !== "SUCCESS") return logres;
+      await log(["add", steamid, category, 0, 0], context);
 
       return "SUCCESS";
       
@@ -138,8 +137,7 @@ module.exports = async function (args, context = epochtal) {
 
       if (file) Bun.write(file, JSON.stringify(data));
 
-      const logres = await log(["add", steamid, category, time, portals], context);
-      if (logres !== "SUCCESS") return logres;
+      await log(["add", steamid, category, time, portals], context);
 
       return "SUCCESS";
 
