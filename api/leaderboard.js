@@ -108,6 +108,34 @@ module.exports = async function (args, request) {
 
     }
 
+    case "remove": {
+
+      if (categoryData.lock) return "ERR_LOCKED";
+      
+      const user = await api_users(["whoami"], request);
+      if (!user) return "ERR_LOGIN";
+      
+      await leaderboard(["remove", category, user.steamid]);
+
+      return "SUCCESS";
+      
+    }
+
+    case "edit": {
+
+      if (categoryData.lock) return "ERR_LOCKED";
+      
+      const user = await api_users(["whoami"], request);
+      if (!user) return "ERR_LOGIN";
+      
+      const note = args[2];
+
+      await leaderboard(["edit", category, user.steamid, note]);
+
+      return "SUCCESS";
+      
+    }
+
   }
 
   return "ERR_COMMAND";

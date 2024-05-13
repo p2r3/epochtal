@@ -8,6 +8,8 @@ function popupEscapeHandler (event) {
 const popup = document.querySelector("#global-popup");
 const tooltip = document.querySelector("#global-tooltip");
 
+const popupCloseEvent = new Event("close");
+
 var showPopup = function (title, text, type = POPUP_INFO) {
 
   const titleElement = document.querySelector("#global-popup-title");
@@ -47,6 +49,8 @@ var hidePopup = function () {
   popup.style.transform = "translate(-50%, 0)";
 
   document.removeEventListener("keydown", popupEscapeHandler);
+
+  popup.dispatchEvent(popupCloseEvent);
 
 };
 
@@ -198,6 +202,8 @@ var homepageInit = async function () {
   <p class="lb-text">${user.name}</p>
   <p class="lb-text font-light">${placement}${suffix} place in ${ticksToString(run.time)}${portalCount}</p>
   <div class="lb-icons">
+    ${!isArchive && whoami && run.steamid === whoami.steamid ? `<i class="fa-solid fa-pen-to-square pointer" onmouseover="showTooltip('Edit comment')" onmouseleave="hideTooltip()" onclick="editComment('${category}')"></i>` : ""}
+    ${!isArchive && whoami && run.steamid === whoami.steamid ? `<i class="fa-solid fa-trash pointer" onmouseover="showTooltip('Remove submission')" onmouseleave="hideTooltip()" onclick="removeRun('${category}')"></i>` : ""}
     ${run.segmented ? `<i class="fa-solid fa-link" onmouseover="showTooltip('Segmented submission')" onmouseleave="hideTooltip()"></i>` : ""}
     ${run.note ? `<i class="fa-solid fa-comment" onmouseover="showTooltip('${run.note}')" onmouseleave="hideTooltip()"></i>` : ""}
     ${run.proof ? `<a href='${downloadURL}' target="_blank"><i class="fa-solid fa-${run.proof === "demo" ? "file-arrow-down" : "video"}" onmouseover="showTooltip('${run.proof === "demo" ? "Download demo" : "Watch video"}')" onmouseleave="hideTooltip()"></i></a>` : ""}
@@ -233,6 +239,110 @@ var homepageInit = async function () {
 
     displayLeaderboard("main");
   
+  };
+
+  var removeRunConfirm = null;
+  window.removeRun = async function (category) {
+
+    if (removeRunConfirm !== category) {
+      showPopup("Are you sure?", "You are about to permanently delete this submission. Press the button again to confirm.", POPUP_WARN);
+      removeRunConfirm = category;
+      return;
+    }
+    removeRunConfirm = null;
+
+    try {
+
+      const response = await fetch("/api/leaderboard/remove/" + category);
+      const data = await response.json();
+
+      switch (data) {
+        case "ERR_LOGIN":
+          return showPopup("Not logged in", "Please log in via Steam before submitting runs.", POPUP_ERROR);
+        case "ERR_NOTFOUND":
+          return showPopup("Run not found", "You do not have a submission in this category.", POPUP_ERROR);
+        case "ERR_LOCKED":
+          return showPopup("Leaderboard locked", "The leaderboard for this category is locked.", POPUP_ERROR);
+        case "ERR_CATEGORY":
+          return showPopup("Invalid category", "The leaderboard for this category could not be found.", POPUP_ERROR);
+
+        case "SUCCESS": {
+
+          leaderboard = await (await fetch("/api/leaderboard/get")).json();
+          displayLeaderboard(leaderboardCategorySelect.value);
+
+          return showPopup("Success", "Your run has been removed!");
+
+        }
+
+        default:
+          throw data;
+      }
+
+    } catch (e) {
+
+      console.error(e);
+      return showPopup("Unknown error", "An unexpected error occurred while removing your speedrun. Check the JavaScript console for more info.", POPUP_ERROR);
+
+    }
+
+  };
+
+  window.editComment = function (category) {
+
+    const run = leaderboard[category].find(curr => curr.steamid === whoami.steamid);
+
+    showPopup("Edit run comment", `<textarea id="edit-note" cols="25" rows="3" placeholder="no comment">${run.note}</textarea>`);
+
+    let submitEditFunction;
+    submitEditFunction = async function () {
+
+      popup.removeEventListener("close", submitEditFunction);
+
+      try {
+
+        const note = document.querySelector("#edit-note").value.trim();
+        const safeNote = encodeURIComponent(note);
+
+        const response = await fetch(`/api/leaderboard/edit/${category}/${safeNote}`);
+        const data = await response.json();
+
+        switch (data) {
+          case "ERR_LOGIN":
+            return showPopup("Not logged in", "Please log in via Steam before submitting runs.", POPUP_ERROR);
+          case "ERR_NOTFOUND":
+            return showPopup("Run not found", "You do not have a submission in this category.", POPUP_ERROR);
+          case "ERR_LOCKED":
+            return showPopup("Leaderboard locked", "The leaderboard for this category is locked.", POPUP_ERROR);
+          case "ERR_CATEGORY":
+            return showPopup("Invalid category", "The leaderboard for this category could not be found.", POPUP_ERROR);
+          case "ERR_NOTE":
+            return showPopup("Comment too long", "Please keep your run comments to 200 characters or under.", POPUP_ERROR);
+
+          case "SUCCESS": {
+
+            leaderboard = await (await fetch("/api/leaderboard/get")).json();
+            displayLeaderboard(leaderboardCategorySelect.value);
+
+            return showPopup("Success", "Your run's comment has been changed!");
+
+          }
+
+          default:
+            throw data;
+        }
+
+      } catch (e) {
+
+        console.error(e);
+        return showPopup("Unknown error", "An unexpected error occurred while editing your speedrun. Check the JavaScript console for more info.", POPUP_ERROR);
+
+      }
+
+    };
+
+    popup.addEventListener("close", submitEditFunction);
+
   };
 
   const linkContainer = document.querySelector("#submit-link-container");

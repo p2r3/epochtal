@@ -143,8 +143,26 @@ module.exports = async function (args, context = epochtal) {
 
     }
     
-  }
+    case "edit": {
+  
+      if (lb === undefined) throw new UtilError("ERR_CATEGORY", args, context);
+      if (categoryData.lock) throw new UtilError("ERR_LOCKED", args, context);
+  
+      const note = args[3];
+      if (note === undefined) throw new UtilError("ERR_ARGS", args, context);
+  
+      if (note.length > 200) throw new UtilError("ERR_NOTE", args, context);
 
-  throw new UtilError("ERR_COMMAND", args, context);
+      const run = lb.find(curr => curr.steamid === steamid);
+      run.note = note;
+
+      if (file) Bun.write(file, JSON.stringify(data));
+      return "SUCCESS";
+  
+    }
+  
+    throw new UtilError("ERR_COMMAND", args, context);
+
+  }
 
 };
