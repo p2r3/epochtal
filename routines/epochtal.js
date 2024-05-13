@@ -116,7 +116,7 @@ async function releaseMap (context) {
     context.data.week.map = newmap;
 
     const portal2 = await gamefiles(["build"], context);
-    const vmf = await gamefiles(["getvmf", `${portal2.output}/maps/${portal2.map[0]}`], context);
+    const vmf = await gamefiles(["getvmf", `${portal2.output}/maps/${portal2.map[0]}`, true], context);
     const archive = await spplice(["archive", portal2.output], context);
     const manifest = await spplice(["manifest", null], context);
   

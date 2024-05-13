@@ -177,19 +177,23 @@ async function buildFiles (context) {
 
 }
 
-async function getVMF (path) {
+async function getVMF (path, compress = false) {
 
   if (path.endsWith(".bsp")) path = path.slice(0, -4);
 
-  const output = (await tmppath()) + ".vmf.xz";
+  const output = (await tmppath()) + ".vmf" + (compress ? ".xz" : "");
 
   // Decompile map
   const flags = "--no_cubemaps --no_areaportals --no_occluders --no_ladders --no_visgroups --no_cams";
   await $`${__dirname}/../bin/bspsrc/bspsrc.sh ${flags} ${path}.bsp`.quiet();
 
   // Compress decompiled VMF
-  await $`xz -z9e ${`${path}_d.vmf`}`.quiet();
-  fs.renameSync(`${path}_d.vmf.xz`, output);
+  if (compress) {
+    await $`xz -z9e ${`${path}_d.vmf`}`.quiet();
+    fs.renameSync(`${path}_d.vmf.xz`, output);
+  } else {
+    fs.renameSync(`${path}_d.vmf`, output);
+  }
 
   // Remove excess logs
   fs.unlinkSync(`${path}_d.log`);
@@ -248,12 +252,12 @@ module.exports = async function (args, context = epochtal) {
 
     case "getvmf": {
 
-      const path = args[1];
+      const [path, compress] = args.slice(1);
       if (!path) throw new UtilError("ERR_PATH", args, context);
 
       let output;
       try {
-        output = await getVMF(path);
+        output = await getVMF(path, compress);
       } catch (e) {
         if (typeof e !== "string") throw e;
         throw new UtilError(e, args, context);
