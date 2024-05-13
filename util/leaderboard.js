@@ -87,6 +87,7 @@ module.exports = async function (args, context = epochtal) {
       
       if (!("portals" in categoryData)) throw new UtilError("ERR_CATEGORY", args, context);
       const countPortals = categoryData.portals;
+      if (countPortals && isNaN(portals)) throw new UtilError("ERR_PORTALS", args, context);
       
       const oldRunIndex = lb.findIndex(function (curr) {
         return curr.steamid === steamid;

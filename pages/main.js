@@ -456,6 +456,8 @@ var homepageInit = async function () {
           return showPopup("Invalid time format", "The time you provided could not be parsed. Please provide time in the format \"min:sec.ms\".", POPUP_ERROR);
         case "ERR_PROOF":
           return showPopup("Invalid proof type", "This category does not accept demo submissions.", POPUP_ERROR);
+        case "ERR_PORTALS":
+          return showPopup("Invalid portal count", "The portal count could not be parsed.", POPUP_ERROR);
       
         default:
           throw data;
@@ -520,6 +522,8 @@ var homepageInit = async function () {
           return showPopup("Invalid time format", "The time you provided could not be parsed. Please provide time in the format \"min:sec.ms\".", POPUP_ERROR);
         case "ERR_PROOF":
           return showPopup("Invalid proof type", "This category does not accept link submissions.", POPUP_ERROR);
+        case "ERR_PORTALS":
+          return showPopup("Invalid portal count", "The portal count you provided could not be parsed.", POPUP_ERROR);
       
         default:
           throw data;
