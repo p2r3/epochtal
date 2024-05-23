@@ -213,6 +213,22 @@
 
       });
 
+      var lastPrintTimestamp = (new Date()).toUTCString();
+      async function readPrint () {
+        
+        const timestamp = encodeURIComponent(lastPrintTimestamp);
+        const printText = await (await fetch(`/util/readprint/${timestamp}`)).json();
+
+        if (printText) {
+          lastPrintTimestamp = (new Date()).toUTCString();
+          output.innerHTML += printText.replaceAll("\n", "<br>");
+        }
+        
+        setTimeout(readPrint, 500);
+
+      }
+      readPrint();
+
     </script>
 
   </body>
