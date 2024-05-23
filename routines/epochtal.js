@@ -1,4 +1,5 @@
 const fs = require("node:fs");
+const UtilPrint = require("../util/print.js");
 const tmppath = require("../util/tmppath.js");
 const archive = require("../util/archive.js");
 const gamefiles = require("../util/gamefiles.js");
@@ -28,14 +29,17 @@ async function concludeWeek (context) {
 
 async function releaseMap (context) {
 
+  UtilPrint("epochtal(releaseMap): Creating archive...");
   await archive(["create"], context);
 
   // Curate a week's worth of workshop maps, pick 5 for voting
   const VOTING_MAPS_COUNT = 5;
 
+  UtilPrint("epochtal(releaseMap): Curating workshop maps...");
   const allmaps = await workshopper(["buildweek"], context);
   await Bun.write(`${__dirname}/../maps.json`, JSON.stringify(allmaps));
 
+  UtilPrint("epochtal(releaseMap): Building voting map list...");
   const votingmaps = [];
   for (let i = 0; i < allmaps.length; i ++) {
 
@@ -48,6 +52,8 @@ async function releaseMap (context) {
   }
 
   // Create Spplice package for voting list maps
+  UtilPrint("epochtal(releaseMap): Creating voting map Spplice package...");
+  
   const votingContext = {
     data: { week: { map: votingmaps } },
     file: { portal2: context.file.portal2 }
@@ -77,6 +83,8 @@ async function releaseMap (context) {
   fs.renameSync(votingPackageNew, votingPackagePath);
 
   // Count votes and pick the next active map
+  UtilPrint("epochtal(releaseMap): Counting map votes...");
+
   const totalVotes = Array(VOTING_MAPS_COUNT).fill(0);
   const totalUpvotes = Array(VOTING_MAPS_COUNT).fill(0);
   const totalDownvotes = Array(VOTING_MAPS_COUNT).fill(0);
@@ -105,6 +113,8 @@ async function releaseMap (context) {
   newmap.downvotes = totalDownvotes[highestVoted];
 
   // Build new game files and update Spplice repository
+  UtilPrint(`epochtal(releaseMap): Building game files for map "${newmap.title}" by "${newmap.author}"...`);
+
   const archivePath = `${__dirname}/../pages/epochtal.tar.xz`;
   const manifestPath = `${__dirname}/../pages/spplice.json`;
   const archiveBackup = await tmppath();
@@ -147,6 +157,8 @@ async function releaseMap (context) {
     throw e;
 
   }
+
+  UtilPrint(`epochtal(releaseMap): Writing configuration for week ${context.data.week.number}...`);
 
   let weekString, leaderboardString;
   try {

@@ -41,6 +41,9 @@
       .highlight {
         color: #faa81a;
       }
+      .grayed {
+        color: #636363;
+      }
     </style>
     
   </head>
@@ -221,10 +224,11 @@
 
         if (printText) {
           lastPrintTimestamp = (new Date()).toUTCString();
-          output.innerHTML += printText.replaceAll("\n", "<br>");
+          const lines = printText.split("\n");
+          output.innerHTML += `<span class=\"grayed\">${lines[0]}</span><br>${lines.slice(1).join("<br>")}`;
         }
         
-        setTimeout(readPrint, 500);
+        setTimeout(readPrint, 200);
 
       }
       readPrint();
