@@ -458,7 +458,7 @@ var homepageInit = async function () {
           return showPopup("Invalid proof type", "This category does not accept demo submissions.", POPUP_ERROR);
         case "ERR_PORTALS":
           return showPopup("Invalid portal count", "The portal count could not be parsed.", POPUP_ERROR);
-      
+
         default:
           throw data;
       }
@@ -524,7 +524,7 @@ var homepageInit = async function () {
           return showPopup("Invalid proof type", "This category does not accept link submissions.", POPUP_ERROR);
         case "ERR_PORTALS":
           return showPopup("Invalid portal count", "The portal count you provided could not be parsed.", POPUP_ERROR);
-      
+        
         default:
           throw data;
       }
@@ -621,6 +621,53 @@ var homepageInit = async function () {
       console.error(e);
       return showPopup("Unknown error", "An unexpected error occurred while submitting your vote. Check the JavaScript console for more info.", POPUP_ERROR);
     
+    }
+
+  };
+
+  const playersContainer = document.querySelector("#players-container");
+  const playersSearch = document.querySelector("#players-search");
+
+  const sortedUsers = [];
+  for (const steamid in users) {
+    const user = JSON.parse(JSON.stringify(users[steamid]));
+    user.steamid = steamid;
+    sortedUsers.push(user);
+  }
+  sortedUsers.sort((a, b) => b.points - a.points);
+
+  let output = "";
+  for (let i = 0; i < sortedUsers.length; i ++) {
+
+    const user = sortedUsers[i];
+
+    const username = user.name.replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll("&", "&amp;");
+
+    output += `<a href="https://steamcommunity.com/profiles/${user.steamid}" target="_blank" style="color:white;text-decoration:none"><div class="lb-entry">
+      <p class="lb-text">${username}</p>
+      <p class="lb-text font-light">${user.points} point${user.points === 1 ? "" : "s"}</p>
+    </div></a>`;
+
+  }
+  playersContainer.innerHTML = output;
+
+  playersSearch.oninput = function () {
+
+    const query = playersSearch.value.trim().toLowerCase();
+    const entries = playersContainer.getElementsByClassName("lb-entry");
+
+    for (let i = 0; i < entries.length; i ++) {
+
+      const name = entries[i].getElementsByClassName("lb-text")[0].innerHTML.toLowerCase();
+
+      if (name.includes(query)) {
+        entries[i].style.display = "";
+      } else {
+        entries[i].style.display = "none";
+      }
+
     }
 
   };

@@ -29,6 +29,7 @@
           <div class="header-block" onclick="smoothScroll('#leaderboard')">Leaderboard</div>
           <div class="header-block" onclick="smoothScroll('#submit')">Submit</div>
           <div class="header-block" onclick="smoothScroll('#voting')">Voting</div>
+          <div class="header-block" onclick="smoothScroll('#players')">Players</div>
           <div class="header-block" onclick="window.open('https://docs.google.com/document/d/1PF8zeVcsUE9MSAbZ6MS47Nd4LvlBgag0hDR5s9er9v4', '_blank')">Rules</div>
           <div class="header-block" onclick="window.location.href = '/api/auth/login'" id="login-button">Log in</div>
         </div>
@@ -133,6 +134,26 @@
           <a href="epochtal-voting.sppkg" download><button>Play as Spplice Package</button></a>
         </div>
 
+      </div>
+
+      <div class="section" id="players">
+      
+        <h1 class="margin0 marginb center">Player Profiles</h1>
+      
+        <p class="marginy marginx justify-center">
+          View the scores and user profiles of other Epochtal players. Scroll through the list of all registered users, or search for a specific player.
+          Clicking on someone's name will open their profile page.
+        </p>
+      
+        <div class="center marginy">
+          <i id="players-search-icon" class="fa-solid fa-magnifying-glass"></i>
+          <input id="players-search" type="text" placeholder="Search" spellcheck="false">
+        </div>
+
+        <div class="marginx scroll-enabled" id="players-container">
+
+        </div>
+      
       </div>
 
       <footer></footer>

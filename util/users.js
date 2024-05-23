@@ -30,7 +30,7 @@ module.exports = async function (args, context = epochtal) {
     }
 
     case "get": {
-
+      
       if (!(user in users)) return null;
       return users[user];
 

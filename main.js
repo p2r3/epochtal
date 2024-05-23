@@ -3,6 +3,7 @@ global.epochtal = { file: {}, data: {}, name: "epochtal" };
 epochtal.file = {
   leaderboard: Bun.file(`${__dirname}/pages/leaderboard.json`),
   users: Bun.file(`${__dirname}/pages/users.json`),
+  profiles: `${__dirname}/pages/profiles`,
   week: Bun.file(`${__dirname}/pages/week.json`),
   log: `${__dirname}/pages/week.log`,
   portal2: `${__dirname}/defaults/portal2`,
