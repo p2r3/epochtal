@@ -96,9 +96,7 @@ module.exports = async function (args, context = epochtal) {
           const path = event.value.path;
           if (
             path.startsWith("./portal2_tempcontent/") ||
-            path.startsWith("./update/")/* ||
-            path.endsWith("/sp_transition_list.nut") ||
-            path.endsWith("/scripts/vscripts/debug_scripts/noclip_door_open_sensor.nut")*/
+            path.startsWith("./update/")
           ) {
             return `Crucial file \`${event.value.path}\` has mismatched checksum \`${event.value.sum}\`.`;
           }
