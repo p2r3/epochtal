@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+  <html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../style.css">
+    <link rel="stylesheet" href="style.css">
+    <script src="../tools.js"></script>
+    <script src="https://kit.fontawesome.com/fc2642e2d1.js" crossorigin="anonymous"></script>
+    <title>Epochtal Live</title>
+  </head>
+  <body>
+    
+    <div id="bg-anim-container">
+      <div id="bg-anim-bg"></div>
+      <canvas id="bg-anim"></canvas>
+      <div id="bg-anim-blur"></div>
+      <script src="../bg.js"></script>
+    </div>
+
+    <div id="page-content">
+
+      <header>
+        <div id="header-left">
+          <div class="header-block" onclick="window.location.href = '/'">Epochtal</div>
+        </div>
+
+        <div id="header-right">
+          <div class="header-block" onclick="createLobbyPopup()">Create a Lobby</div>
+          <div class="header-block" onclick="window.location.href = '/api/auth/login'" id="login-button">Log in</div>
+        </div>
+      </header>
+
+      <div class="center marginy">
+        <h2 style="margin-bottom: 10px">Search for a Lobby</h2>
+        <i id="lobby-search-icon" class="fa-solid fa-magnifying-glass"></i>
+        <input id="lobby-search" type="text" placeholder="Search" spellcheck="false">
+      </div>
+
+      <div id="lobby-list" class="center marginy">
+
+        <h1>Loading available lobbies...</h1>
+
+      </div>
+
+      <div id="global-popup">
+        <h2 id="global-popup-title">ERR_STYLE</h2>
+        <p id="global-popup-text">You should not be seeing this.</p>
+        <button onclick="hidePopup()">Cancel</button>&nbsp;&nbsp;
+        <button onclick="popupOkay()">OK</button>
+      </div>
+      
+      <div id="global-tooltip"></div>
+
+    </div>
+
+    <script src="main.js"></script>
+
+  </body>
+</html>

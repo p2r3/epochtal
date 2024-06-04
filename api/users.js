@@ -58,6 +58,19 @@ module.exports = async function (args, request) {
 
     }
 
+    case "avatar": { // TODO: Cache this in the user's profile directory
+
+      const steamid = args[1];
+      if (!steamid) return "ERR_ARGS";
+
+      const req = await fetch(`https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2?key=${keys.steam}&steamids=${steamid}`);
+      if (req.status !== 200) return "ERR_STEAMID";
+
+      const data = (await req.json()).response.players[0];
+      return data.avatarmedium;
+
+    }
+
   }
 
   return "ERR_COMMAND";

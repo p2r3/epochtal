@@ -187,7 +187,9 @@ footer {
 .font-spaced { letter-spacing: 2px }
 .center { text-align: center }
 .justify-center { text-align: justify; text-align-last: center }
+.right { text-align: right; }
 .marginb { margin-bottom: 2.5% }
+.marginb_small { margin-bottom: 10px }
 .marginy { margin-top: 2.5%; margin-bottom: 2.5% }
 .marginx { margin-left: 25%; margin-right: 25% }
 .inline-block { display: inline-block }
@@ -351,6 +353,7 @@ input:checked+.slider:before {
   border-radius: 10px;
   margin: 2% 25%;
   font-size: 0;
+  min-height: 60px;
 }
 
 .votes-image {
@@ -410,12 +413,12 @@ input:checked+.slider:before {
   mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 1) 80%, rgba(0, 0, 0, 0) 100%);
 }
 
-#players-search-icon {
+#players-search-icon, #lobby-search-icon {
   position: absolute;
   padding: 11px 15px;
   pointer-events: none;
 }
-#players-search {
+#players-search, #lobby-search {
   padding: 7px 15px 7px 40px;
   text-align: left;
 }

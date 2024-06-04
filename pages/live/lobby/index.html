@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+  <html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Epochtal Live Lobby</title>
+    <link rel="stylesheet" href="../../style.css">
+    <link rel="stylesheet" href="../style.css">
+  </head>
+  <body>
+    
+    <div id="bg-anim-container">
+      <div id="bg-anim-bg"></div>
+      <canvas id="bg-anim"></canvas>
+      <div id="bg-anim-blur"></div>
+      <script src="../../bg.js"></script>
+    </div>
+    
+    <div id="page-content">
+
+      <header>
+        <div id="header-left">
+          <div class="header-block" onclick="window.location.href = '/'">Epochtal</div>
+        </div>
+
+        <div id="header-right">
+          <div class="header-block" onclick="leaveLobby()">Leave Lobby</div>
+          <div class="header-block" onclick="window.location.href = '/api/auth/login'" id="login-button">Log in</div>
+        </div>
+      </header>
+
+      <div class="section">
+        <h1 class="margin0" id="lobby-name">Lobby</h1>
+        <h3 class="margin0 font-medium font-spaced" id="lobby-mode">...</h3>
+      </div>
+
+      <div id="lobby-players-container">
+        <h2 class="font-spaced">&nbsp;&nbsp;•&nbsp;•&nbsp;•&nbsp;&nbsp;players</h2><br>
+      </div>
+
+      <div id="lobby-settings-container">
+
+        <h2 class="font-spaced">&nbsp;&nbsp;•&nbsp;•&nbsp;•&nbsp;&nbsp;settings</h2><br>
+
+        <div class="center">
+
+          <div class="center" style="width:50%; display: inline-block">
+            <h3 class="marginb_small">Change lobby name</h3>
+            <input type="text" placeholder="New name">
+          </div><div class="center" style="width:50%; display: inline-block">
+            <h3 class="marginb_small">Change password</h3>
+            <input type="password" placeholder="New password">
+          </div>
+
+          <br><br>
+
+          <h3 class="marginb_small">Current map</h3>
+          <div id="lobby-settings-map" class="votes-entry" style="text-align: left; margin: 0 15%">
+            
+          </div>
+          
+          <br><br>
+
+          <button>Save Settings</button>
+
+        </div>
+
+      </div>
+      
+      <footer></footer>
+
+    </div>
+
+    <script src="../lobby.js"></script>
+
+  </body>
+</html>

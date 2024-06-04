@@ -7,12 +7,16 @@ epochtal.file = {
   week: Bun.file(`${__dirname}/pages/week.json`),
   log: `${__dirname}/pages/week.log`,
   portal2: `${__dirname}/defaults/portal2`,
-  demos: `${__dirname}/demos`
+  demos: `${__dirname}/demos`,
+  // Epochtal Live
+  lobbies: Bun.file(`${__dirname}/lobbies.json`)
 };
 epochtal.data = {
   leaderboard: await epochtal.file.leaderboard.json(),
   users: await epochtal.file.users.json(),
-  week: await epochtal.file.week.json()
+  week: await epochtal.file.week.json(),
+  // Epochtal Live
+  lobbies: await epochtal.file.lobbies.json()
 };
 
 const Discord = require("discord.js");

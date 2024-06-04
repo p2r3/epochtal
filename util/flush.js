@@ -13,6 +13,7 @@ module.exports = async function (args, context = epochtal) {
       context.data.leaderboard = await context.file.leaderboard.json();
       context.data.users = await context.file.users.json();
       context.data.week = await context.file.week.json();
+      context.data.lobbies = await context.file.lobbies.json();
 
       return "SUCCESS";
 
@@ -23,6 +24,7 @@ module.exports = async function (args, context = epochtal) {
       await Bun.write(context.file.leaderboard, JSON.stringify(context.data.leaderboard));
       await Bun.write(context.file.users, JSON.stringify(context.data.users));
       await Bun.write(context.file.week, JSON.stringify(context.data.week));
+      await Bun.write(context.file.lobbies, JSON.stringify(context.data.lobbies));
 
       return "SUCCESS";
 
