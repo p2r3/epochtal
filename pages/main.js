@@ -1,86 +1,5 @@
 // Everything is loaded once, at once. Hopefully makes the frontend way snappier to use.
 
-const [POPUP_INFO, POPUP_ERROR, POPUP_WARN] = [0, 1, 2];
-function popupEscapeHandler (event) {
-  if (event.key === "Escape") hidePopup();
-}
-
-const popup = document.querySelector("#global-popup");
-const tooltip = document.querySelector("#global-tooltip");
-
-const popupCloseEvent = new Event("close");
-
-var showPopup = function (title, text, type = POPUP_INFO) {
-
-  const titleElement = document.querySelector("#global-popup-title");
-  const textElement = document.querySelector("#global-popup-text");
-
-  titleElement.innerHTML = title;
-  textElement.innerHTML = text;
-
-  popup.style.opacity = 1;
-  popup.style.pointerEvents = "auto";
-  popup.style.transform = "translate(-50%, -50%)";
-
-  switch (type) {
-    case POPUP_INFO:
-      popup.style.borderColor = "white";
-      break;
-    case POPUP_ERROR:
-      popup.style.borderColor = "red";
-      break;
-    case POPUP_WARN:
-      popup.style.borderColor = "#ff6400";
-      break;
-  
-    default:
-      popup.style.borderColor = "white";
-      break;
-  }
-
-  document.addEventListener("keydown", popupEscapeHandler);
-
-};
-
-var hidePopup = function () {
-
-  popup.style.opacity = 0;
-  popup.style.pointerEvents = "none";
-  popup.style.transform = "translate(-50%, 0)";
-
-  document.removeEventListener("keydown", popupEscapeHandler);
-
-  popup.dispatchEvent(popupCloseEvent);
-
-};
-
-var tooltipVisible = false;
-var showTooltip = function (text) {
-
-  tooltipVisible = true;
-
-  tooltip.innerHTML = text;
-  tooltip.style.opacity = 1;
-
-};
-
-var hideTooltip = function (text) {
-
-  tooltipVisible = false;
-
-  tooltip.style.opacity = 0;
-
-};
-
-window.addEventListener("mousemove", function (event) {
-
-  if (!tooltipVisible) return;
-  
-  const {clientX, clientY} = event;
-  tooltip.style.transform = `translate(${clientX}px, ${clientY}px)`;
-
-});
-
 const pageContent = document.querySelector("#page-content");
 const header = document.querySelector("header");
 
@@ -307,12 +226,9 @@ var homepageInit = async function () {
 
     const run = leaderboard[category].find(curr => curr.steamid === whoami.steamid);
 
-    showPopup("Edit run comment", `<textarea id="edit-note" cols="25" rows="3" placeholder="no comment">${run.note}</textarea>`);
+    showPopup("Edit run comment", `<textarea id="edit-note" cols="25" rows="3" placeholder="no comment">${run.note}</textarea>`, POPUP_INFO, true);
 
-    let submitEditFunction;
-    submitEditFunction = async function () {
-
-      popup.removeEventListener("close", submitEditFunction);
+    popupOnOkay = async function () {
 
       try {
 
@@ -355,8 +271,6 @@ var homepageInit = async function () {
       }
 
     };
-
-    popup.addEventListener("close", submitEditFunction);
 
   };
 

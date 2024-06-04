@@ -70,8 +70,20 @@
       
       <footer></footer>
 
+      <div id="global-popup">
+        <h2 id="global-popup-title">ERR_STYLE</h2>
+        <p id="global-popup-text">You should not be seeing this.</p>
+        <div style="font-size:0;">
+          <button id="global-popup-cancel" onclick="popupOnCancel()">Cancel</button>
+          <button id="global-popup-ok" onclick="popupOnOkay()">OK</button>
+        </div>
+      </div>
+      
+      <div id="global-tooltip"></div>
+
     </div>
 
+    <script src="../../tools.js"></script>
     <script src="../lobby.js"></script>
 
   </body>

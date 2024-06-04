@@ -1,83 +1,3 @@
-const [POPUP_INFO, POPUP_ERROR, POPUP_WARN] = [0, 1, 2];
-function popupEscapeHandler (event) {
-  if (event.key === "Escape") hidePopup();
-}
-
-const popup = document.querySelector("#global-popup");
-const tooltip = document.querySelector("#global-tooltip");
-
-var showPopup = function (title, text, type = POPUP_INFO) {
-
-  const titleElement = document.querySelector("#global-popup-title");
-  const textElement = document.querySelector("#global-popup-text");
-
-  titleElement.innerHTML = title;
-  textElement.innerHTML = text;
-
-  popup.style.opacity = 1;
-  popup.style.pointerEvents = "auto";
-  popup.style.transform = "translate(-50%, -50%)";
-
-  switch (type) {
-    case POPUP_INFO:
-      popup.style.borderColor = "white";
-      break;
-    case POPUP_ERROR:
-      popup.style.borderColor = "red";
-      break;
-    case POPUP_WARN:
-      popup.style.borderColor = "#ff6400";
-      break;
-  
-    default:
-      popup.style.borderColor = "white";
-      break;
-  }
-
-  document.addEventListener("keydown", popupEscapeHandler);
-
-};
-
-var popupOkay = hidePopup;
-var hidePopup = function () {
-
-  popup.style.opacity = 0;
-  popup.style.pointerEvents = "none";
-  popup.style.transform = "translate(-50%, 0)";
-
-  document.removeEventListener("keydown", popupEscapeHandler);
-
-  popupOkay = hidePopup;
-
-};
-
-var tooltipVisible = false;
-var showTooltip = function (text) {
-
-  tooltipVisible = true;
-
-  tooltip.innerHTML = text;
-  tooltip.style.opacity = 1;
-
-};
-
-var hideTooltip = function (text) {
-
-  tooltipVisible = false;
-
-  tooltip.style.opacity = 0;
-
-};
-
-window.addEventListener("mousemove", function (event) {
-
-  if (!tooltipVisible) return;
-  
-  const {clientX, clientY} = event;
-  tooltip.style.transform = `translate(${clientX}px, ${clientY}px)`;
-
-});
-
 var lobbyListInit = async function () {
   
   const whoami = await (await fetch("/api/users/whoami")).json();
@@ -210,9 +130,9 @@ function createLobbyPopup () {
     <input id="new-lobby-name" type="text" placeholder="Lobby name" spellcheck="false" style="margin-top:5px"></input><br><br>
     Password (leave blank for none)<br>
     <input id="new-lobby-password" type="password" placeholder="Password" spellcheck="false" style="margin-top:5px"></input>
-  `);
+  `, POPUP_INFO, true);
   
-  popupOkay = async function () {
+  popupOnOkay = async function () {
     
     hidePopup();
     
@@ -279,9 +199,9 @@ async function joinLobby (name) {
   showPopup("Join this Lobby", `
     Password required<br>
     <input id="join-lobby-password" type="password" placeholder="Password" spellcheck="false" style="margin-top:5px"></input>
-  `);
+  `, POPUP_INFO, true);
 
-  popupOkay = async function () {
+  popupOnOkay = async function () {
     
     hidePopup();
     

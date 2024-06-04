@@ -6,7 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="../style.css">
     <link rel="stylesheet" href="style.css">
-    <script src="../tools.js"></script>
     <script src="https://kit.fontawesome.com/fc2642e2d1.js" crossorigin="anonymous"></script>
     <title>Epochtal Live</title>
   </head>
@@ -44,17 +43,22 @@
 
       </div>
 
+      <footer></footer>
+
       <div id="global-popup">
         <h2 id="global-popup-title">ERR_STYLE</h2>
         <p id="global-popup-text">You should not be seeing this.</p>
-        <button onclick="hidePopup()">Cancel</button>&nbsp;&nbsp;
-        <button onclick="popupOkay()">OK</button>
+        <div style="font-size:0;">
+          <button id="global-popup-cancel" onclick="popupOnCancel()">Cancel</button>
+          <button id="global-popup-ok" onclick="popupOnOkay()">OK</button>
+        </div>
       </div>
       
       <div id="global-tooltip"></div>
 
     </div>
 
+    <script src="../tools.js"></script>
     <script src="main.js"></script>
 
   </body>

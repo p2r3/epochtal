@@ -45,7 +45,8 @@ module.exports = async function (args, context = epochtal) {
         mode: "ffa"
       };
       lobbies.data[cleanName] = {
-        password: password ? hashedPassword : false
+        password: password ? hashedPassword : false,
+        map: null
       };
       if (file) Bun.write(file, JSON.stringify(lobbies));
       
