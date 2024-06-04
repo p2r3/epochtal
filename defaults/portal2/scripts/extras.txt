@@ -1,0 +1,24 @@
+"Extras"
+{
+  "main"
+  {
+    "title"         "Inbounds CM"
+    "subtitle"      "The “main” tournament category."
+    "command"       "sv_portal_placement_never_fail 0;sv_cheats 0;sar_lphud 0;exec epochtal_map"
+    "pic"           "vgui/chapters/chapter3"
+  }
+  "lp"
+  {
+    "title"         "Least Portals"
+    "subtitle"      "Lower portal count places higher."
+    "command"       "sv_portal_placement_never_fail 0;sv_cheats 0;sar_lphud 1;exec epochtal_map"
+    "pic"           "vgui/chapters/chapter5"
+  }
+  "ppnf"
+  {
+    "title"         "Portal Placement Never Fail"
+    "subtitle"      "Place portals anywhere, even OOB."
+    "command"       "sv_cheats 1;sv_portal_placement_never_fail 1;exec epochtal_map"
+    "pic"           "vgui/chapters/chapter6"
+  }
+}

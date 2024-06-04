@@ -21,4 +21,5 @@ con_drawnotify 0
 
 sar_alias do_reset restart_level
 
-exec epochtal_map
+# exec epochtal_map
+startupmenu
