@@ -15,6 +15,10 @@ epochtal.data = {
   leaderboard: await epochtal.file.leaderboard.json(),
   users: await epochtal.file.users.json(),
   week: await epochtal.file.week.json(),
+  discord: {
+    announce: "1063171316875788338",
+    report: "1059311594116497509"
+  },
   // Epochtal Live
   lobbies: await epochtal.file.lobbies.json()
 };
@@ -121,7 +125,7 @@ const fetchHandler = async function (req) {
 
   }
 
-  let pathDecoded = decodeURIComponent(url.pathname);
+  let pathDecoded = decodeURIComponent(url.pathname.split("#")[0]);
   if (pathDecoded.endsWith("/")) pathDecoded += "index.html";
 
   // Detects probable path traversal attempts, better safe than sorry

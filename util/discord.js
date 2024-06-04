@@ -2,11 +2,6 @@ const UtilError = require("./error.js");
 
 const keys = require("../../keys.js");
 
-const channels = {
-  announce: "1063171316875788338",
-  report: "1059311594116497509"
-};
-
 module.exports = async function (args, context = epochtal) {
 
   const command = args[0];
@@ -16,12 +11,12 @@ module.exports = async function (args, context = epochtal) {
 
     case "announce":
 
-      discordClient.channels.cache.get(channels.announce).send(message);
+      discordClient.channels.cache.get(context.data.discord.announce).send(message);
       return "SUCCESS";
 
     case "report":
       
-      discordClient.channels.cache.get(channels.report).send(message)
+      discordClient.channels.cache.get(context.data.discord.report).send(message)
       return "SUCCESS";
   
   }
