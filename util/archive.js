@@ -1,4 +1,5 @@
 const UtilError = require("./error.js");
+const UtilPrint = require("../util/print.js");
 
 const fs = require("node:fs");
 const { $ } = require("bun");
@@ -96,9 +97,23 @@ module.exports = async function (args, context = epochtal) {
 
       if (name && (name.includes("..") || name.includes("/"))) throw new UtilError("ERR_NAME", args, context);
       
-      const archivePath = `${__dirname}/../pages/archive/${name || ("week" + context.data.week.number)}`;
+      let archivePath = `${__dirname}/../pages/archive/${name || ("week" + context.data.week.number)}`;
+      const force = !!args[2];
 
-      if (fs.existsSync(archivePath)) throw new UtilError("ERR_EXISTS", args, context);
+      if (force) {
+        const originalPath = archivePath;
+        for (let i = 1; i < 32; i ++) {
+          archivePath = originalPath + "_" + i;
+          if (!fs.existsSync(archivePath)) break;
+        }
+        if (archivePath !== originalPath) {
+          UtilPrint(`Warning: Forcing archive creation under new path "${archivePath}"`, context);
+        }
+      }
+      
+      if (fs.existsSync(archivePath)) {
+        throw new UtilError("ERR_EXISTS", args, context);
+      }
       fs.mkdirSync(archivePath);
 
       await Bun.write(`${archivePath}/leaderboard.json`, context.file.leaderboard);

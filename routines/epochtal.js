@@ -30,7 +30,7 @@ async function concludeWeek (context) {
 async function releaseMap (context) {
 
   UtilPrint("epochtal(releaseMap): Creating archive...");
-  await archive(["create"], context);
+  await archive(["create", null, true], context);
 
   // Curate a week's worth of workshop maps, pick 5 for voting
   const VOTING_MAPS_COUNT = 5;
