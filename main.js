@@ -134,7 +134,16 @@ const fetchHandler = async function (req) {
     return Response("404!", { status: 404 });
   }
 
-  const file = Bun.file("pages" + pathDecoded);
+  let outputFilePath = "pages" + pathDecoded;
+
+  if (!fs.existsSync(outputFilePath)) {
+    return Response("404!", { status: 404 });
+  }
+  if (fs.lstatSync(outputFilePath).isDirectory()) {
+    outputFilePath += "/index.html";
+  }
+
+  const file = Bun.file(outputFilePath);
 
   if (file.size === 0) {
     return Response("404!", { status: 404 });
