@@ -216,33 +216,18 @@
 
       });
 
-      var lastPrintTimestamp = (new Date()).toUTCString();
-      async function readPrint () {
+      const utilPrintEvent = new EventSource("/api/events/subscribe/utilPrint");
+
+      utilPrintEvent.onmessage = function (event) {
         
-        const timestamp = encodeURIComponent(lastPrintTimestamp);
-        const printText = await (await fetch(`/util/readprint/${timestamp}`)).json();
-
-        setTimeout(readPrint, 200);
+        const text = JSON.parse(event.data).replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll("  ", " &nbsp;");
+        const lines = text.split("\n");
         
-        if (!printText) return;
-        lastPrintTimestamp = (new Date()).toUTCString();
+        lines[0] = `<span class=\"grayed\">${lines[0]}</span>`;
+        
+        output.innerHTML += lines.join("<br>");
 
-        const lines = printText.split("\n");
-        for (let i = 0; i < lines.length; i ++) {
-          
-          const curr = lines[i].replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll("\n", "<br>").replaceAll("  ", " &nbsp;");
-
-          if (curr.startsWith("[") && curr.endsWith("]")) {
-            output.innerHTML += `<span class=\"grayed\">${curr}</span><br>`;
-          } else {
-            output.innerHTML += `${curr}<br>`;
-          }
-          
-        }
-
-
-      }
-      readPrint();
+      };
 
     </script>
 

@@ -1,4 +1,5 @@
 const { appendFileSync } = require("node:fs");
+const events = require("./events.js");
 
 module.exports = class UtilError extends Error {
 
@@ -19,8 +20,11 @@ module.exports = class UtilError extends Error {
     if (stack) this.stack = stack;
 
     const str = `[${(new Date()).toUTCString()} UTC+0]\n${this.toString()}\n`;
+    
     console.error(str);
     appendFileSync(__dirname + "/../util.error", str);
+    events(["send", "utilError", str]);
+
 
   }
 

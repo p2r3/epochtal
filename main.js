@@ -20,7 +20,8 @@ epochtal.data = {
     report: "1059311594116497509"
   },
   // Epochtal Live
-  lobbies: await epochtal.file.lobbies.json()
+  lobbies: await epochtal.file.lobbies.json(),
+  events: {}
 };
 
 const Discord = require("discord.js");
@@ -152,3 +153,12 @@ console.log(`Listening on http://localhost:${server.port}...`);
 
 utils.routine(["schedule", "epochtal", "concludeWeek", "0 0 10 * * *"]);
 utils.routine(["schedule", "epochtal", "releaseMap", "0 0 12 * * *"]);
+
+const adminCheck = async function (request) {
+  const user = await apis.users(["whoami"], request);
+  if (!user) return false;
+  return !!user.epochtal.admin;
+};
+
+utils.events(["create", "utilError", adminCheck]);
+utils.events(["create", "utilPrint", adminCheck]);

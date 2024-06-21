@@ -1,4 +1,5 @@
 const { appendFileSync } = require("node:fs");
+const events = require("./events.js");
 
 module.exports = function UtilPrint (message, context = epochtal) {
 
@@ -8,7 +9,6 @@ module.exports = function UtilPrint (message, context = epochtal) {
 
   console.log(str);
   appendFileSync(__dirname + "/../util.print", str);
-
-  // return str;
+  events(["send", "utilPrint", str]);
 
 };
