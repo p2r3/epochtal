@@ -4,7 +4,27 @@ IncludeScript("ppmod4");
 // Sets ::epochtal_map to a(n array of) map path(s)
 IncludeScript("epochtal_map");
 
-ppmod.onauto(function () {
+// Set up some very early co-op prerequisites
+local auto = Entities.CreateByClassname("logic_auto");
+auto.AddScript("OnMapSpawn", function () {
+
+  if (!IsMultiplayer()) return;
+
+  // SendToConsole now only works on single player
+  // The workaround for this is in main.js
+  ::SendToConsole <- function (str) {
+    printl("[SendToConsole] " + str);
+  };
+
+  local playerStart = ppmod.get("info_player_start");
+  
+  // Before blue spawns, move the spawner away from the teleport trigger
+  ::playerStartPos <- playerStart.GetOrigin();
+  playerStart.SetOrigin(::playerStartPos - Vector(0, 0, 128));
+
+});
+
+ppmod.onauto(async(function () {
 
   try {
     IncludeScript("epochtalmapmod");
@@ -18,8 +38,65 @@ ppmod.onauto(function () {
   local index = pparray(epochtal_map).find(GetMapName());
 
   if (index == -1) {
-    SendToConsole("map " + epochtal_map[0]);
+    SendToConsole("changelevel " + epochtal_map[0]);
     throw "Not on tournament map!";
+  }
+
+  // Sets up co-op player spawns
+  if (IsMultiplayer()) {
+
+    // Control-flow blocking code is used carelessly here
+    // That's fine though, you can't save in co-op anyway
+
+    local blue = ppmod.get("blue");
+    local red = ppmod.get("red");
+
+    // On local games, ppmod.onauto runs without waiting for blue to re-teleport
+    yield ppromise(function (resolve, reject) {
+      if (!IsLocalSplitScreen()) return resolve();
+      ppmod.wait(resolve, 1.5);
+    });
+
+    // Put blue inside of the teleport trigger
+    blue.SetOrigin(::playerStartPos);
+    red.moveType = 0;
+
+    // Wait a bit for blue to teleport to the start of the map
+    yield ppromise(function (resolve, reject):(blue) {
+      ppmod.wait(function ():(blue, resolve) {
+        ::playerStartPos = blue.GetOrigin();
+        ::playerStartFvec <- blue.GetForwardVector();
+        resolve();
+      }, FrameTime() * 4); // ... kinda arbitrary
+    });
+
+    // Wait for blue to make room for orange
+    local ref = { interval = null };
+    ref.interval = ppmod.interval(function ():(blue, red, ref) {
+
+      local bluepos = blue.GetOrigin();
+      if ((bluepos - ::playerStartPos).Length2DSqr() <= 1024.0) return;
+      ref.interval.Destroy();
+
+      // Spawn in orange! Setup complete
+      ::playerStartPos.z = bluepos.z;
+      red.SetOrigin(::playerStartPos);
+      red.SetForwardVector(::playerStartFvec);
+      red.moveType = 2;
+
+    });
+
+    // Ensure that doors never close behind players
+    ppmod.getall(["prop_testchamber_door"], function (ent) {
+      ppmod.addoutput(ent, "OnFullyClosed", ent, "Open");
+      ppmod.fire([ent.GetOrigin(), 32.0, "func_brush"], "Kill");
+    });
+    
+    ppmod.hook("linked_portal_door", "Close", function () { return false });
+    ppmod.hook("linked_portal_door", "close", function () { return false });
+
+    SendToConsole("r_portalsopenall 1");
+
   }
 
   // Prepares the game for a series of consecutive maps
@@ -60,7 +137,7 @@ ppmod.onauto(function () {
   // Wait until the player is in the map to set up the splits system
   ppmod.wait(function () {
 
-    local player = ppmod.get("player");
+    local player = IsMultiplayer() ? ppmod.get("blue") : GetPlayer();
     local startPos = player.GetOrigin();
     
     // PeTI and BEEMod maps have world portals at the entrance
@@ -110,7 +187,7 @@ ppmod.onauto(function () {
 
     // If the map starts with a world portal, move the door in the elevator room down the list
     // Otherwise, the entrance door gets treated as being very far from the start
-    if (wPartner.IsValid()) {
+    if (wPartner) if (wPartner.IsValid()) {
 
       // Remove the duplicate door
       targets[0].array.remove(0);
@@ -139,4 +216,4 @@ ppmod.onauto(function () {
 
   }, 0.2);
 
-});
+}));
