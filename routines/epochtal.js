@@ -1,3 +1,4 @@
+const { $ } = require("bun");
 const fs = require("node:fs");
 const UtilPrint = require("../util/print.js");
 const tmppath = require("../util/tmppath.js");
@@ -7,6 +8,8 @@ const spplice = require("../util/spplice.js");
 const workshopper = require("../util/workshopper.js");
 const flush = require("../util/flush.js");
 const discord = require("../util/discord.js");
+const demo = require("../util/demo.js");
+const testcvar = require("../util/testcvar.js");
 
 async function concludeWeek (context) {
 
@@ -20,6 +23,22 @@ async function concludeWeek (context) {
   }
 
   await discord(["announce", "The leaderboard has been locked."], context);
+
+  const { summary, timescales } = await summarizeDemoEvents(context);
+
+  let textSummary = "## [ Demo event summary ]\n";
+  for (let i = 0; i < summary.length; i ++) {
+    textSummary += `\`${summary[i].cvar}\` in ${summary.count} demo${summary.count === 1 ? "" : "s"}: \`\`\`json\n${JSON.stringify(summary[i].demos)}\`\`\`\n`;
+  }
+  if (summary.length === 0) textSummary += "*All demos clean, nothing to report.*";
+
+  let textTimescales = "## [ Demo timescale summary ]\n";
+  for (let i = 0; i < timescales.length; i ++) {
+    textTimescales += `\`${timescales[i].average.toFixed(5)}\` average in \`${timescales[i].demo}\`:\`\`\`json\n${JSON.stringify(timescales[i].array)}\`\`\`\n`;
+  }
+  if (timescales.length === 0) textTimescales += "*All demos clean, nothing to report.*";
+
+  await discord(["report", `${textSummary}${textTimescales}`], context);
 
   await Bun.write(context.file.week, JSON.stringify(week));
 
@@ -229,8 +248,107 @@ async function rebuildMap (context) {
 
 }
 
+const [VERDICT_SAFE, VERDICT_UNSURE, VERDICT_ILLEGAL] = [0, 1, 2];
+async function summarizeDemoEvents (context) {
+
+  const summary = {}, timescales = {};
+  const files = fs.readdirSync(context.file.demos);
+
+  for (let i = 0; i < files.length; i ++) {
+
+    if (!files[i].endsWith(".dem.xz")) continue;
+
+    const xzFile = `${context.file.demos}/${files[i]}`;
+    await $`xz -dk ${xzFile}`.quiet();
+
+    const file = `${context.file.demos}/${files[i].slice(0, -3)}`;
+    const mdp = await demo(["mdp", file]);
+
+    fs.unlinkSync(file);
+
+    const fileNoExtension = files[i].slice(0, -7);
+
+    for (const event of mdp.demos[0].events) {
+      
+      if (event.type === "timescale") {
+
+        if (!(fileNoExtension in timescales)) {
+          timescales[fileNoExtension] = { average: 0, array: [] };
+        }
+
+        const scale = Number(event.value);
+        timescales[fileNoExtension].array.push(scale);
+        timescales[fileNoExtension].average += scale;
+
+        continue;
+
+      }
+
+      if (event.type !== "cvar" && event.type !== "cmd") continue;
+
+      const cvar = event.type === "cvar" ? event.val.cvar : event.value.split(" ")[0];
+      const value = event.type === "cvar" ? event.val.val : event.value.split(" ").slice(1).join(" ");
+
+      const verdict = await testcvar([cvar, value], context);
+      
+      if (verdict !== VERDICT_SAFE) {
+
+        if (cvar === "sv_portal_placement_never_fail" && files[i].endsWith("_ppnf.dem.xz")) {
+          continue;
+        }
+
+        if (!(cvar in summary)) summary[cvar] = {
+          count: 0,
+          demos: []
+        };
+
+        summary[cvar].count ++;
+        if (!summary[cvar].demos.includes(fileNoExtension)) {
+          summary[cvar].demos.push(fileNoExtension);
+        }
+
+      }
+
+    }
+
+    if (fileNoExtension in timescales) {
+      const unscaledTicks = mdp.demos[0].ticks - timescales[fileNoExtension].array.length;
+      timescales[fileNoExtension].average += unscaledTicks;
+      timescales[fileNoExtension].average /= mdp.demos[0].ticks;
+    }
+
+  }
+
+  const sortedSummary = [];
+  for (const cvar in summary) {
+    summary[cvar].cvar = cvar;
+    sortedSummary.push(summary[cvar]);
+  }
+
+  sortedSummary.sort(function (a, b) {
+    return a.count - b.count;
+  });
+
+  const sortedTimescales = [];
+  for (const demo in timescales) {
+    timescales[demo].demo = demo;
+    sortedTimescales.push(timescales[demo]);
+  }
+
+  sortedTimescales.sort(function (a, b) {
+    return Math.abs(1.0 - b.average) - Math.abs(1.0 - a.average);
+  });
+
+  return {
+    summary: sortedSummary,
+    timescales: sortedTimescales
+  }
+
+}
+
 module.exports = {
   releaseMap,
   rebuildMap,
-  concludeWeek
+  concludeWeek,
+  summarizeDemoEvents
 };

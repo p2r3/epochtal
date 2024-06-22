@@ -4,6 +4,7 @@ const { $ } = require("bun");
 const fs = require("node:fs");
 const tmppath = require("./tmppath.js");
 const discord = require("./discord.js");
+const testcvar = require("./testcvar.js");
 
 async function parseDump (file) {
 
@@ -30,6 +31,8 @@ async function parseMDP (file) {
   return JSON.parse(await $`cd ${`${__dirname}/../bin/mdp-json`} && ./mdp ${file}`.text());
 
 }
+
+const [VERDICT_SAFE, VERDICT_UNSURE, VERDICT_ILLEGAL] = [0, 1, 2];
 
 module.exports = async function (args, context = epochtal) {
 
@@ -83,6 +86,13 @@ module.exports = async function (args, context = epochtal) {
 
       const mdp = await parseMDP(file);
 
+      if (Math.abs(mdp.demos[0].tps - 60.00) > 0.01) {
+        return `Tickrate mismatch. Expected 60.00, got ${mdp.tps.toFixed(2)}.`;
+      }
+
+      let ppnf = false;
+      let timescale = [], timescaleTotal = 0;
+
       for (const event of mdp.demos[0].events) {
 
         if (event.type === "timestamp") {
@@ -98,7 +108,7 @@ module.exports = async function (args, context = epochtal) {
             path.startsWith("./portal2_tempcontent/") ||
             path.startsWith("./update/")
           ) {
-            return `Crucial file \`${event.value.path}\` has mismatched checksum \`${event.value.sum}\`.`;
+            return `Significant file \`${event.value.path}\` has mismatched checksum \`${event.value.sum}\`.`;
           }
           continue;
         }
@@ -110,10 +120,35 @@ module.exports = async function (args, context = epochtal) {
           return `Demo checksum mismatch.`;
         }
 
-      }
-      
-      if (Math.abs(mdp.tps - 60.00) > 0.01) return `Tickrate mismatch. Expected 60.00, got ${mdp.tps.toFixed(2)}.`;
+        if (event.type === "cvar") {
+          if (event.val.cvar === "host_map") {
+            const expected = context.data.week.map.file + ".bsp";
+            if (event.val.val !== expected) {
+              return `Host map path incorrect. Expected \`${expected}\`, got \`${event.val.val}\`.`;
+            }
+          }
+        }
 
+        if (event.type === "cvar" || event.type === "cmd") {
+
+          const cvar = event.type === "cvar" ? event.val.cvar : event.value.split(" ")[0];
+          const value = event.type === "cvar" ? event.val.val : event.value.split(" ").slice(1).join(" ");
+        
+          const verdict = await testcvar([cvar, value], context);
+          
+          if (verdict === VERDICT_ILLEGAL) {
+            if (cvar.trim().toLowerCase() === "sv_portal_placement_never_fail") {
+              ppnf = true;
+              continue;
+            }
+            return `Illegal command: \`${cvar}${value !== "" ? " " + value : ""}\``;
+          }
+          
+        }
+
+      }
+
+      if (ppnf) return "PPNF";
       return "VALID";
 
     }

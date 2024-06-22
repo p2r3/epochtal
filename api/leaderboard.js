@@ -47,14 +47,16 @@ module.exports = async function (args, request) {
 
       await Bun.write(path, fileBlob);
 
-      const verdict = await demo(["verify", path]);
-      if (verdict !== "VALID") {
-        fs.rmSync(path);
-
-        const reportText = `${user.username}'s run was rejected. ${verdict}\nSteam ID: ${user.steamid}`;
-        await discord(["report", reportText]);
-
-        return "ERR_ILLEGAL";
+      if (categoryData.points || category === "ppnf") {
+        const verdict = await demo(["verify", path]);
+        if (verdict !== "VALID" && !(verdict === "PPNF" && category === "ppnf")) {
+          fs.rmSync(path);
+  
+          const reportText = `${user.username}'s run was rejected. ${verdict}\nSteam ID: \`${user.steamid}\``;
+          await discord(["report", reportText]);
+  
+          return "ERR_ILLEGAL";
+        }
       }
 
       const data = await demo(["parse", path]);
