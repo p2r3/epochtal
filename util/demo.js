@@ -105,8 +105,8 @@ module.exports = async function (args, context = epochtal) {
         if (event.type === "file") {
           const path = event.value.path;
           if (
-            path.startsWith("./portal2_tempcontent/") ||
-            path.startsWith("./update/")
+            path.includes("/common/Portal 2/portal2_tempcontent/") ||
+            path.includes("/common/Portal 2/update/")
           ) {
             return `Significant file \`${event.value.path}\` has mismatched checksum \`${event.value.sum}\`.`;
           }
