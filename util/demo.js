@@ -6,7 +6,17 @@ const tmppath = require("./tmppath.js");
 const discord = require("./discord.js");
 const testcvar = require("./testcvar.js");
 
+async function decompressXZ (file) {
+
+  await $`xz -dkf ${file}`.quiet();
+  return file.slice(0, -3);
+
+}
+
 async function parseDump (file) {
+
+  const originalFile = file;
+  if (file.endsWith(".dem.xz")) file = await decompressXZ(file);
 
   const outputPath = await tmppath();
   fs.mkdirSync(outputPath);
@@ -16,6 +26,7 @@ async function parseDump (file) {
   const dump = await Bun.file(`${outputPath}/${outputFile}`).text();
 
   fs.rmSync(outputPath, { recursive: true });
+  if (originalFile !== file) fs.unlinkSync(file);
 
   // i dont really wanna do this yet
 
@@ -28,7 +39,13 @@ async function parseDump (file) {
 
 async function parseMDP (file) {
 
-  return JSON.parse(await $`cd ${`${__dirname}/../bin/mdp-json`} && ./mdp ${file}`.text());
+  const originalFile = file;
+  if (file.endsWith(".dem.xz")) file = await decompressXZ(file);
+
+  const output = JSON.parse(await $`cd ${`${__dirname}/../bin/mdp-json`} && ./mdp ${file}`.text());
+  if (originalFile !== file) fs.unlinkSync(file);
+
+  return output;
 
 }
 
