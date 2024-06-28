@@ -127,7 +127,7 @@ var homepageInit = async function () {
         } catch (e) { } // Too bad ¯\_(ツ)_/¯
       }
 
-      const portalCount = "portals" in run ? `, ${run.portals} portal${run.portals === 1 ? "" : "s"}` : "";
+      const portalCount = ("portals" in run && categoryData.portals) ? `, ${run.portals} portal${run.portals === 1 ? "" : "s"}` : "";
 
       const suffix = placement < 4 ? suffixes[placement - 1] : "th";
 
@@ -471,6 +471,28 @@ var homepageInit = async function () {
     submitButton.style.pointerEvents = "auto";
 
   }
+
+  pageContent.ondragover = function (e) {
+    e.preventDefault();
+  };
+
+  pageContent.ondrop = function (e) {
+    e.preventDefault();
+
+    const items = e.dataTransfer.items;
+
+    if (items[0].kind !== "file") return;
+    const file = items[0].getAsFile();
+    
+    if (!file.name.endsWith(".dem")) return;
+    demoFile = file;
+    
+    linkInfo.style.display = "none";
+    linkContainer.style.display = "none";
+
+    demoButton.innerHTML = demoFile.name;
+
+  };
 
   const votesContainer = document.querySelector("#votes-container");
   let votesOutput = "";
