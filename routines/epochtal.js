@@ -10,6 +10,7 @@ const flush = require("../util/flush.js");
 const discord = require("../util/discord.js");
 const demo = require("../util/demo.js");
 const testcvar = require("../util/testcvar.js");
+const categories = require("../util/categories.js");
 
 async function concludeWeek (context) {
 
@@ -38,7 +39,7 @@ async function concludeWeek (context) {
   }
   if (timescales.length === 0) textTimescales += "*All demos clean, nothing to report.*";
 
-  await discord(["report", `${textSummary}${textTimescales}`], context);
+  await discord(["report", `${textSummary}\n${textTimescales}`], context);
 
   await Bun.write(context.file.week, JSON.stringify(week));
 
@@ -258,8 +259,13 @@ async function summarizeDemoEvents (context) {
 
     if (!files[i].endsWith(".dem.xz")) continue;
 
+    const category = files[i].split("_")[1].split(".")[0];
+    const categoryData = await categories(["get", category]);
+
+    if (!categoryData.points && category !== "ppnf") continue;
+
     const xzFile = `${context.file.demos}/${files[i]}`;
-    await $`xz -dk ${xzFile}`.quiet();
+    await $`xz -dkf ${xzFile}`.quiet();
 
     const file = `${context.file.demos}/${files[i].slice(0, -3)}`;
     const mdp = await demo(["mdp", file]);
