@@ -71,7 +71,7 @@ function encodeLogEntry (entry, categoryList) {
     buffer[i] = Number(steamid % (256n ** BigInt(8 - i)) / (256n ** BigInt(7 - i)));
   }
 
-  buffer[8] = categoryList.findIndex(curr => curr.name === entry.category);
+  buffer[8] = categoryList.indexOf(entry.category);
 
   for (let i = 0; i < 4; i ++) {
     buffer[9 + i] = entry.time % (256 ** (4 - i)) / (256 ** (3 - i));
