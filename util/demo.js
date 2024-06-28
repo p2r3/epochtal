@@ -42,7 +42,8 @@ async function parseMDP (file) {
   const originalFile = file;
   if (file.endsWith(".dem.xz")) file = await decompressXZ(file);
 
-  const output = JSON.parse(await $`cd ${`${__dirname}/../bin/mdp-json`} && ./mdp ${file}`.text());
+  const text = (await $`cd ${`${__dirname}/../bin/mdp-json`} && ./mdp ${file}`.text()).replaceAll("\\", "\\\\");
+  const output = JSON.parse(text);
   if (originalFile !== file) fs.unlinkSync(file);
 
   return output;
