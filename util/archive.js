@@ -55,8 +55,17 @@ module.exports = async function (args, context = epochtal) {
 
     case "list": {
 
-      return fs.readdirSync(`${__dirname}/../pages/archive`);
-      
+      const getWeekNumber = function (str) {
+        let match = str.match(/\d+/);
+        return match ? parseInt(match[0], 10) : null;
+      };
+
+      const list = fs.readdirSync(`${__dirname}/../pages/archive`);
+      list.sort(function (a, b) {
+        return getWeekNumber(b) - getWeekNumber(a);
+      });
+      return list;
+
     }
 
     case "get": {
@@ -100,7 +109,7 @@ module.exports = async function (args, context = epochtal) {
       let archivePath = `${__dirname}/../pages/archive/${name || ("week" + context.data.week.number)}`;
       const force = !!args[2];
 
-      if (force) {
+      if (force && fs.existsSync(archivePath)) {
         const originalPath = archivePath;
         for (let i = 1; i < 32; i ++) {
           archivePath = originalPath + "_" + i;
