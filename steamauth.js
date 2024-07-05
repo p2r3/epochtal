@@ -1,7 +1,10 @@
-// Require Dependencies
-const openid = require("openid");
+const openid = require("openid"); // OpenID is used together with Steam for authentication
 
-// Main Class
+/**
+ * Class that handles authentication through Steam.
+ *
+ * @see https://steamcommunity.com/dev
+ */
 class SteamAuth {
   constructor({ realm, returnUrl, apiKey }) {
     if (!realm || !returnUrl || !apiKey)
@@ -9,8 +12,10 @@ class SteamAuth {
         "Missing realm, returnURL or apiKey parameter(s). These are required."
       );
 
+    // These two attributes seem to never be used. Should they be removed?
     this.realm = realm;
     this.returnUrl = returnUrl;
+
     this.apiKey = apiKey;
     this.relyingParty = new openid.RelyingParty(
       returnUrl,
@@ -21,7 +26,13 @@ class SteamAuth {
     );
   }
 
-  // Get redirect url for Steam
+  /**
+   * Gets the redirect URL for Steam.
+   *
+   * The promise gets rejected if the authentication fails.
+   *
+   * @returns {Promise<unknown>} The Steam redirect URL
+   */
   async getRedirectUrl() {
     return new Promise((resolve, reject) => {
       this.relyingParty.authenticate(
@@ -37,16 +48,33 @@ class SteamAuth {
     });
   }
 
-  // Fetch user
+  /**
+   * Fetches Steam user data.
+   *
+   * The promise gets rejected if there are no users with the given SteamID or if Steam returns any other errors. If the
+   * latter is the case, the error will also be passed along as part of the rejection.
+   *
+   * @param steamOpenId The user's 64-bit SteamID in full format (<code>https://steamcommunity.com/openid/id/&lt;steamid></code>)
+   * @returns {Promise<unknown>} The following user data:
+   * - <code>_json</code>: All gathered information
+   * - <code>steamid</code>: The user's SteamID
+   * - <code>username</code>: The Steam username
+   * - <code>name</code>: The real name of the user
+   * - <code>profile</code>: The Steam profile URL
+   * - <code>avatar</code>: An array containing the URLs of the user's avatar, in different sizes
+   *
+   * @see https://developer.valvesoftware.com/wiki/Steam_Web_API#GetPlayerSummaries_.28v0002.29
+   */
   async fetchIdentifier(steamOpenId) {
     return new Promise(async (resolve, reject) => {
-      // Parse steamid from the url
+      // Parse SteamID from the URL
       const steamId = steamOpenId.replace(
         "https://steamcommunity.com/openid/id/",
         ""
       );
 
       try {
+        // Query the Steam API with the SteamID
         const response = { data: await (await fetch(
           `https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=${this.apiKey}&steamids=${steamId}`
         )).json() };
@@ -81,7 +109,14 @@ class SteamAuth {
     });
   }
 
-  // Authenticate user
+  /**
+   * Authenticates the user.
+   *
+   * The promise gets rejected if the user does not authenticate properly or if the claimed identity is invalid.
+   *
+   * @param req The request to verify
+   * @returns {Promise<unknown>} The authenticated user and all relevant user data
+   */
   async authenticate(req) {
     return new Promise((resolve, reject) => {
       // Verify assertion
@@ -89,6 +124,8 @@ class SteamAuth {
         if (error) return reject(error.message);
         if (!result || !result.authenticated)
           return reject("Failed to authenticate user.");
+
+        // Check if the claimed identity is valid
         if (
           !/^https?:\/\/steamcommunity\.com\/openid\/id\/\d+$/.test(
             result.claimedIdentifier
@@ -96,6 +133,7 @@ class SteamAuth {
         )
           return reject("Claimed identity is not valid.");
 
+        // Try to get the user data
         try {
           const user = await this.fetchIdentifier(result.claimedIdentifier);
           return resolve(user);
