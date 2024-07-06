@@ -533,6 +533,8 @@ var homepageInit = async function () {
 
     demoButton.innerHTML = demoFile.name;
 
+    smoothScroll('#submit');
+
   };
 
   const votesContainer = document.querySelector("#votes-container");
