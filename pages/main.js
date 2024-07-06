@@ -210,6 +210,8 @@ var homepageInit = async function () {
     
     }
 
+    updateActiveMap();
+    updateCategorySelect();
     displayLeaderboard("main");
   
   };
