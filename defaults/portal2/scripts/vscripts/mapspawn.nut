@@ -94,8 +94,32 @@ ppmod.onauto(async(function () {
     
     ppmod.hook("linked_portal_door", "Close", function () { return false });
     ppmod.hook("linked_portal_door", "close", function () { return false });
+    ppmod.hook("func_areaportal", "Close", function () { return false });
+    ppmod.hook("func_areaportal", "close", function () { return false });
 
-    SendToConsole("r_portalsopenall 1");
+    // Force-close all map portals
+    local portal = null;
+    while (portal = ppmod.get("prop_portal", portal)) {
+      if (!portal.IsValid()) continue;
+      portal.SetActivatedState(0);
+      if (portal.GetName().len() == 0) continue;
+      portal.SetHook("SetActivatedState", function () { return false });
+    }
+
+    ppmod.onportal(function (shot):(ccom, red) {
+
+      if (!shot.weapon) return;
+      if (!shot.portal) return;
+
+      ppmod.fire("prop_portal", "SetLinkageGroupID", 99);
+      ppmod.fire("prop_portal", "AddOutput", "PortalTwo 0", FrameTime() * 2);
+
+    });
+
+    ppmod.interval(function () {
+      ppmod.keyval("weapon_portalgun", "CanFirePortal1", true);
+      ppmod.keyval("weapon_portalgun", "CanFirePortal2", false);
+    });
 
   }
 
