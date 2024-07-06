@@ -14,6 +14,7 @@ module.exports = async function (args, request) {
         voting: week.voting,
         bonus: week.bonus,
         votingmaps: week.votingmaps,
+        map: week.map,
         categories: week.categories,
         partners: week.partners
       };
