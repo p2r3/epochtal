@@ -110,6 +110,7 @@ apisdir.forEach(api => {
 const UtilError = utils["error"];
 
 const profilesdir = fs.readdirSync(epochtal.file.profiles);
+// Load profiles from "profilesdir" into the global epochtal data
 profilesdir.forEach(steamid => {
   const dataPath = `${epochtal.file.profiles}/${steamid}/data.json`;
   epochtal.data.profiles[steamid] = require(dataPath);
