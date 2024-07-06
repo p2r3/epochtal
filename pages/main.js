@@ -68,6 +68,28 @@ var homepageInit = async function () {
   
   document.querySelector("#intro-week").innerHTML = config.number;
 
+  const activeMapContainer = document.querySelector("#active-map");
+
+  function updateActiveMap () {
+
+    const map = config.map;
+    const thumbnail = map.thumbnail.startsWith("http") ? map.thumbnail : `https://steamuserimages-a.akamaihd.net/ugc/${map.thumbnail}?impolicy=Letterbox&imw=640&imh=360`;
+
+    activeMapContainer.innerHTML = `
+      <a href="https://steamcommunity.com/sharedfiles/filedetails/?id=${map.id}" target="_blank">
+        <img class="votes-image" alt="thumbnail" src="${thumbnail}">
+        <p class="votes-text">
+          ${map.title.trim()}<br>
+          <i class="font-light">by ${map.author.trim()}</i><br>
+          <br>
+          ${map.upvotes} upvote${map.upvotes === 1 ? "":"s"}, ${map.downvotes} downvote${map.downvotes === 1 ? "":"s"}
+        </p>
+      </a>
+    `;
+
+  }
+  updateActiveMap();
+
   const leaderboardCategorySelect = document.querySelector("#leaderboard-category-select");
   const leaderboardArchiveSelect = document.querySelector("#leaderboard-archive-select");
 
