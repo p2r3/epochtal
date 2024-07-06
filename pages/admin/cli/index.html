@@ -64,6 +64,8 @@
 
       function formatResponse (response, depth = 0) {
 
+        if (response === null) return "null";
+
         switch (typeof response) {
 
           case "boolean":
