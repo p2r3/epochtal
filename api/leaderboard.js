@@ -70,6 +70,34 @@ module.exports = async function (args, request) {
         fs.rmSync(path);
         return "ERR_STEAMID";
       }
+
+      if (data.partner) {
+
+        if (!categoryData.coop) {
+          fs.rmSync(path);
+          return "ERR_NOTCOOP";
+        }
+
+        const partners = epochtal.data.week.partners;
+
+        if (!(data.steamid in partners || data.partner in partners)) {
+
+          partners[data.steamid] = data.partner;
+          partners[data.partner] = data.steamid;
+
+          if (epochtal.file.week) {
+            await Bun.write(epochtal.file.week, JSON.stringify(epochtal.data.week));
+          }
+
+        } else if (partners[data.steamid] !== data.partner || partners[data.partner] !== data.steamid) {
+          fs.rmSync(path);
+          return "ERR_PARTNER";
+        }
+
+      } else if (categoryData.coop) {
+        fs.rmSync(path);
+        return "ERR_NOPARTNER";
+      }
       
       try {
         await leaderboard(["add", category, data.steamid, data.time, note, data.portals, false]);

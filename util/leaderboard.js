@@ -89,8 +89,14 @@ module.exports = async function (args, context = epochtal) {
       const countPortals = categoryData.portals;
       if (countPortals && isNaN(portals)) throw new UtilError("ERR_PORTALS", args, context);
       
+      const partners = context.data.week.partners;
+
       const oldRunIndex = lb.findIndex(function (curr) {
-        return curr.steamid === steamid;
+        if (categoryData.coop) {
+          return curr.steamid === steamid || curr.steamid === partners[steamid];
+        } else {
+          return curr.steamid === steamid;
+        }
       });
       if (oldRunIndex !== -1) lb.splice(oldRunIndex, 1);
       

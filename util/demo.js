@@ -28,12 +28,28 @@ async function parseDump (file) {
   fs.rmSync(outputPath, { recursive: true });
   if (originalFile !== file) fs.unlinkSync(file);
 
+  const output = {};
+
   // i dont really wanna do this yet
 
-  const parts = dump.split("GUID: STEAM_1:")[1].split("\n")[0].split(":");
-  const steamid = (76561197960265728n + BigInt(parts[0]) + BigInt(parts[1]) * 2n).toString();
+  const steamidSplit = dump.split("GUID: STEAM_1:");
 
-  return { steamid };
+  const parts = steamidSplit[1].split("\n")[0].split(":");
+  output.steamid = (76561197960265728n + BigInt(parts[0]) + BigInt(parts[1]) * 2n).toString();
+
+  if (steamidSplit.length > 2) {
+    let partner = output.steamid;
+    let i = 2;
+    while (partner === output.steamid && i < steamidSplit.length) {
+      const currParts = steamidSplit[i++].split("\n")[0].split(":");
+      partner = (76561197960265728n + BigInt(currParts[0]) + BigInt(currParts[1]) * 2n).toString();
+    }
+    if (partner !== output.steamid) {
+      output.partner = partner;
+    }
+  }
+
+  return output;
 
 }
 
