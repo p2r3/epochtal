@@ -35,7 +35,7 @@ async function concludeWeek (context) {
 
   let textSummary = "## [ Demo event summary ]\n";
   for (let i = 0; i < summary.length; i ++) {
-    textSummary += `\`${summary[i].cvar}\` in ${summary.count} demo${summary.count === 1 ? "" : "s"}: \`\`\`json\n${JSON.stringify(summary[i].demos)}\`\`\`\n`;
+    textSummary += `\`${summary[i].cvar}\` in ${summary[i].count} demo${summary[i].count === 1 ? "" : "s"}: \`\`\`json\n${JSON.stringify(summary[i].demos)}\`\`\`\n`;
   }
   if (summary.length === 0) textSummary += "*All demos clean, nothing to report.*";
 
@@ -45,7 +45,9 @@ async function concludeWeek (context) {
   }
   if (timescales.length === 0) textTimescales += "*All demos clean, nothing to report.*";
 
-  await discord(["report", `${textSummary}\n${textTimescales}`], context);
+  const finalReportText = `${textSummary}\n${textTimescales}`;
+  UtilPrint("epochtal(concludeWeek):\n" + finalReportText);
+  await discord(["report", finalReportText], context);
 
   await Bun.write(context.file.week, JSON.stringify(week));
 
