@@ -24,6 +24,8 @@ async function getArchiveContext (path) {
     week: await context.file.week.json()
   };
 
+  context.name = `archive_week${context.data.week.number}`;
+
   for (const category in context.data.leaderboard) {
     for (const run of context.data.leaderboard[category]) {
 
