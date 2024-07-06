@@ -92,10 +92,10 @@ module.exports = async function (args, context = epochtal) {
       const dump = await parseDump(file);
 
       const output = {
-        steamid: dump.steamid,
+        ...dump,
         time: null,
         portals: 0
-      }
+      };
 
       for (const event of mdp.demos[0].events) {
       
