@@ -14,6 +14,11 @@ const gscale = 0.5;
 canvas.width = window.innerWidth * gscale;
 canvas.height = window.innerHeight * gscale;
 
+window.onresize = function () {
+  canvas.width = window.innerWidth * gscale;
+  canvas.height = window.innerHeight * gscale;
+};
+
 const dots = [];
 const minDistance = 200 * gscale;
 const maxSpeed = 0.75 * gscale;
@@ -65,11 +70,11 @@ class Dot {
     this.y += this.speedY;
 
     if (collideWithEdges) {
-      if (this.x < 0 || this.x > canvas.width) {
+      if ((this.x < 0 && this.speedX < 0) || (this.x > canvas.width && this.speedX > 0)) {
         this.speedX = -this.speedX;
       }
   
-      if (this.y < 0 || this.y > canvas.height) {
+      if ((this.y < 0 && this.speedY < 0) || (this.y > canvas.height && this.speedY > 0)) {
         this.speedY = -this.speedY;
       }
     }
