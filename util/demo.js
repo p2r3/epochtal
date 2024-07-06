@@ -130,8 +130,8 @@ module.exports = async function (args, context = epochtal) {
       for (const event of mdp.demos[0].events) {
 
         if (event.type === "timestamp") {
-          if (Date.now() - Date.parse(event.value) > 1000 * 60 * 60 * 24) {
-            return `Demo was recorded more than 24h ago.`;
+          if (Date.now() - Date.parse(event.value) > 1000 * 60 * 60) {
+            return `Demo was recorded more than 1h ago.`;
           }
           continue;
         }
