@@ -352,6 +352,7 @@ input:checked+.slider:before {
   padding: 0.5vw;
   border: 2px solid white;
   border-radius: 10px;
+  background-color: rgba(0, 0, 0, 0.65);
   margin: 2% 25%;
   font-size: 0;
   min-height: 60px;
@@ -360,6 +361,7 @@ input:checked+.slider:before {
 .votes-image {
   display: inline;
   width: 25%;
+  aspect-ratio: 16 / 9;
   border-radius: 10px;
 }
 
@@ -407,11 +409,11 @@ input:checked+.slider:before {
 }
 
 #players-container {
+  background-color: rgba(255, 255, 255, 0.05);
   height: 60vh;
-  padding: 2px 2vw;
-  border-bottom: 2px solid white;
-  border-radius: 10px;
-  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 1) 80%, rgba(0, 0, 0, 0) 100%);
+  padding: 1.5vw 2vw;
+  margin-top: -1vw;
+  border-radius: 15px;
 }
 
 #players-search-icon, #lobby-search-icon {
