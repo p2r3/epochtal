@@ -34,6 +34,11 @@ module.exports = async function (args, request) {
       const user = await api_users(["whoami"], request);
       if (!user) return "ERR_LOGIN";
 
+      const profile = epochtal.data.profiles[user.steamid];
+      if (!profile) return "ERR_PROFILE";
+
+      if (profile.banned === true || profile.banned > Date.now()) return "ERR_BANNED";
+
       const note = args[2];
       if (note === undefined) return "ERR_ARGS";
       if (note.length > 200) return "ERR_NOTE";

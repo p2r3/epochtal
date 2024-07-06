@@ -11,6 +11,10 @@ const discord = require("../util/discord.js");
 const demo = require("../util/demo.js");
 const testcvar = require("../util/testcvar.js");
 const categories = require("../util/categories.js");
+const users = require("../util/users.js");
+const profiledata = require("../util/profiledata.js");
+const profilelog = require("../util/profilelog.js");
+const points = require("../util/points.js");
 
 async function concludeWeek (context) {
 
@@ -22,6 +26,8 @@ async function concludeWeek (context) {
   for (let i = 0; i < week.categories.length; i ++) {
     week.categories[i].lock = true;
   }
+
+  await points(["award"], context);
 
   await discord(["announce", "The leaderboard has been locked."], context);
 
@@ -352,9 +358,25 @@ async function summarizeDemoEvents (context) {
 
 }
 
+async function rebuildProfiles (context) {
+
+  const userList = await users(["list"], context);
+  
+  for (const steamid in userList) {
+    await profiledata(["forceadd", steamid], context);
+    await users(["apiupdate", steamid], context);
+    await profilelog(["build", steamid], context);
+  }
+
+
+  return "SUCCESS";
+
+}
+
 module.exports = {
   releaseMap,
   rebuildMap,
   concludeWeek,
-  summarizeDemoEvents
+  summarizeDemoEvents,
+  rebuildProfiles
 };

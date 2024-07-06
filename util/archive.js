@@ -20,6 +20,7 @@ async function getArchiveContext (path) {
   context.data = {
     leaderboard: await context.file.leaderboard.json(),
     users: epochtal.data.users,
+    profiles: epochtal.data.profiles,
     week: await context.file.week.json()
   };
 

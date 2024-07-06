@@ -14,6 +14,7 @@ epochtal.file = {
 epochtal.data = {
   leaderboard: await epochtal.file.leaderboard.json(),
   users: await epochtal.file.users.json(),
+  profiles: {},
   week: await epochtal.file.week.json(),
   discord: {
     announce: "1063171316875788338",
@@ -56,6 +57,12 @@ apisdir.forEach(api => {
 });
 
 const UtilError = utils["error"];
+
+const profilesdir = fs.readdirSync(epochtal.file.profiles);
+profilesdir.forEach(steamid => {
+  const dataPath = `${epochtal.file.profiles}/${steamid}/data.json`;
+  epochtal.data.profiles[steamid] = require(dataPath);
+});
 
 const fetchHandler = async function (req) {
 

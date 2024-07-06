@@ -22,9 +22,9 @@ module.exports = async function (args, request) {
       const user = await users(["get", authuser.steamid]);
 
       if (!user) {
-        await users(["add", authuser.steamid, authuser.username]);
+        await users(["add", authuser.steamid, authuser.username, authuser.avatarmedium]);
       } else {
-        await users(["edit", authuser.steamid, "name", authuser.username]);
+        await users(["authupdate", authuser.steamid, authuser]);
       }
 
       const token = jwt.sign(authuser, keys.jwt);

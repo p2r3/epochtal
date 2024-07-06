@@ -1,7 +1,7 @@
 const UtilError = require("./error.js");
 
 const categories = require("./categories.js");
-const log = require("./log.js");
+const weeklog = require("./weeklog.js");
 
 module.exports = async function (args, context = epochtal) {
 
@@ -64,7 +64,7 @@ module.exports = async function (args, context = epochtal) {
       data[category].splice(idx, 1);
       if (file) Bun.write(file, JSON.stringify(data));
       
-      await log(["add", steamid, category, 0, 0], context);
+      await weeklog(["add", steamid, category, 0, 0], context);
 
       return "SUCCESS";
       
@@ -138,7 +138,7 @@ module.exports = async function (args, context = epochtal) {
 
       if (file) Bun.write(file, JSON.stringify(data));
 
-      await log(["add", steamid, category, time, portals], context);
+      await weeklog(["add", steamid, category, time, portals], context);
 
       return "SUCCESS";
 

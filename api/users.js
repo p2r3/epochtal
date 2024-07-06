@@ -2,6 +2,7 @@ const jwt = require("jsonwebtoken");
 
 const keys = require("../../keys.js");
 const users = require("../util/users.js");
+const profiledata = require("../util/profiledata.js");
 
 function getUserToken (request) {
 
@@ -58,16 +59,10 @@ module.exports = async function (args, request) {
 
     }
 
-    case "avatar": { // TODO: Cache this in the user's profile directory
+    case "profile": {
 
       const steamid = args[1];
-      if (!steamid) return "ERR_ARGS";
-
-      const req = await fetch(`https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2?key=${keys.steam}&steamids=${steamid}`);
-      if (req.status !== 200) return "ERR_STEAMID";
-
-      const data = (await req.json()).response.players[0];
-      return data.avatarmedium;
+      return await profiledata(["get", steamid]);
 
     }
 

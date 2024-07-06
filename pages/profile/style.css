@@ -1,0 +1,101 @@
+#page-content {
+  overflow-y: scroll;
+}
+
+#profile-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 25px;
+  margin-right: 15px;
+  vertical-align: -20px;
+}
+
+#profile-graph {
+  margin: 2vh 5vw;
+  width: 60vw;
+  height: 20vh;
+  padding-top: 1.5rem;
+  background-color: rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(5px);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  border-radius: 15px;
+}
+
+#profile-graph-hover {
+  position: absolute;
+  left: 0;
+  top: 0;
+  margin: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  padding: 10px;
+  border-radius: 5px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+#profile-graph-line {
+  position: absolute;
+  left: 0;
+  top: 2px;
+  width: 2px;
+  height: calc(20vh + 1.5rem);
+  margin: 0;
+  background-color: white;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+#profile-graph-legend {
+  position: absolute;
+  margin: 15px 20px;
+  padding-bottom: 10px;
+  left: 0;
+  top: 0;
+  font-style: italic;
+  font-weight: 300;
+  color: #faa81a;
+  cursor: pointer;
+}
+
+#profile-graph-legend-dropdown {
+  position: absolute;
+  left: 0;
+  top: 0;
+  background-color: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(5px);
+  border-radius: 10px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+#profile-graph-legend-dropdown p {
+  margin: 10px;
+  display: block;
+  cursor: pointer;
+  transition: color 0.1s;
+}
+#profile-graph-legend-dropdown p:hover {
+  color: #faa81a;
+}
+#profile-graph-legend:hover + #profile-graph-legend-dropdown {
+  opacity: 1;
+  pointer-events: auto;
+}
+#profile-graph-legend-dropdown:hover {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+#profile-stats-text {
+  font-size: 1.35rem;
+  margin: 0 20vw;
+  padding: 20px;
+  background-color: rgba(255, 255, 255, 0.075);
+  backdrop-filter: blur(5px);
+  border-radius: 15px;
+}
+#profile-stats-text h3 {
+  margin-top: 0;
+}
