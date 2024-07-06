@@ -527,12 +527,12 @@ var homepageInit = async function () {
     
     if (!file.name.endsWith(".dem")) return;
     demoFile = file;
-    
+
     linkInfo.style.display = "none";
     linkContainer.style.display = "none";
-
+    
     demoButton.innerHTML = demoFile.name;
-
+    
     smoothScroll('#submit');
 
   };
@@ -612,22 +612,29 @@ var homepageInit = async function () {
   for (const steamid in users) {
     const user = JSON.parse(JSON.stringify(users[steamid]));
     user.steamid = steamid;
+    if (user.points === null) user.points = -Infinity;
     sortedUsers.push(user);
   }
   sortedUsers.sort((a, b) => b.points - a.points);
 
-  let output = "";
+  let output = "", placement = 1;
   for (let i = 0; i < sortedUsers.length; i ++) {
 
     const user = sortedUsers[i];
 
-    const username = user.name.replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll("&", "&amp;");
+    const username = sanitizeStringHTML(user.name);
 
-    output += `<a href="https://steamcommunity.com/profiles/${user.steamid}" target="_blank" style="color:white;text-decoration:none"><div class="lb-entry">
+    if (i !== 0 && user.points !== sortedUsers[i - 1].points) {
+      placement ++;
+    }
+
+    let pointsString = "Points hidden";
+    const outputPoints = Math.round(user.points);
+    if (user.points !== -Infinity) pointsString = `${outputPoints} point${outputPoints === 1 ? "" : "s"}`;
+    
+    output += `<a href="http://epochtal.p2r3.com:3002/profile/#${user.steamid}" target="_blank" style="color:white;text-decoration:none"><div class="lb-entry lb-rank${placement}">
       <p class="lb-text">${username}</p>
-      <p class="lb-text font-light">${user.points} point${user.points === 1 ? "" : "s"}</p>
+      <p class="lb-text font-light">${pointsString}</p>
     </div></a>`;
 
   }

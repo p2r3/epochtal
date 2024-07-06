@@ -1,70 +1,250 @@
 const UtilError = require("./error.js");
+const UtilPrint = require("./print.js");
+
+const fs = require("node:fs");
 
 const leaderboard = require("./leaderboard.js");
 const categories = require("./categories.js");
+const archive = require("./archive.js");
+const profilelog = require("./profilelog.js");
+const profiledata = require("./profiledata.js");
 
-async function calculatePoints (context = epochtal) {
+const [ WIN, LOSS, DRAW ] = [1, -1, 0];
+function calculateEloDelta (playerElo, opponentElo, result, kFactor = 32) {
 
+  function expectedScore (ratingA, ratingB) {
+    return 1 / (1 + Math.pow(10, (ratingB - ratingA) / 400));
+  }
+
+  const playerExpected = expectedScore(playerElo, opponentElo);
+  const opponentExpected = expectedScore(opponentElo, playerElo);
+
+  let playerScore, opponentScore;
+  switch (result) {
+  
+    case WIN:
+      playerScore = 1;
+      opponentScore = 0;
+      break;
+
+    case LOSS:
+      playerScore = 0;
+      opponentScore = 1;
+      break;
+
+    default:
+    case DRAW:
+      playerScore = 0.5;
+      opponentScore = 0.5;
+      break;
+  
+  }
+
+  return {
+    player: kFactor * (playerScore - playerExpected),
+    opponent: kFactor * (opponentScore - opponentExpected)
+  };
+
+}
+
+function calculateTotalPoints (statistics) {
+
+  let totalPoints = 1000;
+
+  for (let i = 0; i < statistics.length; i ++) {
+    for (let j = 0; j < statistics[i].length; j ++) {
+      totalPoints += statistics[i][j];
+    }
+  }
+
+  return totalPoints;
+
+}
+
+function calculateDisplayPoints (statistics) {
+
+  let runs = 0;
+  let totalPoints = 1000;
+
+  for (let i = 0; i < statistics.length; i ++) {
+    for (let j = 0; j < statistics[i].length; j ++) {
+      runs ++;
+      totalPoints += statistics[i][j];
+    }
+  }
+
+  if (runs < 10) return null;
+  if (totalPoints < 0) return Number((-100 / totalPoints).toFixed(2));
+  return Number((totalPoints + 100).toFixed(2));
+
+}
+
+async function pointsFromSteamID (steamid, context = epochtal) {
+
+  const profile = await profiledata(["get", steamid], context);
+  return calculateTotalPoints(profile.statistics);
+
+}
+
+async function calculatePointsDelta (context = epochtal) {
+
+  const users = context.data.users;
   const boards = await leaderboard(["list"], context);
-  const output = {};
+  const catlist = await categories(["list"], context);
+  const catDeltaElo = {};
   
   for (let i = 0; i < boards.length; i ++) {
 
     const catname = boards[i];
+    if (!catlist.includes(catname)) continue;
 
     const cat = await categories(["get", catname], context);
     if (!cat.points) continue;
     const lb = await leaderboard(["get", catname], context);
 
-    const mainDistribution = [10, 5, 1];
-    const baseOffset = Math.min(lb.length, 5);
-
+    catDeltaElo[catname] = {};
+    const deltaElo = catDeltaElo[catname];
+    
     for (let j = 0; j < lb.length; j ++) {
+      const playerTime = lb[j].time;
+      const player = lb[j].steamid;
+      if (!(player in deltaElo)) deltaElo[player] = 0;
 
-      const run = lb[j];
-      if (run.placement > 3) break;
+      for (let k = j + 1; k < lb.length; k ++) {
+        const opponentTime = lb[k].time;
+        const opponent = lb[k].steamid;
+        if (!(opponent in deltaElo)) deltaElo[opponent] = 0;
 
-      if (!(run.steamid in output)) output[run.steamid] = 0;
+        const result = playerTime === opponentTime ? DRAW : WIN;
 
-      if (catname === "main") {
-        output[run.steamid] += mainDistribution[run.placement - 1];
-      } else {
-        output[run.steamid] += Math.max(baseOffset - run.placement - 1, 0);
+        if ((lb[j].partner && lb[k].partner) || (cat.coop && ("partners" in cat) && cat.partners[player] && cat.partners[opponent])) {
+
+          const playerPartner = lb[j].partner || cat.partners[player];
+          const opponentPartner = lb[k].partner || cat.partners[opponent];
+          
+          if (!(playerPartner in deltaElo)) deltaElo[playerPartner] = 0;
+          if (!(opponentPartner in deltaElo)) deltaElo[opponentPartner] = 0;
+
+          const playerAverage = (await pointsFromSteamID(player, context) + await pointsFromSteamID(playerPartner, context)) / 2;
+          const opponentAverage = (await pointsFromSteamID(opponent, context) + await pointsFromSteamID(opponentPartner, context)) / 2;
+
+          const elo = calculateEloDelta(playerAverage, opponentAverage, result);
+
+          deltaElo[player] += elo.player;
+          deltaElo[playerPartner] += elo.player;
+          deltaElo[opponent] += elo.opponent;
+          deltaElo[opponentPartner] += elo.opponent;
+
+        } else {
+
+          const elo = calculateEloDelta(await pointsFromSteamID(player), await pointsFromSteamID(opponent), result);
+
+          deltaElo[player] += elo.player;
+          deltaElo[opponent] += elo.opponent;
+
+        }
+
       }
-
     }
 
+  }
+
+  const output = {};
+
+  for (const cat in catDeltaElo) {
+    for (const steamid in catDeltaElo[cat]) {
+      if (!(steamid in output)) output[steamid] = [];
+      output[steamid].push(catDeltaElo[cat][steamid]);
+    }
   }
 
   return output;
 
 }
 
-module.exports = async function (args, context) {
+module.exports = async function (args, context = epochtal) {
 
   const [command] = args;
 
+  const file = context.file.users;
+  const users = context.data.users;
+
   switch (command) {
 
-    case "calculate": {
+    case "user": {
 
-      return await calculatePoints(context);
+      const steamid = args[1];
+      if (!steamid) throw new UtilError("ERR_ARGS", args, context);
+
+      const profile = await profiledata(["get", steamid], context);
+
+      return {
+        total: calculateTotalPoints(profile.statistics),
+        display: calculateDisplayPoints(profile.statistics)
+      };
 
     }
 
-    case "revoke":
+    case "calculate": {
+
+      return await calculatePointsDelta(context);
+
+    }
+
     case "award": {
 
-      const usersFile = Bun.file("./pages/users.json");
-      const users = await usersFile.json();
+      const deltaElo = await calculatePointsDelta(context);
 
-      const awardees = calculatePoints(context);
-      for (const user in awardees) {
-        if (command === "revoke") users[user].points -= awardees[user];
-        else users[user].points += awardees[user];
+      for (const steamid in deltaElo) {
+
+        const profile = await profiledata(["get", steamid], context);
+        profile.statistics.push(deltaElo[steamid]);
+        profile.weeks.push(context.data.week.number);
+
+        users[steamid].points = calculateDisplayPoints(profile.statistics);
+
+        profiledata(["flush", steamid], context);
+
       }
 
-      await Bun.write(usersFile, JSON.stringify(users));
+      if (file) Bun.write(file, JSON.stringify(users));
+      return "SUCCESS";
+
+    }
+
+    case "rebuild": {
+
+      const usersList = [];
+      const archiveList = (await archive(["list"], context)).reverse();
+      for (const week of archiveList) {
+
+        const archiveContext = await archive(["get", week], context);
+        const deltaElo = await calculatePointsDelta(archiveContext);
+
+        for (const steamid in deltaElo) {
+
+          const profile = await profiledata(["get", steamid], context);
+          
+          if (!usersList.includes(steamid)) {
+            usersList.push(steamid);
+            profile.statistics = [];
+            profile.weeks = [];
+          }
+
+          profile.statistics.push(deltaElo[steamid]);
+          profile.weeks.push(archiveContext.data.week.number);
+
+        }
+
+      }
+
+      for (const steamid of usersList) {
+        const profile = await profiledata(["get", steamid], context);
+        users[steamid].points = calculateDisplayPoints(profile.statistics);
+        profiledata(["flush", steamid], context);
+      }
+
+      if (file) Bun.write(file, JSON.stringify(users));
       return "SUCCESS";
 
     }

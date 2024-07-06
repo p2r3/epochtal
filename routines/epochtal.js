@@ -368,6 +368,7 @@ async function rebuildProfiles (context) {
     await profilelog(["build", steamid], context);
   }
 
+  await points(["rebuild"], context);
 
   return "SUCCESS";
 
