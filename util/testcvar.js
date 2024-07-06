@@ -2,7 +2,7 @@ const UtilError = require("./error.js");
 
 const [VERDICT_SAFE, VERDICT_UNSURE, VERDICT_ILLEGAL] = [0, 1, 2];
 
-const cvarTestSafe = {
+var cvarTestSafe = {
   "_autosave": (val) => true, // cmd autosave
   "_autosavedangerous": (val) => true, // cmd autosavedangerous
   "_bugreporter_restart": (val) => false, // cmd restarts bug reporter .dll
@@ -141,7 +141,7 @@ const cvarTestSafe = {
   "ainet_generate_report": (val) => false, // cmd generate a report to the console.
   "ainet_generate_report_only": (val) => false, // cmd generate a report to the console.
   "air_density": (val) => false, // cmd changes the density of air for drag computations.
-  "alias": (val) => val == "[epochtal]" || checkcvar(val.split(" ")[1], ""), // cmd alias a command.
+  "alias": (val) => true, // cmd alias a command.
   "+alt1": (val) => true, // cmd 
   "-alt1": (val) => true, // cmd 
   "+alt2": (val) => true, // cmd 
@@ -599,11 +599,11 @@ const cvarTestSafe = {
   "cm_open_vote_dialog": (val) => false, // cmd opens the map voting dialog for testing purposes
   "cm_play_intro_video": (val) => val == 0, // 
   "cm_reset_vo_progress": (val) => true, // cmd reset the progress of the peti storyline.
-  "cmd": (val) => checkcvar(val.split(" ")[0], val.split(" ").slice(1).join(" ")), //cmd  forward command to server.
-  "cmd1": (val) => checkcvar(val.split(" ")[0], val.split(" ").slice(1).join(" ")), //cmd  sets userinfo string for split screen player in slot 1
-  "cmd2": (val) => checkcvar(val.split(" ")[0], val.split(" ").slice(1).join(" ")), //cmd  sets userinfo string for split screen player in slot 2
-  "cmd3": (val) => checkcvar(val.split(" ")[0], val.split(" ").slice(1).join(" ")), //cmd  sets userinfo string for split screen player in slot 3
-  "cmd4": (val) => checkcvar(val.split(" ")[0], val.split(" ").slice(1).join(" ")), //cmd  sets userinfo string for split screen player in slot 4
+  "cmd": (val) => cvarTestSafe[val.split(" ")[0]](val.split(" ").slice(1).join(" ")), //cmd  forward command to server.
+  "cmd1": (val) => cvarTestSafe[val.split(" ")[0]](val.split(" ").slice(1).join(" ")), //cmd  sets userinfo string for split screen player in slot 1
+  "cmd2": (val) => cvarTestSafe[val.split(" ")[0]](val.split(" ").slice(1).join(" ")), //cmd  sets userinfo string for split screen player in slot 2
+  "cmd3": (val) => cvarTestSafe[val.split(" ")[0]](val.split(" ").slice(1).join(" ")), //cmd  sets userinfo string for split screen player in slot 3
+  "cmd4": (val) => cvarTestSafe[val.split(" ")[0]](val.split(" ").slice(1).join(" ")), //cmd  sets userinfo string for split screen player in slot 4
   "collision_shake_amp": (val) => val == 0, // 
   "collision_shake_freq": (val) => val == 0, // 
   "collision_shake_time": (val) => val == 0, // 
@@ -1060,7 +1060,7 @@ const cvarTestSafe = {
   "impulse": (val) => false, // cmd 
   "in_forceuser": (val) => val == 0, // force user input to this split screen player.
   "in_usekeyboardsampletime": (val) => val == 1, // use keyboard sample time smoothing.
-  "incrementvar": (val) => checkcvar(val, ""), // cmd increment specified convar value.
+  "incrementvar": (val) => cvarTestSafe[val.split(" ")[0]](""), // cmd increment specified convar value.
   "invnext": (val) => true, // cmd 
   "invprev": (val) => true, // cmd 
   "ip": (val) => true, // overrides ip for multihomed hosts
@@ -2447,7 +2447,7 @@ const cvarTestSafe = {
   "r_worldlistcache": (val) => true, // 
   "ragdoll_sleepaftertime": (val) => true, // after this many seconds of being basically stationary, the ragdoll will go to sleep.
   "rate": (val) => val >= 20000 && val <= 30000, // max bytes/sec the host can receive data
-  "rcon": (val) => checkcvar(val.split(" ")[0], val.split(" ").slice(1).join(" ")), // cmd issue an rcon command.
+  "rcon": (val) => cvarTestSafe[val.split(" ")[0]](val.split(" ").slice(1).join(" ")), // cmd issue an rcon command.
   "rcon_address": (val) => true, // address of remote server if sending unconnected rcon commands (format x.x.x.x:p) 
   "rcon_password": (val) => true, // remote console password.
   "recompute_speed": (val) => false, // cmd recomputes clock speed (for debugging purposes).
@@ -3216,7 +3216,7 @@ const cvarTestSafe = {
   "tir_maxz": (val) => val == 1, // trackir max z
   "tir_start": (val) => val == 0, // trackir start
   "tir_stop": (val) => val == 0, // trackir stop
-  "toggle": (val) => checkcvar(val.split(" ")[0], val.split(" ").slice(1).join(" ")), // cmd toggles a convar on or off, or cycles through a set of values.
+  "toggle": (val) => cvarTestSafe[val.split(" ")[0]](val.split(" ").slice(1).join(" ")), // cmd toggles a convar on or off, or cycles through a set of values.
   "toggleconsole": (val) => true, // cmd show/hide the console.
   "toolload": (val) => false, // cmd load a tool.
   "toolunload": (val) => false, // cmd unload a tool.
@@ -3840,53 +3840,53 @@ const cvarTestSafe = {
   "conds": (val) => true, // 	inherited 	-
   "sar_alias_run": (val) => true, // 	inherited 	-
   "sar_function_run": (val) => true, // 	inherited 	-
-  "sar_on_config_exec": (val) => !val.includes("+") && !val.includes("-") && checkcvar(val.split(" ")[0], val.split(" ").slice(1).join(" ")),
+  "sar_on_config_exec": (val) => !val.includes("+") && !val.includes("-") && cvarTestSafe[val.split(" ")[0]](val.split(" ").slice(1).join(" ")),
   "sar_on_config_exec_clear": (val) => true,
   "sar_on_config_exec_list": (val) => true,
-  "sar_on_coop_reset_done": (val) => !val.includes("+") && !val.includes("-") && checkcvar(val.split(" ")[0], val.split(" ").slice(1).join(" ")),
+  "sar_on_coop_reset_done": (val) => !val.includes("+") && !val.includes("-") && cvarTestSafe[val.split(" ")[0]](val.split(" ").slice(1).join(" ")),
   "sar_on_coop_reset_done_clear": (val) => true,
   "sar_on_coop_reset_done_list": (val) => true,
-  "sar_on_coop_reset_remote": (val) => !val.includes("+") && !val.includes("-") && checkcvar(val.split(" ")[0], val.split(" ").slice(1).join(" ")),
+  "sar_on_coop_reset_remote": (val) => !val.includes("+") && !val.includes("-") && cvarTestSafe[val.split(" ")[0]](val.split(" ").slice(1).join(" ")),
   "sar_on_coop_reset_remote_clear": (val) => true,
   "sar_on_coop_reset_remote_list": (val) => true,
-  "sar_on_coop_spawn": (val) => !val.includes("+") && !val.includes("-") && checkcvar(val.split(" ")[0], val.split(" ").slice(1).join(" ")),
+  "sar_on_coop_spawn": (val) => !val.includes("+") && !val.includes("-") && cvarTestSafe[val.split(" ")[0]](val.split(" ").slice(1).join(" ")),
   "sar_on_coop_spawn_clear": (val) => true,
   "sar_on_coop_spawn_list": (val) => true,
-  "sar_on_demo_start": (val) => !val.includes("+") && !val.includes("-") && checkcvar(val.split(" ")[0], val.split(" ").slice(1).join(" ")),
+  "sar_on_demo_start": (val) => !val.includes("+") && !val.includes("-") && cvarTestSafe[val.split(" ")[0]](val.split(" ").slice(1).join(" ")),
   "sar_on_demo_start_clear": (val) => true,
   "sar_on_demo_start_list": (val) => true,
-  "sar_on_demo_stop": (val) => !val.includes("+") && !val.includes("-") && checkcvar(val.split(" ")[0], val.split(" ").slice(1).join(" ")),
+  "sar_on_demo_stop": (val) => !val.includes("+") && !val.includes("-") && cvarTestSafe[val.split(" ")[0]](val.split(" ").slice(1).join(" ")),
   "sar_on_demo_stop_clear": (val) => true,
   "sar_on_demo_stop_list": (val) => true,
-  "sar_on_exit": (val) => !val.includes("+") && !val.includes("-") && checkcvar(val.split(" ")[0], val.split(" ").slice(1).join(" ")),
+  "sar_on_exit": (val) => !val.includes("+") && !val.includes("-") && cvarTestSafe[val.split(" ")[0]](val.split(" ").slice(1).join(" ")),
   "sar_on_exit_clear": (val) => true,
   "sar_on_exit_list": (val) => true,
-  "sar_on_flags": (val) => !val.includes("+") && !val.includes("-") && checkcvar(val.split(" ")[0], val.split(" ").slice(1).join(" ")),
+  "sar_on_flags": (val) => !val.includes("+") && !val.includes("-") && cvarTestSafe[val.split(" ")[0]](val.split(" ").slice(1).join(" ")),
   "sar_on_flags_clear": (val) => true,
   "sar_on_flags_list": (val) => true,
-  "sar_on_load": (val) => !val.includes("+") && !val.includes("-") && checkcvar(val.split(" ")[0], val.split(" ").slice(1).join(" ")),
+  "sar_on_load": (val) => !val.includes("+") && !val.includes("-") && cvarTestSafe[val.split(" ")[0]](val.split(" ").slice(1).join(" ")),
   "sar_on_load_clear": (val) => true,
   "sar_on_load_list": (val) => true,
-  "sar_on_not_pb": (val) => !val.includes("+") && !val.includes("-") && checkcvar(val.split(" ")[0], val.split(" ").slice(1).join(" ")),
+  "sar_on_not_pb": (val) => !val.includes("+") && !val.includes("-") && cvarTestSafe[val.split(" ")[0]](val.split(" ").slice(1).join(" ")),
   "sar_on_not_pb_clear": (val) => true,
   "sar_on_not_pb_list": (val) => true,
-  "sar_on_pb": (val) => !val.includes("+") && !val.includes("-") && checkcvar(val.split(" ")[0], val.split(" ").slice(1).join(" ")),
+  "sar_on_pb": (val) => !val.includes("+") && !val.includes("-") && cvarTestSafe[val.split(" ")[0]](val.split(" ").slice(1).join(" ")),
   "sar_on_pb_clear": (val) => true,
   "sar_on_pb_list": (val) => true,
-  "sar_on_session_end": (val) => !val.includes("+") && !val.includes("-") && checkcvar(val.split(" ")[0], val.split(" ").slice(1).join(" ")),
+  "sar_on_session_end": (val) => !val.includes("+") && !val.includes("-") && cvarTestSafe[val.split(" ")[0]](val.split(" ").slice(1).join(" ")),
   "sar_on_session_end_clear": (val) => true,
   "sar_on_session_end_list": (val) => true,
-  "sar_on_tas_end": (val) => !val.includes("+") && !val.includes("-") && checkcvar(val.split(" ")[0], val.split(" ").slice(1).join(" ")),
+  "sar_on_tas_end": (val) => !val.includes("+") && !val.includes("-") && cvarTestSafe[val.split(" ")[0]](val.split(" ").slice(1).join(" ")),
   "sar_on_tas_end_clear": (val) => true,
   "sar_on_tas_end_list": (val) => true,
-  "sar_on_tas_start": (val) => !val.includes("+") && !val.includes("-") && checkcvar(val.split(" ")[0], val.split(" ").slice(1).join(" ")),
+  "sar_on_tas_start": (val) => !val.includes("+") && !val.includes("-") && cvarTestSafe[val.split(" ")[0]](val.split(" ").slice(1).join(" ")),
   "sar_on_tas_start_clear": (val) => true,
   "sar_on_tas_start_list": (val) => true,
-  "hwait": (val) => !val.includes("+") && !val.includes("-") && checkcvar(val.split(" ")[0], val.split(" ").slice(1).join(" ")),
-  "seq": (val) => !val.includes("+") && !val.includes("-") && checkcvar(val.split(" ")[0], val.split(" ").slice(1).join(" ")),
-  "wait": (val) => !val.includes("+") && !val.includes("-") && checkcvar(val.split(" ")[0], val.split(" ").slice(1).join(" ")),
-  "wait_to": (val) => !val.includes("+") && !val.includes("-") && checkcvar(val.split(" ")[0], val.split(" ").slice(1).join(" ")),
-  "wait_for": (val) => !val.includes("+") && !val.includes("-") && checkcvar(val.split(" ")[0], val.split(" ").slice(1).join(" ")),
+  "hwait": (val) => !val.includes("+") && !val.includes("-") && cvarTestSafe[val.split(" ")[0]](val.split(" ").slice(1).join(" ")),
+  "seq": (val) => !val.includes("+") && !val.includes("-") && cvarTestSafe[val.split(" ")[0]](val.split(" ").slice(1).join(" ")),
+  "wait": (val) => !val.includes("+") && !val.includes("-") && cvarTestSafe[val.split(" ")[0]](val.split(" ").slice(1).join(" ")),
+  "wait_to": (val) => !val.includes("+") && !val.includes("-") && cvarTestSafe[val.split(" ")[0]](val.split(" ").slice(1).join(" ")),
+  "wait_for": (val) => !val.includes("+") && !val.includes("-") && cvarTestSafe[val.split(" ")[0]](val.split(" ").slice(1).join(" ")),
   "wait_mode": (val) => true, // 	non-functional 	-
   "wait_persist_across_loads": (val) => true, // 	non-functional 	-
   // miscellaneous commands found in demos
