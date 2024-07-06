@@ -26,7 +26,7 @@ async function concludeWeek (context) {
   for (let i = 0; i < week.categories.length; i ++) {
     week.categories[i].lock = true;
   }
-
+  
   await points(["award"], context);
 
   await discord(["announce", "The leaderboard has been locked."], context);
@@ -51,6 +51,11 @@ async function concludeWeek (context) {
 
   await Bun.write(context.file.week, JSON.stringify(week));
 
+  // Curate a week's worth of workshop maps
+  UtilPrint("epochtal(concludeWeek): Curating workshop maps...");
+  const allmaps = await workshopper(["buildweek"], context);
+  await Bun.write(`${__dirname}/../maps.json`, JSON.stringify(allmaps));
+
   return "SUCCESS";
 
 }
@@ -60,12 +65,9 @@ async function releaseMap (context) {
   UtilPrint("epochtal(releaseMap): Creating archive...");
   await archive(["create", null, true], context);
 
-  // Curate a week's worth of workshop maps, pick 5 for voting
+  // Load the curated workshop map set, pick 5 for voting
+  const allmaps = await Bun.file(`${__dirname}/../maps.json`).json();
   const VOTING_MAPS_COUNT = 5;
-
-  UtilPrint("epochtal(releaseMap): Curating workshop maps...");
-  const allmaps = await workshopper(["buildweek"], context);
-  await Bun.write(`${__dirname}/../maps.json`, JSON.stringify(allmaps));
 
   UtilPrint("epochtal(releaseMap): Building voting map list...");
   const votingmaps = [];
