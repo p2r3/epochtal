@@ -3,6 +3,17 @@ const UtilError = require("./error.js");
 const keys = require("../../keys.js");
 const profiledata = require("./profiledata.js");
 
+/**
+ * Handles the <code>avatar</code> utility call. This utility can do the following based on the (sub)command that gets called:
+ *
+ * - <code>get</code>: Gets the locally stored avatar of the user with the specified SteamID.
+ * - <code>update</code>: Fetches the avatar of the given SteamID from the Steam API, and updates the locally stored version.
+ * - <code>fetch</code>: Fetches the avatar of the given SteamID from the Steam API and returns it.
+ *
+ * @param args An array where the first item is the (sub)command to call, and the second item is the appropriate SteamID
+ * @param context The context on which to execute the call
+ * @returns {Promise<*|string|undefined>} The result of the utility call
+ */
 module.exports = async function (args, context = epochtal) {
 
   const [command, steamid] = args;
@@ -19,9 +30,11 @@ module.exports = async function (args, context = epochtal) {
     case "update":
     case "fetch": {
 
+      // Get user data from Steam API
       const apiRequest = await fetch(`https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2?key=${keys.steam}&steamids=${steamid}`);
       if (apiRequest.status !== 200) throw new UtilError("ERR_STEAMAPI", args, context);
 
+      // Try to get the medium avatar from the API response
       let avatar;
       try {
         avatar = (await apiRequest.json()).response.players[0].avatarmedium;
@@ -29,6 +42,11 @@ module.exports = async function (args, context = epochtal) {
         throw new UtilError("ERR_STEAMAPI: " + e.message, args, context, "avatar", e.stack);
       }
 
+      // In my opinion it would be cleaner to break out this switch branch (up until this point) into its own function,
+      // and individually call the function in the "update" and "fetch" branches. This way, you wouldn't need to check
+      // "command" twice, does that make sense? It's probably up to preference but there's an idea at least - Soni
+
+      // Return or update avatar based on command
       if (command === "fetch") return avatar;
       return await profiledata(["edit", steamid, "avatar", avatar], context);
 
