@@ -24,6 +24,27 @@ var smoothScroll = function (queryString) {
 
 };
 
+function sanitizeStringJS (str) {
+  return (
+    str.replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll("&", "&amp;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("\n", "<br>")
+    .replaceAll("\r", "")
+    .replaceAll("\\", "\\\\")
+    .replaceAll("'", "\\'")
+  );
+}
+
+function sanitizeStringHTML (str) {
+  return (
+    str.replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll("&", "&amp;")
+  );
+}
+
 var homepageInit = async function () {
 
   var config = await (await fetch("/api/config/get")).json();
@@ -101,18 +122,14 @@ var homepageInit = async function () {
       const run = leaderboardData[i];
       const user = users[run.steamid];
 
-      run.note = run.note.replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll("&", "&amp;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("\n", "<br>")
-        .replaceAll("\r", "")
-        .replaceAll("\\", "\\\\")
-        .replaceAll("'", "\\'");
+      const note = sanitizeStringJS(run.note);
 
-      const username = user.name.replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll("&", "&amp;");
+      let username = user.name;
+      if ((categoryData.coop && ("partners" in config && config.partners[run.steamid]) || run.partner)) {
+        const partner = users[("partners" in config && config.partners[run.steamid]) ? config.partners[run.steamid] : run.partner];
+        username += " & " + partner.name;
+      }
+      username = sanitizeStringHTML(username);
 
       if (i !== 0 && run.time !== leaderboardData[i - 1].time) {
         placement ++;
@@ -139,7 +156,7 @@ var homepageInit = async function () {
     ${!isArchive && whoami && run.steamid === whoami.steamid ? `<i class="fa-solid fa-pen-to-square pointer" onmouseover="showTooltip('Edit comment')" onmouseleave="hideTooltip()" onclick="editComment('${category}')"></i>` : ""}
     ${!isArchive && whoami && run.steamid === whoami.steamid ? `<i class="fa-solid fa-trash pointer" onmouseover="showTooltip('Remove submission')" onmouseleave="hideTooltip()" onclick="removeRun('${category}')"></i>` : ""}
     ${run.segmented ? `<i class="fa-solid fa-link" onmouseover="showTooltip('Segmented submission')" onmouseleave="hideTooltip()"></i>` : ""}
-    ${run.note ? `<i class="fa-solid fa-comment" onmouseover="showTooltip('${run.note}')" onmouseleave="hideTooltip()"></i>` : ""}
+    ${note ? `<i class="fa-solid fa-comment" onmouseover="showTooltip('${note}')" onmouseleave="hideTooltip()"></i>` : ""}
     ${run.proof ? `<a href='${downloadURL}' target="_blank"><i class="fa-solid fa-${run.proof === "demo" ? "file-arrow-down" : "video"}" onmouseover="showTooltip('${run.proof === "demo" ? "Download demo" : "Watch video"}')" onmouseleave="hideTooltip()"></i></a>` : ""}
   </div>
 </div>`;
@@ -226,7 +243,7 @@ var homepageInit = async function () {
 
     const run = leaderboard[category].find(curr => curr.steamid === whoami.steamid);
 
-    showPopup("Edit run comment", `<textarea id="edit-note" cols="25" rows="3" placeholder="no comment">${run.note}</textarea>`, POPUP_INFO, true);
+    showPopup("Edit run comment", `<textarea id="edit-note" cols="25" rows="3" placeholder="no comment">${sanitizeStringJS(run.note)}</textarea>`, POPUP_INFO, true);
 
     popupOnOkay = async function () {
 
