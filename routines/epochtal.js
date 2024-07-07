@@ -53,7 +53,7 @@ async function concludeWeek (context) {
 
   // Curate a week's worth of workshop maps
   UtilPrint("epochtal(concludeWeek): Curating workshop maps...");
-  const allmaps = await workshopper(["buildweek"], context);
+  const allmaps = await workshopper(["curateweek"], context);
   await Bun.write(`${__dirname}/../maps.json`, JSON.stringify(allmaps));
 
   return "SUCCESS";

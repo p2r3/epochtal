@@ -200,11 +200,8 @@ bun.lockb
 bin
 
 # State secrets (shhh)
-util/workshopper.js
-util/curator.js
 maps.json
 entgraphs.json
-curator
 
 # Utility logs
 util.error
