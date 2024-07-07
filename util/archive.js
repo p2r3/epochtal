@@ -3,14 +3,6 @@ const UtilPrint = require("../util/print.js");
 
 const fs = require("node:fs");
 
-const utilsdir = fs.readdirSync(__dirname);
-const utils = {};
-utilsdir.forEach(util => {
-  if (util === "archive.js") return;
-  util = util.split(".js")[0];
-  utils[util] = require("./" + util);
-});
-
 function isValidName (name) {
   return name && !name.includes("..") && !name.includes("/");
 }
@@ -108,10 +100,11 @@ module.exports = async function (args, context = epochtal) {
       const utilName = args[2];
       const utilArgs = args.slice(3);
 
-      if (!(utilName in utils)) throw new UtilError("ERR_UTIL", args, context);
-      const util = utils[utilName];
-
+      if (!utilName || utilName.includes("..") || utilName.includes("/")) throw new UtilError("ERR_ARGS", args, context);
+      if (!fs.existsSync(`${__dirname}/${utilName}.js`)) throw new UtilError("ERR_UTIL", args, context);
+      
       // This will fail if circular dependencies with archive.js are encountered...
+      const util = require(`${__dirname}/${utilName}.js`);
       return await util(utilArgs, archiveContext);
 
     }
