@@ -136,6 +136,8 @@ async function buildFiles (context) {
   // Write map command and script to epochtal_map
   await Bun.write(`${portal2}/cfg/epochtal_map.cfg`, `map ${mapPaths[0]}`);
   await Bun.write(`${portal2}/scripts/vscripts/epochtal_map.nut`, `::epochtal_map <- ["${mapPaths.join('", "')}"]`);
+  // Write current week number to epochtal_week.cfg as an svar
+  await Bun.write(`${portal2}/cfg/epochtal_week.cfg`, `svar_set epochtal_week ${week.number}`);
 
   // Create checksums for all created files
   let checksums = "\n// Epochtal files";

@@ -7,6 +7,7 @@ sar_fast_load_preset full
 exec autoexec.cfg
 stuffcmds
 
+exec epochtal_week
 exec epochtal_category
 execifexists epochtal_category_override
 
