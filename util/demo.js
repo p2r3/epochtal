@@ -6,6 +6,14 @@ const tmppath = require("./tmppath.js");
 const discord = require("./discord.js");
 const testcvar = require("./testcvar.js");
 
+// Allows specifying just the filename of the demo as a shorthand for the full path
+function extendFilePath (file) {
+  if (!fs.existsSync(file)) {
+    return `${__dirname}/../demos/${file}`;
+  }
+  return file;
+}
+
 async function decompressXZ (file) {
 
   await $`xz -dkf ${file}`.quiet();
@@ -76,20 +84,29 @@ module.exports = async function (args, context = epochtal) {
     
     case "dump": {
 
-      return await parseDump(file);
+      const path = extendFilePath(file);
+      if (!fs.existsSync(path)) throw new UtilError("ERR_FILE", args, context);
+
+      return await parseDump(path);
     
     }
   
     case "mdp": {
 
-      return await parseMDP(file);
+      const path = extendFilePath(file);
+      if (!fs.existsSync(path)) throw new UtilError("ERR_FILE", args, context);
+
+      return await parseMDP(path);
 
     }
 
     case "parse": {
 
-      const mdp = await parseMDP(file);
-      const dump = await parseDump(file);
+      const path = extendFilePath(file);
+      if (!fs.existsSync(path)) throw new UtilError("ERR_FILE", args, context);
+
+      const mdp = await parseMDP(path);
+      const dump = await parseDump(path);
 
       const output = {
         ...dump,
@@ -118,7 +135,10 @@ module.exports = async function (args, context = epochtal) {
 
     case "verify": {
 
-      const mdp = await parseMDP(file);
+      const path = extendFilePath(file);
+      if (!fs.existsSync(path)) throw new UtilError("ERR_FILE", args, context);
+
+      const mdp = await parseMDP(path);
 
       if (Math.abs(mdp.demos[0].tps - 60.00) > 0.01) {
         return `Tickrate mismatch. Expected 60.00, got ${mdp.tps.toFixed(2)}.`;
