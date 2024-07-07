@@ -2,9 +2,25 @@ const UtilError = require("./error.js");
 const UtilPrint = require("../util/print.js");
 
 const fs = require("node:fs");
-const { $ } = require("bun");
 
-async function getArchiveContext (path) {
+const utilsdir = fs.readdirSync(__dirname);
+const utils = {};
+utilsdir.forEach(util => {
+  if (util === "archive.js") return;
+  util = util.split(".js")[0];
+  utils[util] = require("./" + util);
+});
+
+function isValidName (name) {
+  return name && !name.includes("..") && !name.includes("/");
+}
+
+async function getArchiveContext (name) {
+
+  if (!isValidName(name)) return "ERR_NAME";
+
+  const path = `${__dirname}/../pages/archive/${name}`;
+  if (!fs.existsSync(path)) return "ERR_NAME";
 
   const context = { file: {}, data: {} };
   
@@ -73,41 +89,36 @@ module.exports = async function (args, context = epochtal) {
 
     case "get": {
 
-      if (!name || name.includes("..") || name.includes("/")) throw new UtilError("ERR_NAME", args, context);
+      const archiveContext = await getArchiveContext(name);
+      if (typeof archiveContext === "string") {
+        throw new UtilError(archiveContext, args, context);
+      }
 
-      const archivePath = `${__dirname}/../pages/archive/${name}`;
-      if (!fs.existsSync(archivePath)) throw new UtilError("ERR_NAME", args, context);
-
-      return await getArchiveContext(archivePath);
+      return archiveContext;
 
     }
 
     case "assume": {
 
-      if (!name || name.includes("..") || name.includes("/")) throw new UtilError("ERR_NAME", args, context);
-
-      const archivePath = `${__dirname}/../pages/archive/${name}`;
-      if (!fs.existsSync(archivePath)) throw new UtilError("ERR_NAME", args, context);
-
-      const archiveContext = await getArchiveContext(archivePath);
-
-      let util;
-      try {
-        util = require("./" + args[2]);
-        if (!util) throw new UtilError("ERR_UTIL", args, context);
-      } catch (e) {
-        throw new UtilError("ERR_UTIL", args, context);
+      const archiveContext = await getArchiveContext(name);
+      if (typeof archiveContext === "string") {
+        throw new UtilError(archiveContext, args, context);
       }
 
-      const args = args.slice(3);
+      const utilName = args[2];
+      const utilArgs = args.slice(3);
 
-      return await util(args, archiveContext);
+      if (!(utilName in utils)) throw new UtilError("ERR_UTIL", args, context);
+      const util = utils[utilName];
+
+      // This will fail if circular dependencies with archive.js are encountered...
+      return await util(utilArgs, archiveContext);
 
     }
 
     case "create": {
 
-      if (name && (name.includes("..") || name.includes("/"))) throw new UtilError("ERR_NAME", args, context);
+      if (name && !isValidName(name)) throw new UtilError("ERR_NAME", args, context);
       
       let archivePath = `${__dirname}/../pages/archive/${name || ("week" + context.data.week.number)}`;
       const force = !!args[2];
@@ -150,8 +161,10 @@ module.exports = async function (args, context = epochtal) {
 
     case "demo": {
 
+      if (!isValidName(name)) throw new UtilError("ERR_NAME", args, context);
+
       const [steamid, category] = args.slice(2);
-      if (!steamid || !category) throw new UtilError("ERR_ARGS", args, context);
+      if (!isValidName(steamid) || !isValidName(category)) throw new UtilError("ERR_ARGS", args, context);
 
       const archivePath = `${__dirname}/../pages/archive/${name}`;
       if (!fs.existsSync(archivePath)) throw new UtilError("ERR_NAME", args, context);
