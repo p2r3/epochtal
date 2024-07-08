@@ -129,9 +129,11 @@ ppmod.onauto(async(function () {
     local mapTextString = "      Playing map " + (index + 1) + " of " + epochtal_map.len() + "\n";
     local mapTextInstance = ppmod.text(mapTextString, 0, 1);
 
-    mapTextInstance.SetSize(0);
-    mapTextInstance.SetFade(0.5, 0.5);
-    mapTextInstance.Display(5.0);
+    ppmod.wait(function ():(mapTextInstance) {
+      mapTextInstance.SetSize(0);
+      mapTextInstance.SetFade(0.5, 0.5);
+      mapTextInstance.Display(5.0);
+    }, 1.0);
 
     SendToConsole("sar_speedrun_start_on_load 0");
 
