@@ -121,7 +121,7 @@ async function releaseMap (context) {
     sppliceVotingResult = await spplice(["add",
       "epochtal-voting",
       votingFiles.output,
-      `Tournament Week ${context.data.week.number} Voting Pool`,
+      `Tournament Week ${context.data.week.number + 1} Voting Pool`,
       "PortalRunner",
       votingThumbnail,
       "Play future maps ahead of time and vote for your favorites on the Epochtal website.",
