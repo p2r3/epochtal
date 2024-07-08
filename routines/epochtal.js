@@ -125,7 +125,7 @@ async function releaseMap (context) {
       "PortalRunner",
       votingThumbnail,
       "Play future maps ahead of time and vote for your favorites on the Epochtal website.",
-      95
+      2995
     ]);
 
     fs.rmSync(votingFiles.output, { recursive: true });
@@ -216,7 +216,7 @@ async function releaseMap (context) {
       "PortalRunner",
       thumbnail,
       announceText,
-      100
+      3000
     ]);
   
     fs.rmSync(portal2.output, { recursive: true });
