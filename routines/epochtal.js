@@ -15,6 +15,7 @@ const users = require("../util/users.js");
 const profiledata = require("../util/profiledata.js");
 const profilelog = require("../util/profilelog.js");
 const points = require("../util/points.js");
+const curator = require("../util/curator.js");
 
 // Scheduled routines are designed to revert all changes upon failing or to fail invisibly
 // This causes messy try/catches, but is better than leaving the system in a half-broken state
@@ -100,7 +101,7 @@ async function releaseMap (context) {
   UtilPrint("epochtal(releaseMap): Creating voting map Spplice package...");
   
   const votingContext = {
-    data: { week: { map: votingmaps } },
+    data: { week: { number: ((context.data.week.number + 1) + "-voting"), map: votingmaps } },
     file: { portal2: context.file.portal2 }
   };
 
