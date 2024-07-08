@@ -320,6 +320,10 @@ async function rebuildMap (context) {
     }
     const announceText = `With a community vote of ${context.data.week.map.upvotes} upvotes to ${context.data.week.map.downvotes} downvotes, the map for week ${context.data.week.number} of PortalRunner's Weekly Tournament was decided to be ${context.data.week.map.title} by ${context.data.week.map.author}.`;
 
+    if (await spplice(["get", "epochtal"])) {
+      await spplice(["remove", "epochtal"]);
+    }
+
     const portal2 = await gamefiles(["build"], context);
     sppliceResult = await spplice(["add",
       "epochtal",
