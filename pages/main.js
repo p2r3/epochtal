@@ -605,6 +605,55 @@ var homepageInit = async function () {
 
   };
 
+  const suggestMapButton = document.querySelector("#suggest-map-button");
+  suggestMapButton.onclick = function () {
+    
+    showPopup("Suggest a Map", `<p>Suggest a map to the tournament.
+      Every submission will be considered by the curation algorithm until it appears in the voting top 5 list.</p>
+      <input type="text" placeholder="Workshop Link" id="suggest-input"></input>`, POPUP_INFO, true);
+
+    popupOnOkay = async function () {
+
+      const suggestInput = document.querySelector("#suggest-input");
+      const mapid = suggestInput.value.trim().toLowerCase().split("https://steamcommunity.com/sharedfiles/filedetails/?id=").pop().split("?")[0];
+
+      if (!mapid || isNaN(mapid)) {
+        showPopup("Invalid link", "The workshop link you provided could not be parsed.", POPUP_ERROR);
+        return;
+      }
+
+      hidePopup();
+      
+      try {
+
+        const response = await fetch(`/api/workshopper/suggest/"${mapid}"`);
+        const data = await response.json();
+        
+        if (data !== "SUCCESS") switch (data) {
+          case "ERR_LOGIN":
+            return showPopup("Not logged in", "Please log in via Steam before suggesting maps.", POPUP_ERROR);
+          case "ERR_MAPID":
+            return showPopup("Invalid link", "The workshop link you provided could not be parsed.", POPUP_ERROR);
+          case "ERR_EXISTS":
+            return showPopup("Already suggested", "This map has already been suggested to the tournament.", POPUP_ERROR);
+        
+          default:
+            throw data;
+        }
+
+        return showPopup("Success", "Your map has been suggested for the tournament.");
+
+      } catch (e) {
+
+        console.error(e);
+        return showPopup("Unknown error", "An unexpected error occurred while submitting the map. Check the JavaScript console for more info.", POPUP_ERROR);
+
+      }
+
+    };
+
+  };
+
   const playersContainer = document.querySelector("#players-container");
   const playersSearch = document.querySelector("#players-search");
 

@@ -54,12 +54,21 @@ async function concludeWeek (context) {
 
   await Bun.write(context.file.week, JSON.stringify(week));
 
+  // Parse suggested maps (remove those which have been picked)
+  const suggestions = await Bun.file(`${__dirname}/../suggestions.json`).json();
+  for (let i = 0; i < suggestions.length; i ++) {
+    if (!("v1" in suggestions[i] && "v2" in suggestions[i])) {
+      suggestions.splice(i, 1);
+      i --;
+    }
+  }
+
   // Curate a week's worth of workshop maps
   UtilPrint("epochtal(concludeWeek): Ensuring that v2 density graphs are up to date...");
   await curator(["graph"], context);
 
   UtilPrint("epochtal(concludeWeek): Curating workshop maps...");
-  const allmaps = await workshopper(["curateweek"], context);
+  const allmaps = await workshopper(["curateweek", suggestions], context);
   await Bun.write(`${__dirname}/../maps.json`, JSON.stringify(allmaps));
 
   return "SUCCESS";
@@ -257,6 +266,32 @@ async function releaseMap (context) {
     await spplice(["remove", "epochtal"]);
 
     e.message = "ERR_WRITEMEM: " + e.message;
+    throw e;
+
+  }
+  
+  try {
+    
+    const suggestionsFile = Bun.file(`${__dirname}/../suggestions.json`);
+    const suggestions = await suggestionsFile.json();
+
+    for (const map of votingmaps) {
+      const suggestion = suggestions.find(c => c.id === map.id);
+      if (!suggestion) continue;
+
+      delete suggestion.v1;
+      delete suggestion.v2;
+    }
+    await Bun.write(suggestionsFile, JSON.stringify(suggestions));
+
+  } catch (e) {
+
+    await flush(["memory"], context);
+
+    await spplice(["remove", "epochtal-voting"]);
+    await spplice(["remove", "epochtal"]);
+
+    e.message = "ERR_UPDATE_SUGGESTIONS: " + e.message;
     throw e;
 
   }
