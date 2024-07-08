@@ -7,7 +7,7 @@ const { $ } = require("bun");
 const keys = require("../../keys.js");
 const tmppath = require("./tmppath.js");
 const workshopper = require("./workshopper.js");
-const coopify = require("./coopify.js");
+const coopifier = require("./coopifier.js");
 
 async function getChecksum (path) {
 
@@ -169,7 +169,7 @@ async function buildFiles (context) {
 
   // Prepare map(s) BSP for simulated co-op
   for (let i = 0; i < mapPaths.length; i ++) {
-    if ((await coopify([`${portal2}/maps/${mapPaths[i]}.bsp`])) !== true) throw "ERR_COOPIFY";
+    await coopifier(["inject", `${portal2}/maps/${mapPaths[i]}.bsp`], context);
   }
 
   return {
