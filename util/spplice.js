@@ -7,7 +7,7 @@ const tmppath = require("./tmppath.js");
 async function archiveFiles (portal2) {
 
   const output = (await tmppath()) + ".tar.xz";
-  await $`tar -cJf ${output} -C ${portal2} .`;
+  await $`XZ_OPT=-9e tar -cJf ${output} -C ${portal2} .`;
 
   return output;
 
