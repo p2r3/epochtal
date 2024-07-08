@@ -36,6 +36,7 @@ async function downloadEntityLump (mapid) {
   if (typeof data === "string") return data;
 
   if (data.file_url === undefined) return "";
+  if (data.consumer_appid !== 620) return "";
 
   const request = await fetch(data.file_url);
   if (request.status !== 200) throw new UtilError("ERR_STEAMAPI", args, context);
@@ -110,6 +111,13 @@ async function downloadEntityLump (mapid) {
 
           return;
         }
+      });
+
+      // if the response ended and we have no entities lump, resolve with empty string
+      response.on("end", function () {
+        setTimeout(function () {
+          resolve("");
+        }, 1000);
       });
 
     }).end();
@@ -500,7 +508,7 @@ module.exports = async function (args, context = epochtal) {
         } else {
           // If a cache was not found, try to download the BSP and calculate graphs
           const entityLump = await downloadEntityLump(archiveContext.data.week.map.id);
-          if (entityLump === "") { UtilPrint(`Skipping ${archiveName}, no BSP data.`); continue; }
+          if (entityLump === "") continue;
           
           const entities = parseLump(entityLump);
           mapDensity = calculateDensities(entities);
