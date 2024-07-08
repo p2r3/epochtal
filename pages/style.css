@@ -425,3 +425,132 @@ input:checked+.slider:before {
   padding: 7px 15px 7px 40px;
   text-align: left;
 }
+
+@media screen and (max-width: 800px) {
+
+  #page-content {
+    overflow-x: hidden;
+  }
+
+  header {
+    padding: 15px;
+  }
+  #header-left {
+    display: none;
+  }
+  #header-right {
+    float: none;
+    width: 100%;
+    text-align: center;
+  }
+  .header-block {
+    margin-top: 5px;
+  }
+
+  .section {
+    padding: 10% 5% 0 5%;
+  }
+
+  .marginx { margin-left: 2.5%; margin-right: 2.5%; }
+  .marginy { margin-top: 10%; margin-bottom: 7.5%; }
+  .marginb { margin-bottom: 10% }
+  .justify-center { text-align: center; }
+
+  h1 {
+    font-size: 1.35rem;
+  }
+
+  .scroll-enabled::-webkit-scrollbar {
+    display: none;
+  }
+  .scroll-enabled {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  #intro h1 {
+    text-align: center;
+    margin-top: 10%;
+  }
+  #intro h3 {
+    text-align: center;
+  }
+
+  .votes-entry {
+    margin: 5%;
+    padding: 5px;
+  }
+  .votes-entry a {
+    text-decoration: none;
+  }
+  .votes-image {
+    display: block;
+    width: 100%;
+  }
+  .votes-text {
+    position: relative;
+    display: inline-block;
+    width: 100%;
+    text-align: center;
+    margin: 10px 0;
+  }
+  .votes-buttons {
+    left: 5%;
+    bottom: 5%;
+    width: 90%;
+  }
+  .votes-buttons img {
+    width: 12%;
+    margin: 0;
+  }
+  .votes-up {
+    margin-right: 76% !important;
+  }
+
+  #leaderboard-archive-select-container, #leaderboard-category-select-container {
+    position: relative;
+    top: unset;
+    left: unset;
+    right: unset;
+    transform: unset;
+    margin-bottom: 10px;
+  }
+  #leaderboard-archive-select-container h3, #leaderboard-category-select-container h3 {
+    margin-bottom: 0 !important;
+  }
+  #leaderboard-archive-select, #leaderboard-category-select {
+    margin-left: 50%;
+    transform: translateX(-50%);
+  }
+  #leaderboard-data {
+    margin-top: 10%;
+  }
+
+  #submit-demo {
+    margin-bottom: 5px;
+  }
+  #submit-link-container h3 {
+    display: none;
+  }
+
+  #players-container {
+    background-color: transparent;
+  }
+
+  #bg-anim-switch {
+    display: none;
+  }
+
+  #global-tooltip {
+    max-width: calc(90vw - 10px);
+    text-align: center;
+    transform: translate(calc(50vw - 50%), calc(80vh - 100%)) !important;
+  }
+
+  #global-popup {
+    width: 90vw;
+    box-sizing: border-box;
+    text-align: center;
+  }
+
+}

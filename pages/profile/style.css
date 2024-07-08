@@ -99,3 +99,28 @@
 #profile-stats-text h3 {
   margin-top: 0;
 }
+
+@media screen and (max-width: 800px) {
+
+  #header-left {
+    display: inline-block;
+    width: 100%;
+    text-align: center;
+  }
+
+  #profile-avatar {
+    border: 2px solid white;
+    box-sizing: border-box;
+    vertical-align: -22px;
+  }
+
+  #profile-graph {
+    width: 90vw;
+  }
+
+  #profile-stats-text {
+    font-size: 1.2rem;
+    margin: 0 5vw;
+  }
+
+}
