@@ -16,6 +16,9 @@ const profiledata = require("../util/profiledata.js");
 const profilelog = require("../util/profilelog.js");
 const points = require("../util/points.js");
 
+// Scheduled routines are designed to revert all changes upon failing or to fail invisibly
+// This causes messy try/catches, but is better than leaving the system in a half-broken state
+
 async function concludeWeek (context) {
 
   const week = context.data.week;
@@ -90,98 +93,132 @@ async function releaseMap (context) {
   };
 
   let votingThumbnail = votingmaps[0].thumbnail;
-  if (!votingThumbnail.startsWith("http")) votingThumbnail = `https://steamuserimages-a.akamaihd.net/ugc/${votingThumbnail}?impolicy=Letterbox&imh=360`;
+  if (!votingThumbnail.startsWith("http")) {
+    votingThumbnail = `https://steamuserimages-a.akamaihd.net/ugc/${votingThumbnail}?impolicy=Letterbox&imh=360`;
+  }
+
+  let sppliceVotingResult;
+  try {
+
+    const votingFiles = await gamefiles(["build"], votingContext);
+
+    if (await spplice(["get", "epochtal-voting"])) {
+      await spplice(["remove", "epochtal-voting"]);
+    }
+
+    sppliceVotingResult = await spplice(["add",
+      "epochtal-voting",
+      votingFiles.output,
+      `Tournament Week ${context.data.week.number} Voting Pool`,
+      "PortalRunner",
+      votingThumbnail,
+      "Play future maps ahead of time and vote for your favorites on the Epochtal website.",
+      95
+    ]);
+
+    fs.rmSync(votingFiles.output, { recursive: true });
+
+  } catch (e) {
+
+    if (sppliceVotingResult) await spplice(["remove", "epochtal-voting"]);
+
+    e.message = "ERR_VOTEFILES: " + e.message;
+    throw e;
+
+  }
   
-  const votingManifest = {
-    title: `Tournament Week ${context.data.week.number + 1} Voting Pool`,
-    name: `epochtal-voting${context.data.week.number + 1}`,
-    author: "PortalRunner",
-    icon: votingThumbnail,
-    description: `Play future maps ahead of time and vote for your favorites on the Epochtal website.`,
-    weight: 95
-  };
-
-  const votingFiles = await gamefiles(["build"], votingContext);
-  const votingPackageNew = await spplice(["package", votingFiles.output, votingManifest], votingContext);
-
-  fs.rmSync(votingFiles.output, { recursive: true });
-  
-  const votingPackagePath = `${__dirname}/../pages/epochtal-voting.sppkg`;
-  const votingPackageBackup = await tmppath();
-
-  fs.renameSync(votingPackagePath, votingPackageBackup);
-  fs.renameSync(votingPackageNew, votingPackagePath);
-
   // Count votes and pick the next active map
   UtilPrint("epochtal(releaseMap): Counting map votes...");
 
-  const totalVotes = Array(VOTING_MAPS_COUNT).fill(0);
-  const totalUpvotes = Array(VOTING_MAPS_COUNT).fill(0);
-  const totalDownvotes = Array(VOTING_MAPS_COUNT).fill(0);
+  let newmap;
+  try {
 
-  for (const steamid in context.data.week.votes) {
-
-    const curr = context.data.week.votes[steamid];
-    
-    for (let i = 0; i < VOTING_MAPS_COUNT; i ++) {
-      if (curr[i] > 0) totalUpvotes[i] += curr[i];
-      else if (curr[i] < 0) totalDownvotes[i] -= curr[i];
-      totalVotes[i] += curr[i];
+    const totalVotes = Array(VOTING_MAPS_COUNT).fill(0);
+    const totalUpvotes = Array(VOTING_MAPS_COUNT).fill(0);
+    const totalDownvotes = Array(VOTING_MAPS_COUNT).fill(0);
+  
+    for (const steamid in context.data.week.votes) {
+  
+      const curr = context.data.week.votes[steamid];
+      
+      for (let i = 0; i < VOTING_MAPS_COUNT; i ++) {
+        if (curr[i] > 0) totalUpvotes[i] += curr[i];
+        else if (curr[i] < 0) totalDownvotes[i] -= curr[i];
+        totalVotes[i] += curr[i];
+      }
+  
     }
+  
+    let highestVoted = 0;
+    for (let i = 1; i < VOTING_MAPS_COUNT; i ++) {
+      if (totalVotes[i] > totalVotes[highestVoted]) {
+        highestVoted = i;
+      }
+    }
+  
+    newmap = await workshopper(["get", context.data.week.votingmaps[highestVoted].id]);
+    newmap.upvotes = totalUpvotes[highestVoted];
+    newmap.downvotes = totalDownvotes[highestVoted];
+
+  } catch (e) {
+
+    await spplice(["remove", "epochtal-voting"]);
+
+    e.message = "ERR_VOTEFILES: " + e.message;
+    throw e;
 
   }
-
-  let highestVoted = 0;
-  for (let i = 1; i < VOTING_MAPS_COUNT; i ++) {
-    if (totalVotes[i] > totalVotes[highestVoted]) {
-      highestVoted = i;
-    }
-  }
-
-  const newmap = await workshopper(["get", context.data.week.votingmaps[highestVoted].id]);
-  newmap.upvotes = totalUpvotes[highestVoted];
-  newmap.downvotes = totalDownvotes[highestVoted];
 
   // Build new game files and update Spplice repository
   UtilPrint(`epochtal(releaseMap): Building game files for map "${newmap.title}" by "${newmap.author}"...`);
 
-  const archivePath = `${__dirname}/../pages/epochtal.tar.xz`;
-  const manifestPath = `${__dirname}/../pages/spplice.json`;
-  const archiveBackup = await tmppath();
-  const manifestBackup = await tmppath();
+  let sppliceResult = null;
+  let announceText;
 
   try {
 
     context.data.week.number ++;
     context.data.week.map = newmap;
 
+    announceText = `With a community vote of ${context.data.week.map.upvotes} upvotes to ${context.data.week.map.downvotes} downvotes, the map for week ${context.data.week.number} of PortalRunner's Weekly Tournament was decided to be ${context.data.week.map.title} by ${context.data.week.map.author}.`;
+
     const portal2 = await gamefiles(["build"], context);
     const vmf = await gamefiles(["getvmf", `${portal2.output}/maps/${portal2.map[0]}`, true], context);
-    const archive = await spplice(["archive", portal2.output], context);
-    const manifest = await spplice(["manifest", null], context);
+
+    let thumbnail = context.data.week.map.thumbnail;
+    if (!thumbnail.startsWith("http")) {
+      thumbnail = `https://steamuserimages-a.akamaihd.net/ugc/${thumbnail}?impolicy=Letterbox&imh=360`;
+    }
+
+    // If the routine fails somewhere here, we can't easily revert a Spplice package change
+    // However, since the board would be locked by now, we can afford deleting the old package
+    // The focus should be on not "leaking" the new package early
+    if (await spplice(["get", "epochtal"])) {
+      await spplice(["remove", "epochtal"]);
+    }
+
+    sppliceResult = await spplice(["add",
+      "epochtal",
+      portal2.output,
+      "Tournament Week " + context.data.week.number,
+      "PortalRunner",
+      thumbnail,
+      announceText,
+      100
+    ]);
   
     fs.rmSync(portal2.output, { recursive: true });
-
-    fs.renameSync(archivePath, archiveBackup);
-    fs.renameSync(archive, archivePath);
-    fs.renameSync(manifestPath, manifestBackup);
-    fs.renameSync(manifest, manifestPath);
 
     fs.renameSync(vmf, `${__dirname}/../vmfs/${context.data.week.map.id}.vmf.xz`);
 
     context.data.week.map.file = portal2.map[0];
-    
-    const announceText = `With a community vote of ${context.data.week.map.upvotes} upvotes to ${context.data.week.map.downvotes} downvotes, the map for week ${context.data.week.number} of PortalRunner's Weekly Tournament was decided to be ${context.data.week.map.title} by ${context.data.week.map.author}.`;
-    await discord(["announce", announceText], context);
   
   } catch (e) {
 
     await flush(["memory"], context);
 
-    fs.renameSync(votingPackageBackup, votingPackagePath);
-
-    if (fs.existsSync(archiveBackup)) fs.renameSync(archiveBackup, archivePath);
-    if (fs.existsSync(manifestBackup)) fs.renameSync(manifestBackup, manifestPath);
+    await spplice(["remove", "epochtal-voting"]);
+    if (sppliceResult) await spplice(["remove", "epochtal"]);
 
     e.message = "ERR_GAMEFILES: " + e.message;
     throw e;
@@ -213,10 +250,8 @@ async function releaseMap (context) {
 
     await flush(["memory"], context);
 
-    fs.renameSync(votingPackageBackup, votingPackagePath);
-
-    if (fs.existsSync(archiveBackup)) fs.renameSync(archiveBackup, archivePath);
-    if (fs.existsSync(manifestBackup)) fs.renameSync(manifestBackup, manifestPath);
+    await spplice(["remove", "epochtal-voting"]);
+    await spplice(["remove", "epochtal"]);
 
     e.message = "ERR_WRITEMEM: " + e.message;
     throw e;
@@ -227,6 +262,8 @@ async function releaseMap (context) {
   await Bun.write(context.file.leaderboard, leaderboardString);
   await Bun.write(context.file.log, "");
 
+  await discord(["announce", announceText], context);
+
   return "SUCCESS";
 
 }
@@ -236,19 +273,31 @@ async function rebuildMap (context) {
   const archivePath = `${__dirname}/../pages/epochtal.tar.xz`;
   const archiveBackup = await tmppath();
 
+  let sppliceResult;
   try {
 
+    let thumbnail = context.data.week.map.thumbnail;
+    if (!thumbnail.startsWith("http")) {
+      thumbnail = `https://steamuserimages-a.akamaihd.net/ugc/${thumbnail}?impolicy=Letterbox&imh=360`;
+    }
+    const announceText = `With a community vote of ${context.data.week.map.upvotes} upvotes to ${context.data.week.map.downvotes} downvotes, the map for week ${context.data.week.number} of PortalRunner's Weekly Tournament was decided to be ${context.data.week.map.title} by ${context.data.week.map.author}.`;
+
     const portal2 = await gamefiles(["build"], context);
-    const archive = await spplice(["archive", portal2.output], context);
+    sppliceResult = await spplice(["add",
+      "epochtal",
+      portal2.output,
+      "Tournament Week " + context.data.week.number,
+      "PortalRunner",
+      thumbnail,
+      announceText,
+      100
+    ]);
   
     fs.rmSync(portal2.output, { recursive: true });
-  
-    fs.renameSync(archivePath, archiveBackup);
-    fs.renameSync(archive, archivePath);
 
   } catch (e) {
 
-    if (fs.existsSync(archiveBackup)) fs.renameSync(archiveBackup, archivePath);
+    if (sppliceResult) await spplice(["remove", "epochtal"]);
 
     e.message = "ERR_GAMEFILES: " + e.message;
     throw e;

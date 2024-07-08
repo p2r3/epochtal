@@ -8,6 +8,10 @@ epochtal.file = {
   log: `${__dirname}/pages/week.log`,
   portal2: `${__dirname}/defaults/portal2`,
   demos: `${__dirname}/demos`,
+  spplice: {
+    repository: `${__dirname}/pages/spplice`,
+    index: Bun.file(`${__dirname}/pages/spplice/index.json`)
+  },
   // Epochtal Live
   lobbies: Bun.file(`${__dirname}/lobbies.json`)
 };
@@ -19,6 +23,10 @@ epochtal.data = {
   discord: {
     announce: "1063171316875788338",
     report: "1059311594116497509"
+  },
+  spplice: {
+    address: "http://epochtal.p2r3.com:3002/spplice",
+    index: await epochtal.file.spplice.index.json()
   },
   // Epochtal Live
   lobbies: await epochtal.file.lobbies.json(),
@@ -68,6 +76,11 @@ const fetchHandler = async function (req) {
 
   const url = new URL(req.url);
   const urlPath = url.pathname.split("/").slice(1);
+  const userAgent = req.headers.get("User-Agent");
+
+  if (userAgent && userAgent.includes("spplice/2") && !urlPath[0]) {
+    return Response.json(await utils.spplice(["get"]));
+  }
 
   if (urlPath[0] === "api") {
 
