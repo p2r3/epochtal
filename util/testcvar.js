@@ -3904,7 +3904,8 @@ var cvarTestSafe = {
   "cm_max_history_chambers": (val) => true,
   "cm_current_community_map": (val) => true,
   "ui_pvplobby_show_offline": (val) => true,
-  "joy_remap_player_for_controller1": (val) => true
+  "joy_remap_player_for_controller1": (val) => true,
+  "mm_session_sys_delay_create_host": (val) => true
 };
 
 const cvarTestIllegal = {
