@@ -106,7 +106,7 @@ ppmod.onauto(async(function () {
       portal.SetHook("SetActivatedState", function () { return false });
     }
 
-    ppmod.onportal(function (shot):(ccom, red) {
+    ppmod.onportal(function (shot):(red) {
 
       if (!shot.weapon) return;
       if (!shot.portal) return;

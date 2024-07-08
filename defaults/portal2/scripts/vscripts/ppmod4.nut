@@ -853,7 +853,7 @@ for (local i = 0; i < entclasses.len(); i ++) {
       local intervalname = UniqueString("ppmod_auto_interval");
       local timername = UniqueString("ppmod_auto_timer");
 
-      ppmod.interval(function ():(blue, lowest, scr, intervalname) {
+      ppmod.interval(function ():(blue, lowest, scr, intervalname, timername) {
 
         local red = Entities.FindByClassname(null, "red");
         if (!red || !red.IsValid() || red.GetClassname() != "player") {
