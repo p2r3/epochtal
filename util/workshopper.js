@@ -153,9 +153,6 @@ module.exports = async function (args, context = epochtal) {
         throw new UtilError("ERR_ARGS", args, context);
       }
 
-      // Ensure that v2 density graphs are up to date
-      await curator(["graph"], context);
-
       return await curateWorkshop(maps);
 
     }
