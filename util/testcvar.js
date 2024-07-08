@@ -3909,17 +3909,17 @@ var cvarTestSafe = {
 };
 
 const cvarTestIllegal = {
-  "noclip": (val) => true,
-  "notarget": (val) => true,
+  "noclip": (val, cheats) => cheats,
+  "notarget": (val, cheats) => cheats,
   "ent_fire": (val) => true,
-  "god": (val) => true,
-  "buddha": (val) => true,
+  "god": (val, cheats) => cheats,
+  "buddha": (val, cheats) => cheats,
   "sv_portal_placement_never_fail": (val) => val != 0,
   "sar_aircontrol": (val) => true,
   "sar_autojump": (val) => true,
   "sar_duckjump": (val) => true,
   "sar_aircontrol": (val) => true,
-  "sar_autojump": (val) => true,
+  "sar_autojump": (val, cheats) => cheats,
   "sar_duckjump": (val) => true,
   "cl_ent_absbox": (val) => true,
   "cl_ent_bbox": (val) => true,
@@ -3972,10 +3972,8 @@ const cvarTestIllegal = {
   "fire_rocket_projectile": (val) => true,
   "getpos": (val) => true,
   "getpos_exact": (val) => true,
-  "god": (val) => true,
   "hurtme": (val) => true,
   "impulse": (val) => true,
-  "noclip": (val) => true,
   "notarget": (val) => true,
   "npc_bipass": (val) => true,
   "npc_combat": (val) => true,
@@ -4054,12 +4052,12 @@ const cvarTestIllegal = {
 
 module.exports = async function (args, context = epochtal) {
 
-  const [cvar, value] = args;
+  const [cvar, value, sv_cheats] = args;
 
   const cleanCvar = cvar.trim().toLowerCase();
 
-  if (cleanCvar in cvarTestIllegal && cvarTestIllegal[cleanCvar](value)) return VERDICT_ILLEGAL;
-  if (cleanCvar in cvarTestSafe && cvarTestSafe[cleanCvar](value)) return VERDICT_SAFE;
+  if (cleanCvar in cvarTestIllegal && cvarTestIllegal[cleanCvar](value, sv_cheats)) return VERDICT_ILLEGAL;
+  if (cleanCvar in cvarTestSafe && cvarTestSafe[cleanCvar](value, sv_cheats)) return VERDICT_SAFE;
 
   return VERDICT_UNSURE;
 

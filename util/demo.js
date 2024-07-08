@@ -144,7 +144,7 @@ module.exports = async function (args, context = epochtal) {
         return `Tickrate mismatch. Expected 60.00, got ${mdp.tps.toFixed(2)}.`;
       }
 
-      let ppnf = false;
+      let ppnf = false, sv_cheats = false;
       let timescale = [], timescaleTotal = 0;
 
       for (const event of mdp.demos[0].events) {
@@ -185,10 +185,15 @@ module.exports = async function (args, context = epochtal) {
 
         if (event.type === "cvar" || event.type === "cmd") {
 
-          const cvar = event.type === "cvar" ? event.val.cvar : event.value.split(" ")[0];
+          const cvar = (event.type === "cvar" ? event.val.cvar : event.value.split(" ")[0]).trim().toLowerCase();
           const value = event.type === "cvar" ? event.val.val : event.value.split(" ").slice(1).join(" ");
         
-          const verdict = await testcvar([cvar, value], context);
+          if (cvar === "sv_cheats") {
+            if (!value || value == "0") sv_cheats = false;
+            else sv_cheats = true;
+          }
+
+          const verdict = await testcvar([cvar, value, sv_cheats], context);
           
           if (verdict === VERDICT_ILLEGAL) {
             if (cvar.trim().toLowerCase() === "sv_portal_placement_never_fail") {
