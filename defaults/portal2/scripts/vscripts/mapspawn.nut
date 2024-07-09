@@ -101,10 +101,34 @@ ppmod.onauto(async(function () {
 
     });
 
-    // Ensure that doors never close behind players
+    // Ensure that doors don't close behind players if someone's been close enough to enter them
     ppmod.getall(["prop_testchamber_door"], function (ent) {
-      ppmod.addoutput(ent, "OnFullyClosed", ent, "Open");
+
+      ent.AddScript("OnClose", function ():(ent) {
+        
+        if (!ent.IsValid()) return;
+
+        local curr = null;
+        local classes = ["player", "linked_portal_door"];
+
+        for (local i = 0; i < classes.len(); i ++) {
+          while (curr = ppmod.get(classes[i], curr)) {
+            
+            local doorpos = ent.GetOrigin();
+            local dist = (curr.GetOrigin() - doorpos).LengthSqr();
+            if (dist > 65536) continue; // If over 256 units away, don't keep the door open
+            
+            ppmod.addoutput(ent, "OnFullyClosed", ent, "Open");
+
+            return;
+
+          }
+        }
+
+      });
+
       ppmod.fire([ent.GetOrigin(), 32.0, "func_brush"], "Kill");
+
     });
     
     ppmod.hook("linked_portal_door", "Close", function () { return false });
