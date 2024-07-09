@@ -2542,7 +2542,7 @@ var cvarTestSafe = {
   "-score": (val) => true, // cmd 
   "scr_centertime": (val) => true, // 
   "screenshot": (val) => true, // cmd take a screenshot.
-  "script": (val) => false, // cmd run the text as a script
+  "script": (val) => (val === "::coopUpdatePortals()"), // cmd run the text as a script
   "script_client": (val) => false, // cmd run the text as a script
   "script_connect_debugger_on_mapspawn": (val) => val == 0, // 
   "script_debug": (val) => false, // cmd connect the vscript vm to the script debugger
@@ -4028,7 +4028,7 @@ const cvarTestIllegal = {
   "prop_physics_create": (val) => true,
   "report_entities": (val) => true,
   "respawn_entities": (val) => true,
-  "script": (val) => true,
+  "script": (val) => (val !== "::coopUpdatePortals()"),
   "script_client": (val) => true,
   "script_execute": (val) => true,
   "script_execute_client": (val) => true,

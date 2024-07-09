@@ -119,15 +119,38 @@ ppmod.onauto(async(function () {
       portal.SetActivatedState(0);
       if (portal.GetName().len() == 0) continue;
       portal.SetHook("SetActivatedState", function () { return false });
+      portal.SetHook("setactivatedstate", function () { return false });
     }
 
-    ppmod.onportal(function (shot):(red) {
+    local ccom = Entities.CreateByClassname("point_clientcommand");
+    local size = { height = 54.0 };
+
+    ::coopUpdatePortals <- function ():(red, size, ccom) {
+
+      if (size.height == 54.0) size.height = 53.95;
+      else size.height = 54.0;
+      
+      ppmod.fire("prop_portal", "Resize", "32 " + size.height);
+
+      SendToConsole("hud_saytext_time 12");
+      ccom.Command("echo [SendToConsole] hud_saytext_time 12", 0, red);
+
+    };
+
+    ppmod.onportal(function (shot):(blue, red, ccom) {
 
       if (!shot.weapon) return;
       if (!shot.portal) return;
 
       ppmod.fire("prop_portal", "SetLinkageGroupID", 99);
-      ppmod.fire("prop_portal", "AddOutput", "PortalTwo 0", FrameTime() * 2);
+
+      // If blue fired this portal, we need to get orange's client to update
+      // The way I've found to do this is by resizing the portals (after a hacky ping-pong with orange)
+      local isBlueWeapon = (shot.weapon.GetOrigin() - blue.GetOrigin()).LengthSqr() < 256.0;
+      if (!isBlueWeapon) return;
+
+      SendToConsole("hud_saytext_time 0");
+      ccom.Command("echo [coop_portal_ping]", 0, red);
 
     });
 
