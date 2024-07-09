@@ -124,7 +124,7 @@ if (popup) {
 
 if (tooltip) {
 
-  var tooltipVisible = false;
+  var tooltipVisible = false, tooltipTimeout = null;
   var showTooltip = function (text) {
   
     tooltipVisible = true;
@@ -132,6 +132,16 @@ if (tooltip) {
     tooltip.innerHTML = text;
     tooltip.style.opacity = 1;
   
+    if (tooltipTimeout) {
+      clearTimeout(tooltipTimeout);
+      tooltipTimeout = null;
+    }
+
+    // Hiding the tooltip is unituitive on touchscreen, so just fade it out on a timeout
+    if ("ontouchstart" in window) {
+      tooltipTimeout = setTimeout(hideTooltip, 5000);
+    }
+
   };
   
   var hideTooltip = function (text) {
