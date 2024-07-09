@@ -341,7 +341,7 @@ async function rebuildMap (context) {
       "PortalRunner",
       thumbnail,
       announceText,
-      100
+      3000
     ]);
   } finally {
     fs.rmSync(portal2.output, { recursive: true });
