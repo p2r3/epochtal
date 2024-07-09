@@ -34,6 +34,7 @@ ppmod.onauto(async(function () {
 
   SendToConsole("sv_player_collide_with_laser 0");
   SendToConsole("sv_laser_cube_autoaim 1");
+  SendToConsole("gameinstructor_enable 0");
 
   local index = pparray(epochtal_map).find(GetMapName());
 
@@ -148,6 +149,40 @@ ppmod.onauto(async(function () {
       return false;
 
     });
+
+    // Allow the player to skip the map by pressing the co-op ping key
+    // We make this a cheat command on purpose, so that it can be easily detected if needed
+    SendToConsole("alias +mouse_menu \"sv_cheats 1;ent_fire @relay_pti_level_end Trigger;sv_cheats 0\"");
+    
+    // If this is the first map, teach the player about the map skip key
+    if (index == 0) {
+      
+      ppmod.wait(function () {
+        SendToConsole("gameinstructor_enable 1");
+      }, 7.0);
+
+      ppmod.wait(function () {
+
+        local instructor = Entities.CreateByClassname("env_instructor_hint");
+        local target = Entities.CreateByClassname("info_target_instructor_hint");
+
+        instructor.hint_target = "epochtal_map_skip_hint_target";
+        instructor.hint_static = true;
+        instructor.hint_caption = "Skip Level";
+        instructor.hint_binding = "mouse_menu";
+        instructor.hint_timeout = 5;
+        instructor.hint_color = "255 255 255";
+        instructor.hint_icon_onscreen = "use_binding";
+
+        instructor.ShowHint();
+
+      }, 7.0 + FrameTime());
+
+      ppmod.wait(function () {
+        SendToConsole("gameinstructor_enable 0");
+      }, 12.0);
+
+    }
 
   } else { // Prepares for a single map (standard setup)
 
