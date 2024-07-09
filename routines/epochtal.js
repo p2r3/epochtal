@@ -123,6 +123,8 @@ async function releaseMap (context) {
     const valveRC = Bun.file(`${votingFiles.output}/cfg/valve.rc`);
     const valveRCText = await valveRC.text();
     await Bun.write(valveRC, valveRCText.replace("startupmenu", "exec epochtal_map"));
+
+    try {
     sppliceVotingResult = await spplice(["add",
       "epochtal-voting",
       votingFiles.output,
@@ -132,8 +134,9 @@ async function releaseMap (context) {
       "Play future maps ahead of time and vote for your favorites on the Epochtal website.",
       2995
     ]);
-
+    } finally {
     fs.rmSync(votingFiles.output, { recursive: true });
+    }
 
   } catch (e) {
 
@@ -199,9 +202,6 @@ async function releaseMap (context) {
 
     announceText = `With a community vote of ${context.data.week.map.upvotes} upvotes to ${context.data.week.map.downvotes} downvotes, the map for week ${context.data.week.number} of PortalRunner's Weekly Tournament was decided to be ${context.data.week.map.title} by ${context.data.week.map.author}.`;
 
-    const portal2 = await gamefiles(["build"], context);
-    const vmf = await gamefiles(["getvmf", `${portal2.output}/maps/${portal2.map[0]}`, true], context);
-
     let thumbnail = context.data.week.map.thumbnail;
     if (!thumbnail.startsWith("http")) {
       thumbnail = `https://steamuserimages-a.akamaihd.net/ugc/${thumbnail}?impolicy=Letterbox&imh=360`;
@@ -214,6 +214,10 @@ async function releaseMap (context) {
       await spplice(["remove", "epochtal"]);
     }
 
+    const portal2 = await gamefiles(["build"], context);
+    const vmf = await gamefiles(["getvmf", `${portal2.output}/maps/${portal2.map[0]}`, true], context);
+    
+    try {
     sppliceResult = await spplice(["add",
       "epochtal",
       portal2.output,
@@ -223,8 +227,9 @@ async function releaseMap (context) {
       announceText,
       3000
     ]);
-  
+    } finally {
     fs.rmSync(portal2.output, { recursive: true });
+    }
 
     fs.renameSync(vmf, `${__dirname}/../vmfs/${context.data.week.map.id}.vmf.xz`);
 
