@@ -122,6 +122,10 @@ ppmod.onauto(async(function () {
       ppmod.keyval("weapon_portalgun", "CanFirePortal2", false);
     });
 
+    local playerdie = Entities.CreateByClassname("trigger_brush");
+    playerdie.targetname = "game_playerdie";
+    playerdie.AddOutput("OnUse", "prop_portal", "SetActivatedState", 0);
+
   }
 
   // Prepares the game for a series of consecutive maps
