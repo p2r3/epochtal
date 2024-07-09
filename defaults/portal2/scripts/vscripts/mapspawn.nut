@@ -79,11 +79,25 @@ ppmod.onauto(async(function () {
       if ((bluepos - ::playerStartPos).Length2DSqr() <= 1024.0) return;
       ref.interval.Destroy();
 
-      // Spawn in orange! Setup complete
+      // Spawn in orange
       ::playerStartPos.z = bluepos.z;
       red.SetOrigin(::playerStartPos);
       red.SetForwardVector(::playerStartFvec);
       red.moveType = 2;
+
+      // On some maps, the elevator becomes solid after it departs
+      // We set the respawn position to wherever orange is by the time they've moved 96 units
+      ref.interval = ppmod.interval(function ():(red, ref) {
+
+        if ((red.GetOrigin() - ::playerStartPos).Length2DSqr() > 9216.0) {
+          local playerStart = ppmod.get("info_player_start");
+          playerStart.SetOrigin(red.GetOrigin());
+          playerStart.SetForwardVector(::playerStartFvec);
+
+          ref.interval.Destroy();
+        }
+
+      });
 
     });
 
