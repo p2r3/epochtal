@@ -379,7 +379,8 @@ input:checked+.slider:before {
   display: inline-block;
   right: 1.5%;
   bottom: 4%;
-  width: 11%;
+  width: 5rem;
+  filter: hue-rotate(180deg);
 }
 .votes-buttons img {
   width: 40%;
