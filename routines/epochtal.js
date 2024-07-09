@@ -113,12 +113,16 @@ async function releaseMap (context) {
   let sppliceVotingResult;
   try {
 
-    const votingFiles = await gamefiles(["build"], votingContext);
-
     if (await spplice(["get", "epochtal-voting"])) {
       await spplice(["remove", "epochtal-voting"]);
     }
 
+    const votingFiles = await gamefiles(["build"], votingContext);
+
+    // It doesn't make much sense for the voting package to start on the main menu
+    const valveRC = Bun.file(`${votingFiles.output}/cfg/valve.rc`);
+    const valveRCText = await valveRC.text();
+    await Bun.write(valveRC, valveRCText.replace("startupmenu", "exec epochtal_map"));
     sppliceVotingResult = await spplice(["add",
       "epochtal-voting",
       votingFiles.output,
