@@ -387,6 +387,9 @@ module.exports = async function (args, context = epochtal) {
 
     // The "new" Repochtal object density curation algorithm
     case "v2": {
+      
+      // Whether to report density anomalies
+      const report = args[2];
 
       // Convert entity lump to an object density graph
       const entityLump = await downloadEntityLump(mapid);
@@ -416,6 +419,8 @@ module.exports = async function (args, context = epochtal) {
 
         // If the density is outside of the acceptable range, punish severely
         if (norm < -0.25 || norm > 1.25) {
+          
+          if (report) UtilPrint(`Density of "${ent}" is outside of acceptable range. (${norm})`);
           
           if (ent === "total") {
             totalDensityScore = -weights.v2.QUALITY_DEFAULT;
