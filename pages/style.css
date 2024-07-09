@@ -408,6 +408,9 @@ input:checked+.slider:before {
   filter: hue-rotate(180deg) !important;
 }
 
+.votes-color-up { color: rgb(23, 192, 233); }
+.votes-color-down { color: rgb(232, 63, 22); }
+
 #players-container {
   background-color: rgba(255, 255, 255, 0.05);
   height: 60vh;
@@ -505,6 +508,11 @@ input:checked+.slider:before {
   }
   .votes-up {
     margin-right: 76% !important;
+  }
+  .votes-author {
+    display: inline-block;
+    width: 100%;
+    margin-bottom: 1rem;
   }
 
   #leaderboard-archive-select-container, #leaderboard-category-select-container {

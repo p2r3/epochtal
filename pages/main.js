@@ -80,9 +80,8 @@ var homepageInit = async function () {
         <img class="votes-image" alt="thumbnail" src="${thumbnail}">
         <p class="votes-text">
           ${map.title.trim()}<br>
-          <i class="font-light">by ${map.author.trim()}</i><br>
-          <br>
-          ${map.upvotes} upvote${map.upvotes === 1 ? "":"s"}, ${map.downvotes} downvote${map.downvotes === 1 ? "":"s"}
+          <i class="font-light votes-author">by ${map.author.trim()}</i>&nbsp;
+          <span class="votes-color-up">${map.upvotes} <i class="fa-solid fa-thumbs-up"></i></span> <span class="votes-color-down">${map.downvotes} <i class="fa-solid fa-thumbs-down"></i></span>
         </p>
       </a>
     `;
