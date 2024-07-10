@@ -210,14 +210,16 @@ ppmod.onauto(async(function () {
         return true;
       }
 
-      SendToConsole("map " + epochtal_map[index + 1]);
+      SendToConsole("changelevel " + epochtal_map[index + 1]);
       return false;
 
     });
 
     // Allow the player to skip the map by pressing the co-op ping key
-    // We make this a cheat command on purpose, so that it can be easily detected if needed
-    SendToConsole("alias +mouse_menu \"sv_cheats 1;ent_fire @relay_pti_level_end Trigger;sv_cheats 0\"");
+    // We make this a console command on purpose, so that it can be easily detected if needed
+    if (index + 1 < epochtal_map.len()) {
+      SendToConsole("alias +mouse_menu \"changelevel "+ epochtal_map[index + 1] +"\"");
+    }
     
     // If this is the first map, teach the player about the map skip key
     if (index == 0) {
