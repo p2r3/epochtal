@@ -137,14 +137,13 @@ ppmod.onauto(async(function () {
     ppmod.hook("func_areaportal", "close", function () { return false });
 
     // Force-close all map portals
-    local portal = null;
-    while (portal = ppmod.get("prop_portal", portal)) {
-      if (!portal.IsValid()) continue;
-      portal.SetActivatedState(0);
-      if (portal.GetName().len() == 0) continue;
-      portal.SetHook("SetActivatedState", function () { return false });
-      portal.SetHook("setactivatedstate", function () { return false });
-    }
+    ppmod.fire("prop_portal", "SetActivatedState", 0);
+    ppmod.keyval("prop_portal", "Targetname", "");
+
+    ppmod.wait(function () {
+      ppmod.hook("prop_portal", "SetActivatedState", function () { return false });
+      ppmod.hook("prop_portal", "setactivatedstate", function () { return false });
+    }, FrameTime());
 
     local ccom = Entities.CreateByClassname("point_clientcommand");
     local size = { height = 54.0 };
