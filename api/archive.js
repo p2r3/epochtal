@@ -23,15 +23,6 @@ module.exports = async function (args, request) {
 
     }
 
-    case "demo": {
-
-      const [steamid, category] = args.slice(2);
-      if (!steamid || !category) return "ERR_ARGS";
-
-      return Response(await archive(["demo", name, steamid, category]));
-
-    }
-
   }
 
   return "ERR_COMMAND";

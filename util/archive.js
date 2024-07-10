@@ -2,6 +2,7 @@ const UtilError = require("./error.js");
 const UtilPrint = require("../util/print.js");
 
 const fs = require("node:fs");
+const proof = require("./proof.js");
 
 function isValidName (name) {
   return name && !name.includes("..") && !name.includes("/");
@@ -37,19 +38,7 @@ async function getArchiveContext (name) {
   for (const category in context.data.leaderboard) {
     for (const run of context.data.leaderboard[category]) {
 
-      const demoPath = `${path}/demos/${run.steamid}_${category}.dem.xz`;
-      const linkPath = `${path}/demos/${run.steamid}_${category}.link`;
-  
-      if (fs.existsSync(demoPath)) {
-        run.proof = "demo";
-        continue;
-      }
-      if (fs.existsSync(linkPath)) {
-        run.proof = "video";
-        continue;
-      }
-
-      run.proof = null;
+      run.proof = await proof(["type", run.steamid, category], context);
 
     }
   }
@@ -149,26 +138,6 @@ module.exports = async function (args, context = epochtal) {
       }
 
       return "SUCCESS";
-
-    }
-
-    case "demo": {
-
-      if (!isValidName(name)) throw new UtilError("ERR_NAME", args, context);
-
-      const [steamid, category] = args.slice(2);
-      if (!isValidName(steamid) || !isValidName(category)) throw new UtilError("ERR_ARGS", args, context);
-
-      const archivePath = `${__dirname}/../pages/archive/${name}`;
-      if (!fs.existsSync(archivePath)) throw new UtilError("ERR_NAME", args, context);
-
-      const demoPath = `${archivePath}/demos/${steamid}_${category}.dem.xz`;
-      const linkPath = `${archivePath}/demos/${steamid}_${category}.link`;
-
-      if (fs.existsSync(demoPath)) return Bun.file(demoPath);
-      if (fs.existsSync(linkPath)) return Bun.file(linkPath);
-
-      throw new UtilError("ERR_NOTFOUND", args, context);
 
     }
   

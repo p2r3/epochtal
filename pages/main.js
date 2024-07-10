@@ -158,7 +158,7 @@ var homepageInit = async function () {
 
       const isArchive = leaderboardArchiveSelect.value !== "active";
 
-      let downloadURL = `/api/archive/demo/${leaderboardArchiveSelect.value}/"${run.steamid}"/${category}`;
+      let downloadURL = `/api/proof/archive/"${run.steamid}"/${category}/${leaderboardArchiveSelect.value}`;
       if (run.proof === "video") {
         try {
           downloadURL = await (await fetch(downloadURL)).text();
