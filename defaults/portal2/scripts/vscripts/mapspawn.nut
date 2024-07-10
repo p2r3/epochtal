@@ -145,20 +145,24 @@ ppmod.onauto(async(function () {
       ppmod.hook("prop_portal", "setactivatedstate", function () { return false });
     }, FrameTime());
 
+    // In networked games, if blue fired this portal, we need to get orange's client to update
+    // The way I've found to do this is by resizing the portals (after a hacky ping-pong with orange)
     local ccom = Entities.CreateByClassname("point_clientcommand");
     local size = { height = 54.0 };
 
-    ::coopUpdatePortals <- function ():(red, size, ccom) {
+    if (!IsLocalSplitScreen()) {
+      ::coopUpdatePortals <- function ():(red, size, ccom) {
 
-      if (size.height == 54.0) size.height = 53.95;
-      else size.height = 54.0;
-      
-      ppmod.fire("prop_portal", "Resize", "32 " + size.height);
+        if (size.height == 54.0) size.height = 53.95;
+        else size.height = 54.0;
+        
+        ppmod.fire("prop_portal", "Resize", "32 " + size.height);
 
-      SendToConsole("hud_saytext_time 12");
-      ccom.Command("echo [SendToConsole] hud_saytext_time 12", 0, red);
+        SendToConsole("hud_saytext_time 12");
+        ccom.Command("echo [SendToConsole] hud_saytext_time 12", 0, red);
 
-    };
+      };
+    }
 
     ppmod.onportal(function (shot):(blue, red, ccom) {
 
@@ -167,8 +171,8 @@ ppmod.onauto(async(function () {
 
       ppmod.fire("prop_portal", "SetLinkageGroupID", 99);
 
-      // If blue fired this portal, we need to get orange's client to update
-      // The way I've found to do this is by resizing the portals (after a hacky ping-pong with orange)
+      if (IsLocalSplitScreen()) return;
+
       local isBlueWeapon = (shot.weapon.GetOrigin() - blue.GetOrigin()).LengthSqr() < 256.0;
       if (!isBlueWeapon) return;
 
