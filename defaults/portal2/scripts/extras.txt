@@ -21,4 +21,15 @@
     "command"       "sv_cheats 1;sv_portal_placement_never_fail 1;exec epochtal_map"
     "pic"           "vgui/chapters/chapter6"
   }
+  "empty"
+  {
+    
+  }
+  "spcoop"
+  {
+    "title"         "Single Player Co-Op"
+    "subtitle"      "Single player split-screen co-op"
+    "command"       "ss_map mp_coop_community_hub"
+    "pic"           "vgui/extras/attract01"
+  }
 }
