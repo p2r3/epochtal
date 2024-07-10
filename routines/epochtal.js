@@ -51,7 +51,16 @@ async function concludeWeek (context) {
 
   const finalReportText = `${textSummary}\n${textTimescales}`;
   UtilPrint("epochtal(concludeWeek):\n" + finalReportText);
-  await discord(["report", finalReportText], context);
+
+  // Send the demos as a tar archive
+  const demoTarPath = (await tmppath()) + ".tar";
+  await $`tar -cf ${demoTarPath} -C ${context.file.demos} .`.quiet();
+
+  try {
+    await discord(["report", finalReportText, [demoTarPath]], context);
+  } finally {
+    fs.unlinkSync(demoTarPath);
+  }
 
   await Bun.write(context.file.week, JSON.stringify(week));
 
@@ -317,9 +326,6 @@ async function releaseMap (context) {
 }
 
 async function rebuildMap (context) {
-
-  const archivePath = `${__dirname}/../pages/epochtal.tar.xz`;
-  const archiveBackup = await tmppath();
 
   let thumbnail = context.data.week.map.thumbnail;
   if (!thumbnail.startsWith("http")) {
