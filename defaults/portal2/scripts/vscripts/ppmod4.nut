@@ -382,6 +382,10 @@ try {
     }
   }
 
+  function Vector::_unm () {
+    return Vector() - this;
+  }
+
   function Vector::equals (other) {
     if (this.x == other.x && this.y == other.y && this.z == other.z) return true;
     return false;
@@ -851,7 +855,6 @@ for (local i = 0; i < entclasses.len(); i ++) {
       blue.SetOrigin(Vector(0, 0, lowest));
 
       local intervalname = UniqueString("ppmod_auto_interval");
-
       ppmod.interval(function ():(blue, lowest, scr, intervalname) {
 
         local red = Entities.FindByClassname(null, "red");
@@ -1085,6 +1088,10 @@ for (local i = 0; i < entclasses.len(); i ++) {
   pplayer.unduck <- function (scr):(player, proxy) {
     local scrqstr = "ppmod.scrq_get(" + ppmod.scrq_add(scr) + ")()";
     ppmod.addoutput(proxy, "OnUnDuck", player, "RunScriptCode", "if (self == activator) " + scrqstr);
+  };
+
+  pplayer.ducking <- function ():(player) {
+    return player.GetCenter().z - player.GetOrigin().z < 18.001;
   };
 
   pplayer.input <- function (str, scr):(gameui) {
