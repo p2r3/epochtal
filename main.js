@@ -11,9 +11,7 @@ epochtal.file = {
   spplice: {
     repository: `${__dirname}/pages/spplice`,
     index: Bun.file(`${__dirname}/pages/spplice/index.json`)
-  },
-  // Epochtal Live
-  lobbies: Bun.file(`${__dirname}/lobbies.json`)
+  }
 };
 epochtal.data = {
   leaderboard: await epochtal.file.leaderboard.json(),
@@ -29,7 +27,7 @@ epochtal.data = {
     index: await epochtal.file.spplice.index.json()
   },
   // Epochtal Live
-  lobbies: await epochtal.file.lobbies.json(),
+  lobbies: { list: {}, data: {} },
   events: {}
 };
 
@@ -109,7 +107,7 @@ const fetchHandler = async function (req) {
         args[i] = JSON.parse(args[i]);
       } catch (e) { } // Leave it as a string
     }
-    
+
     let output;
     try {
       output = await api(args, req);
@@ -133,7 +131,7 @@ const fetchHandler = async function (req) {
     const user = await apis.users(["whoami"], req);
     if (!user) return Response("ERR_LOGIN", { status: 403 });
     if (!user.epochtal.admin) return Response("ERR_PERMS", { status: 403 });
-    
+
   }
 
   if (urlPath[0] === "util") {
@@ -148,7 +146,7 @@ const fetchHandler = async function (req) {
         args[i] = JSON.parse(args[i]);
       } catch (e) { } // Leave it as a string
     }
-    
+
     let result;
     try {
       result = await util(args);
@@ -158,7 +156,7 @@ const fetchHandler = async function (req) {
       }
       return Response.json(err.toString());
     }
-    
+
     return Response.json(result);
 
   }
