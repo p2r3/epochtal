@@ -45,11 +45,11 @@
         color: #636363;
       }
     </style>
-    
+
   </head>
 
   <body>
-    
+
     <div id="cli-container">
       <p id="cli-output"></p>
       <input type="text" name="cli-input" id="cli-input">
@@ -170,7 +170,7 @@
 
         if (response.status === 404) return output.innerHTML += "Command or module not found.<br>";
         if (response.status !== 200) return output.innerHTML += `An unknown server error occurred.<br>Status: ${response.status}<br>`;
-        
+
         output.innerHTML += formatResponse(await response.json()) + "<br>";
         output.scrollTop = output.scrollHeight;
 
@@ -188,7 +188,7 @@
 
           submitCommand(input.value);
           input.value = "";
-        
+
         }
 
       });
@@ -221,12 +221,12 @@
       const utilPrintSocket = new WebSocket("ws://epochtal.p2r3.com:3002/ws/utilPrint");
 
       utilPrintSocket.addEventListener("message", function (event) {
-        
-        const text = event.data.replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll("  ", " &nbsp;");
+
+        const text = JSON.parse(event.data).replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll("  ", " &nbsp;");
         const lines = text.split("\n");
-        
+
         lines[0] = `<span class=\"grayed\">${lines[0]}</span>`;
-        
+
         output.innerHTML += lines.join("<br>");
 
       });

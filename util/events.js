@@ -7,7 +7,7 @@ module.exports = async function (args, context = epochtal) {
   const events = context.data.events;
 
   switch (command) {
-    
+
     case "create": {
 
       if (!name) throw new UtilError("ERR_NAME", args, context);
@@ -29,7 +29,7 @@ module.exports = async function (args, context = epochtal) {
     case "get": {
 
       if (!(name in events)) throw new UtilError("ERR_NAME", args, context);
-      
+
       return events[name];
 
     }
@@ -45,12 +45,12 @@ module.exports = async function (args, context = epochtal) {
       if (!(name in events)) throw new UtilError("ERR_NAME", args, context);
       if (data === undefined) throw new UtilError("ERR_DATA", args, context);
 
-      events.server.publish(name, data);
-      
+      events.server.publish(name, JSON.stringify(data));
+
       return "SUCCESS";
 
     }
-    
+
     case "rename": {
 
       if (!(name in events)) throw new UtilError("ERR_NAME", args, context);
