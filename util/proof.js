@@ -1,7 +1,6 @@
 const UtilError = require("./error.js");
 
 const fs = require("node:fs");
-const categories = require("./categories.js");
 
 module.exports = async function (args, context = epochtal) {
 
@@ -16,8 +15,7 @@ module.exports = async function (args, context = epochtal) {
     case "file": {
 
       if (!(steamid in users)) throw new UtilError("ERR_STEAMID", args, context);
-      // This will throw if the category doesn't exist
-      await categories(["get", category], context);
+      if (!(category in context.data.leaderboard)) throw new UtilError("ERR_CATEGORY", args, context);
 
       const demoPath = `${demos}/${steamid}_${category}.dem.xz`;
       const linkPath = `${demos}/${steamid}_${category}.link`;
@@ -28,7 +26,7 @@ module.exports = async function (args, context = epochtal) {
       return null;
 
     }
-  
+
   }
 
   throw new UtilError("ERR_COMMAND", args, context);
