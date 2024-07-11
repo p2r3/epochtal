@@ -341,6 +341,7 @@ var homepageInit = async function () {
 
     linkInfo.style.display = "none";
     linkContainer.style.display = "none";
+    demoClearButton.style.display = "inline-block";
 
     demoButton.innerHTML = demoFile.name;
 
@@ -348,6 +349,14 @@ var homepageInit = async function () {
 
   const demoButton = document.querySelector("#submit-demo");
   demoButton.addEventListener("click", () => { fakeInput.click() });
+
+  const demoClearButton = document.querySelector("#submit-demo-clear");
+  demoClearButton.addEventListener("click", function () {
+    demoFile = null;
+    demoButton.innerHTML = "Submit Demo File";
+    linkContainer.style.display = "";
+    demoClearButton.style.display = "none";
+  });
 
   const categorySelect = document.querySelector("#submit-category");
   for (let i = 0; i < config.categories.length; i ++) {

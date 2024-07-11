@@ -17,7 +17,7 @@
     </div>
 
     <div id="page-content">
-      
+
       <header>
 
         <div id="header-left">
@@ -34,12 +34,12 @@
         </div>
 
       </header>
-      
+
       <div class="section" id="intro">
-      
+
         <h1 class="margin0">Epochtal Tournament System</h1>
         <h3 class="margin0 font-medium font-spaced">week <span id="intro-week">...</span></h3>
-      
+
         <p class="marginy marginx justify-center">
           Welcome to the weekly tournament!<br><br>This is an open Portal 2 speedrunning competition where players of any
           skill level
@@ -47,7 +47,7 @@
             href="https://docs.google.com/document/d/1YzlEXzPsy2zfw0WRXhjeZUZXPbfVmGfHhg0plFdaszo" target="_blank">this
             guide</a> to learn how to participate.
         </p>
-      
+
       </div>
 
       <div class="section" id="map">
@@ -57,13 +57,13 @@
         <div class="votes-entry" id="active-map"></div>
 
       </div>
-      
+
       <div class="section" id="leaderboard">
-      
+
         <h1 class="margin0 marginb center">Leaderboard for category <span id="leaderboard-category">...</span></h1>
 
         <div class="marginx" id="leaderboard-container">
-          
+
           <div id="leaderboard-archive-select-container">
             <h3 class="center" style="margin: 0 0 10px 0">Select Archive</h3>
             <select name="category" id="leaderboard-archive-select">
@@ -81,14 +81,14 @@
           <div id="leaderboard-data"></div>
 
         </div>
-        
+
 
       </div>
-      
+
       <div class="section" id="submit">
-      
+
         <h1 class="margin0 marginb center">Submit Speedrun</h1>
-      
+
         <p class="marginy marginx justify-center">
           This is where you can submit your speedrun. Depending on the category, you can provide either a demo file or a YouTube
           link. For demo files, the system will fill in the time and portal count for you.
@@ -96,7 +96,7 @@
 
         <div class="submit-container">
 
-          <button id="submit-demo">Select Demo File</button>
+          <button id="submit-demo">Select Demo File</button><i id="submit-demo-clear" class="fa-solid fa-trash"></i>
           <span id="submit-link-container">
             <h3 class="inline-block">&nbsp; or &nbsp;</h3>
             <input type="text" id="submit-link" placeholder="Enter YouTube Link">
@@ -115,7 +115,7 @@
           </div>
 
           <br><br>
-          
+
           <textarea id="submit-note" cols="25" rows="5" placeholder="run comment"></textarea>
           <br><br>
           <button id="submit-button" style="min-width: 150px">Submit</button>
@@ -123,7 +123,7 @@
           <br><br>
 
         </div>
-      
+
       </div>
 
       <div class="section" id="voting">
@@ -136,7 +136,7 @@
         </p>
 
         <div id="votes-container"></div>
-        
+
         <div class="center">
           <button id="suggest-map-button">Suggest a Map</button>
         </div>
@@ -144,14 +144,14 @@
       </div>
 
       <div class="section" id="players">
-      
+
         <h1 class="margin0 marginb center">Player Profiles</h1>
-      
+
         <p class="marginy marginx justify-center">
           View the scores and user profiles of other Epochtal players. Scroll through the list of all registered users, or search for a specific player.
           Clicking on someone's name will open their profile page.
         </p>
-      
+
         <div class="center marginy">
           <i id="players-search-icon" class="fa-solid fa-magnifying-glass"></i>
           <input id="players-search" type="text" placeholder="Search" spellcheck="false">
@@ -160,11 +160,11 @@
         <div class="marginx scroll-enabled" id="players-container">
 
         </div>
-      
+
       </div>
 
       <footer></footer>
-      
+
       <h3 class="center marginy" id="bg-anim-switch">
         Disable Background Animation&nbsp;
         <label class="switch">
@@ -172,7 +172,7 @@
           <span class="slider"></span>
         </label>
       </h3>
-      
+
       <div id="global-popup">
         <h2 id="global-popup-title">ERR_STYLE</h2>
         <p id="global-popup-text">You should not be seeing this.</p>

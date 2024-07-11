@@ -339,6 +339,14 @@ input:checked+.slider:before {
   text-align: center;
 }
 
+#submit-demo-clear {
+  display: none;
+  position: relative;
+  width: 0;
+  margin: 0 -10px 0 10px;
+  cursor: pointer;
+}
+
 .vote-title {
   font-size: 1.2rem;
 }
