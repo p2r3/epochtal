@@ -194,19 +194,9 @@ const server = Bun.serve({
   port: 3002,
   fetch: fetchHandler,
   websocket: {
-    
-    open (ws) {
-      ws.subscribe(ws.data.event);
-      epochtal.data.events[ws.data.event].connect(ws.data.steamid);
-    },
-    message (ws, message) {
-      epochtal.data.events[ws.data.event].message(message);
-    },
-    close (ws) {
-      ws.unsubscribe(ws.data.event);
-      epochtal.data.events[ws.data.event].disconnect(ws.data.steamid);
-    }
-
+    open: await utils.events(["wshandler", "open"]),
+    message: await utils.events(["wshandler", "message"]),
+    close: await utils.events(["wshandler", "close"])
   }
 });
 epochtal.data.events.server = server;

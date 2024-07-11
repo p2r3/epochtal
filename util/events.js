@@ -65,6 +65,65 @@ module.exports = async function (args, context = epochtal) {
 
     }
 
+    case "delete": {
+
+      if (!(name in events)) throw new UtilError("ERR_NAME", args, context);
+      delete events[name];
+
+      return "SUCCESS";
+
+    }
+
+    case "wshandler": {
+
+      switch (name) {
+
+        case "open": return function (ws) {
+
+          const name = ws.data.event;
+          const event = context.data.events[ws.data.event];
+          if (!event) return;
+
+          try {
+            ws.subscribe(ws.data.event);
+            event.connect(ws.data.steamid);
+          } catch (err) {
+            throw new UtilError("ERR_HANDLER", args, context);
+          }
+
+        };
+
+        case "message": return function (ws, message) {
+
+          const name = ws.data.event;
+          const event = context.data.events[ws.data.event];
+          if (!event) return;
+
+          try {
+            context.data.events[ws.data.event].message(message);
+          } catch (err) {
+            throw new UtilError("ERR_HANDLER", args, context);
+          }
+
+        };
+
+        case "close": return function (ws) {
+
+          try {
+            ws.unsubscribe(ws.data.event);
+            context.data.events[ws.data.event].disconnect(ws.data.steamid);
+          } catch (err) {
+            throw new UtilError("ERR_HANDLER", args, context);
+          }
+
+        };
+
+      }
+
+      throw new UtilError("ERR_NAME", args, context);
+
+    }
+
   }
 
   throw new UtilError("ERR_COMMAND", args, context);
