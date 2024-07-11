@@ -7,7 +7,7 @@ var smoothScroll = function (queryString) {
 
   const element = document.querySelector(queryString);
   const bbox = element.getBoundingClientRect();
-  
+
   const headerSize = header.getBoundingClientRect().height;
 
   if (bbox.height < window.innerHeight) {
@@ -65,7 +65,7 @@ var homepageInit = async function () {
     };
 
   }
-  
+
   document.querySelector("#intro-week").innerHTML = config.number;
 
   const activeMapContainer = document.querySelector("#active-map");
@@ -93,7 +93,7 @@ var homepageInit = async function () {
   const leaderboardArchiveSelect = document.querySelector("#leaderboard-archive-select");
 
   function updateCategorySelect () {
-    
+
     let output = "";
     for (let i = 0; i < config.categories.length; i ++) {
 
@@ -107,7 +107,7 @@ var homepageInit = async function () {
   updateCategorySelect();
 
   function updateArchiveSelect () {
-    
+
     let output = "<option value='active' selected=''>active</option>";
     for (let i = 0; i < archives.length; i ++) {
       output += `<option value="${archives[i]}">${archives[i]}</option>`;
@@ -206,13 +206,13 @@ var homepageInit = async function () {
 
       config = await (await fetch(`/api/archive/config/${archive}`)).json();
       leaderboard = await (await fetch(`/api/archive/leaderboard/${archive}`)).json();
-    
+
     }
 
     updateActiveMap();
     updateCategorySelect();
     displayLeaderboard("main");
-  
+
   };
 
   var removeRunConfirm = null;
@@ -333,12 +333,12 @@ var homepageInit = async function () {
   };
 
   fakeInput.onchange = async function (evt) {
-  
+
     demoFile = evt.target.files[0];
     fakeInput.remove();
 
     if (!demoFile) return;
-    
+
     linkInfo.style.display = "none";
     linkContainer.style.display = "none";
 
@@ -373,7 +373,7 @@ var homepageInit = async function () {
   const noteInput = document.querySelector("#submit-note");
   const timeInput = document.querySelector("#submit-time");
   const portalsInput = document.querySelector("#submit-portals");
-  
+
   async function submitDemo () {
 
     const formData = new FormData();
@@ -384,7 +384,7 @@ var homepageInit = async function () {
 
     const note = noteInput.value.trim();
     if (note.length > 200) return showPopup("Comment too long", "Please keep your run comments to 200 characters or under.", POPUP_ERROR);
-    
+
     const safeNote = encodeURIComponent(note);
 
     let data;
@@ -432,7 +432,7 @@ var homepageInit = async function () {
 
   }
 
-  
+
   async function submitLink () {
 
     const link = linkInput.value.trim();
@@ -445,7 +445,7 @@ var homepageInit = async function () {
 
     const time = stringToTicks(timeInput.value.trim());
     let portals = parseInt(portalsInput.value.trim());
-    
+
     if (isNaN(time)) return showPopup("Invalid time format", "The time you provided could not be parsed. Please provide time in the format \"min:sec.ms\".", POPUP_ERROR)
     if (isNaN(portals) || portals < 0) {
       if (portalsInput.style.display === "none") {
@@ -457,7 +457,7 @@ var homepageInit = async function () {
 
     const note = noteInput.value.trim();
     if (note.length > 200) return showPopup("Comment too long", "Please keep your run comments to 200 characters or under.", POPUP_ERROR);
-    
+
     const safeLink = encodeURIComponent(link);
     const safeNote = encodeURIComponent(note);
 
@@ -479,7 +479,7 @@ var homepageInit = async function () {
           return showPopup("Invalid proof type", "This category does not accept link submissions.", POPUP_ERROR);
         case "ERR_PORTALS":
           return showPopup("Invalid portal count", "The portal count you provided could not be parsed.", POPUP_ERROR);
-        
+
         default:
           throw data;
       }
@@ -488,7 +488,7 @@ var homepageInit = async function () {
 
       console.error(e);
       return showPopup("Unknown error", "An unexpected error occurred while submitting your speedrun. Check the JavaScript console for more info.", POPUP_ERROR);
-    
+
     }
 
     leaderboard = await (await fetch("/api/leaderboard/get")).json();
@@ -500,7 +500,7 @@ var homepageInit = async function () {
 
   const submitButton = document.querySelector("#submit-button");
   submitButton.onclick = async function () {
-    
+
     submitButton.innerHTML = "Submitting...";
     submitButton.style.pointerEvents = "none";
 
@@ -523,15 +523,15 @@ var homepageInit = async function () {
 
     if (items[0].kind !== "file") return;
     const file = items[0].getAsFile();
-    
+
     if (!file.name.endsWith(".dem")) return;
     demoFile = file;
 
     linkInfo.style.display = "none";
     linkContainer.style.display = "none";
-    
+
     demoButton.innerHTML = demoFile.name;
-    
+
     smoothScroll('#submit');
 
   };
@@ -578,7 +578,7 @@ var homepageInit = async function () {
           return showPopup("Voting locked", "Voting for next week's map has concluded.", POPUP_ERROR);
         case "ERR_MAP":
           return showPopup("Invalid map", "The map you voted for is out of range. Somehow.", POPUP_ERROR);
-      
+
         default:
           throw data;
       }
@@ -599,14 +599,14 @@ var homepageInit = async function () {
 
       console.error(e);
       return showPopup("Unknown error", "An unexpected error occurred while submitting your vote. Check the JavaScript console for more info.", POPUP_ERROR);
-    
+
     }
 
   };
 
   const suggestMapButton = document.querySelector("#suggest-map-button");
   suggestMapButton.onclick = function () {
-    
+
     showPopup("Suggest a Map", `<p>Suggest a map to the tournament.
       Every submission will be considered by the curation algorithm until it appears in the voting top 5 list.</p>
       <input type="text" placeholder="Workshop Link" id="suggest-input"></input>`, POPUP_INFO, true);
@@ -622,12 +622,12 @@ var homepageInit = async function () {
       }
 
       hidePopup();
-      
+
       try {
 
         const response = await fetch(`/api/workshopper/suggest/"${mapid}"`);
         const data = await response.json();
-        
+
         if (data !== "SUCCESS") switch (data) {
           case "ERR_LOGIN":
             return showPopup("Not logged in", "Please log in via Steam before suggesting maps.", POPUP_ERROR);
@@ -635,7 +635,7 @@ var homepageInit = async function () {
             return showPopup("Invalid link", "The workshop link you provided could not be parsed.", POPUP_ERROR);
           case "ERR_EXISTS":
             return showPopup("Already suggested", "This map has already been suggested to the tournament.", POPUP_ERROR);
-        
+
           default:
             throw data;
         }
@@ -679,7 +679,7 @@ var homepageInit = async function () {
     let pointsString = "Points hidden";
     const outputPoints = Math.round(user.points);
     if (user.points !== -Infinity) pointsString = `${outputPoints} point${outputPoints === 1 ? "" : "s"}`;
-    
+
     output += `<a href="http://epochtal.p2r3.com:3002/profile/#${user.steamid}" target="_blank" style="color:white;text-decoration:none"><div class="lb-entry lb-rank${placement}">
       <p class="lb-text">${username}</p>
       <p class="lb-text font-light">${pointsString}</p>
@@ -708,7 +708,7 @@ var homepageInit = async function () {
   };
 
   const powerSavingSwitch = document.querySelector("#power-saving");
-  
+
   if (localStorage.getItem("powerSaving") === "on") {
     powerSavingSwitch.checked = true;
   } else {
@@ -725,6 +725,10 @@ var homepageInit = async function () {
     }
   };
 
+  if (window.location.href.endsWith("#404")) {
+    showPopup("Not found", "The page you were trying to access does not exist. You've been brought back to the homepage.", POPUP_ERROR);
+  }
+
   let cliKeysControl = false;
   let cliKeysTilde = false;
 
@@ -732,7 +736,7 @@ var homepageInit = async function () {
     if (e.key === "Control") cliKeysControl = true;
     if (e.key === "`") cliKeysTilde = true;
     if (cliKeysControl && cliKeysTilde) {
-      
+
       const features = "popup=yes,width=640,height=400,left=20,top=20";
 
       const popupWindow = window.open("/admin/cli/index.html", "_blank", features);
@@ -761,10 +765,10 @@ var tryHomepageInit = async function () {
   try {
     await homepageInit();
   } catch (e) {
-    
+
     console.log("Caught error during homepage initialization:");
     console.error(e);
-    
+
     homepageInitAttempts ++;
     if (homepageInitAttempts < homepageInitAttemptsMax) {
       console.log(`Retrying... (${homepageInitAttempts}/${homepageInitAttemptsMax})`);
@@ -772,7 +776,7 @@ var tryHomepageInit = async function () {
     } else {
       console.log(`Reached max retry attempts (${homepageInitAttempts}/${homepageInitAttemptsMax})`);
     }
-  
+
   }
 }
 tryHomepageInit();

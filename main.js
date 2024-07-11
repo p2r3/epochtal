@@ -161,18 +161,20 @@ const fetchHandler = async function (req) {
 
   }
 
+  const file404 = Bun.file(`${__dirname}/pages/404.html`);
+
   let pathDecoded = decodeURIComponent(url.pathname.split("#")[0]);
   if (pathDecoded.endsWith("/")) pathDecoded += "index.html";
 
   // Detects probable path traversal attempts, better safe than sorry
   if (path.normalize(pathDecoded) !== pathDecoded) {
-    return Response("404!", { status: 404 });
+    return Response(file404, { status: 404 });
   }
 
   let outputFilePath = "pages" + pathDecoded;
 
   if (!fs.existsSync(outputFilePath)) {
-    return Response("404!", { status: 404 });
+    return Response(file404, { status: 404 });
   }
   if (fs.lstatSync(outputFilePath).isDirectory()) {
     outputFilePath += "/index.html";
@@ -181,7 +183,7 @@ const fetchHandler = async function (req) {
   const file = Bun.file(outputFilePath);
 
   if (file.size === 0) {
-    return Response("404!", { status: 404 });
+    return Response(file404, { status: 404 });
   }
 
   return Response(file);
