@@ -82,6 +82,23 @@ const fetchHandler = async function (req) {
     return Response.json(await utils.spplice(["get"]));
   }
 
+  if (urlPath[0] === "ws") {
+
+    const user = await apis.users(["whoami"], req);
+    if (!user) return Response("ERR_LOGIN", { status: 403 });
+
+    const steamid = user.steamid;
+    const event = decodeURIComponent(urlPath[1]);
+    const eventData = epochtal.data.events[event];
+
+    if (!eventData) return Response("ERR_EVENT", { status: 404 });
+    if (!(await eventData.auth(steamid))) return Response("ERR_PERMS", { status: 403 });
+
+    if (server.upgrade(req, { data: { event, steamid } })) return;
+    return new Response("ERR_PROTOCOL", { status: 500 });
+
+  }
+
   if (urlPath[0] === "api") {
 
     const api = apis[urlPath[1]];
@@ -175,19 +192,29 @@ const fetchHandler = async function (req) {
 
 const server = Bun.serve({
   port: 3002,
-  fetch: fetchHandler
+  fetch: fetchHandler,
+  websocket: {
+    
+    open (ws) {
+      ws.subscribe(ws.data.event);
+      epochtal.data.events[ws.data.event].connect(ws.data.steamid);
+    },
+    message (ws, message) {
+      epochtal.data.events[ws.data.event].message(message);
+    },
+    close (ws) {
+      ws.unsubscribe(ws.data.event);
+      epochtal.data.events[ws.data.event].disconnect(ws.data.steamid);
+    }
+
+  }
 });
+epochtal.data.events.server = server;
 
 console.log(`Listening on http://localhost:${server.port}...`);
 
 utils.routine(["schedule", "epochtal", "concludeWeek", "0 0 10 * * *"]);
 utils.routine(["schedule", "epochtal", "releaseMap", "0 0 12 * * *"]);
 
-const adminCheck = async function (request) {
-  const user = await apis.users(["whoami"], request);
-  if (!user) return false;
-  return !!user.epochtal.admin;
-};
-
-utils.events(["create", "utilError", adminCheck]);
-utils.events(["create", "utilPrint", adminCheck]);
+utils.events(["create", "utilError", steamid => epochtal.data.users[steamid].admin]);
+utils.events(["create", "utilPrint", steamid => epochtal.data.users[steamid].admin]);

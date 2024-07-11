@@ -218,18 +218,18 @@
 
       });
 
-      const utilPrintEvent = new EventSource("/api/events/subscribe/utilPrint");
+      const utilPrintSocket = new WebSocket("ws://epochtal.p2r3.com:3002/ws/utilPrint");
 
-      utilPrintEvent.onmessage = function (event) {
+      utilPrintSocket.addEventListener("message", function (event) {
         
-        const text = JSON.parse(event.data).replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll("  ", " &nbsp;");
+        const text = event.data.replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll("  ", " &nbsp;");
         const lines = text.split("\n");
         
         lines[0] = `<span class=\"grayed\">${lines[0]}</span>`;
         
         output.innerHTML += lines.join("<br>");
 
-      };
+      });
 
     </script>
 

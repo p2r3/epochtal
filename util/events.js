@@ -13,11 +13,13 @@ module.exports = async function (args, context = epochtal) {
       if (!name) throw new UtilError("ERR_NAME", args, context);
       if (name in events) throw new UtilError("ERR_EXISTS", args, context);
 
-      const authFunction = args[2];
+      const [auth, message, connect, disconnect] = args.slice(2);
 
       events[name] = {
-        controllers: [],
-        auth: authFunction || false
+        auth: auth || (x => true),
+        message: message || (x => undefined),
+        connect: connect || (x => undefined),
+        disconnect: disconnect || (x => undefined)
       };
 
       return "SUCCESS";
@@ -32,15 +34,33 @@ module.exports = async function (args, context = epochtal) {
 
     }
 
+    case "list": {
+
+      return Object.keys(events);
+
+    }
+
     case "send": {
 
       if (!(name in events)) throw new UtilError("ERR_NAME", args, context);
-      if (!data) throw new UtilError("ERR_ARGS", args, context);
+      if (data === undefined) throw new UtilError("ERR_DATA", args, context);
 
-      for (let i = 0; i < events[name].controllers.length; i ++) {
-        events[name].controllers[i].enqueue(`data: ${JSON.stringify(data)}\n\n`);
-      }
+      events.server.publish(name, data);
       
+      return "SUCCESS";
+
+    }
+    
+    case "rename": {
+
+      if (!(name in events)) throw new UtilError("ERR_NAME", args, context);
+
+      const newName = args[2].trim();
+      if (newName in events) throw new UtilError("ERR_EXISTS", args, context);
+
+      events[newName] = events[name];
+      delete events[name];
+
       return "SUCCESS";
 
     }
