@@ -68,6 +68,32 @@ module.exports = async function (args, request) {
 
     }
 
+    case "rename": {
+
+      const newName = args[2];
+
+      const user = await api_users(["whoami"], request);
+      if (!user) return "ERR_LOGIN";
+
+      const listEntry = await lobbies(["get", name]);
+      if (!listEntry.players.includes(user.steamid)) return "ERR_PERMS";
+
+      return lobbies(["rename", name, newName]);
+
+    }
+
+    case "password": {
+
+      const user = await api_users(["whoami"], request);
+      if (!user) return "ERR_LOGIN";
+
+      const listEntry = await lobbies(["get", name]);
+      if (!listEntry.players.includes(user.steamid)) return "ERR_PERMS";
+
+      return lobbies(["password", name, password]);
+
+    }
+
   }
 
   return "ERR_COMMAND";

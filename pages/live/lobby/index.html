@@ -37,6 +37,7 @@
 
       <div id="lobby-players-container">
         <h2 class="font-spaced">&nbsp;&nbsp;•&nbsp;•&nbsp;•&nbsp;&nbsp;players</h2><br>
+        <div id="lobby-players-list"></div>
       </div>
 
       <div id="lobby-settings-container">
@@ -45,13 +46,9 @@
 
         <div class="center">
 
-          <div class="center" style="width:50%; display: inline-block">
-            <h3 class="marginb_small">Change lobby name</h3>
-            <input type="text" placeholder="New name">
-          </div><div class="center" style="width:50%; display: inline-block">
-            <h3 class="marginb_small">Change password</h3>
-            <input type="password" placeholder="New password">
-          </div>
+          <button onclick="changeLobbyName()">Change lobby name</button>
+            &nbsp;&nbsp;
+          <button onclick="changeLobbyPassword()">Change lobby password</button>
 
           <br><br>
 
@@ -60,10 +57,6 @@
             
           </div>
           
-          <br><br>
-
-          <button>Save Settings</button>
-
         </div>
 
       </div>
