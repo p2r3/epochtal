@@ -6,7 +6,7 @@ function decodeLog (buffer, categoryList) {
   for (let i = 0; i < buffer.length; i += 10) {
 
     const entry = {};
-    
+
     // 1 byte - category index
     entry.category = categoryList[buffer[i]];
 
@@ -26,7 +26,7 @@ function decodeLog (buffer, categoryList) {
     }
 
     log.push(entry);
-    
+
   }
 
   return log;
@@ -39,7 +39,7 @@ function openSteamProfile () {
 }
 
 var profilePageInit = async function () {
-  
+
   const whoami = await (await fetch("/api/users/whoami")).json();
   if (whoami !== null) {
 
@@ -53,7 +53,7 @@ var profilePageInit = async function () {
   }
 
   const users = await (await fetch("/api/users/get")).json();
-  
+
   window.addEventListener("hashchange", function(){
     window.location.reload();
   });
@@ -101,7 +101,7 @@ var profilePageInit = async function () {
 
       if (!(week in leaderboards)) leaderboards[week] = {};
       if (!(category in leaderboards[week])) leaderboards[week][category] = [];
-      
+
       leaderboards[week][category].push(profileLog[i]);
 
     }
@@ -116,7 +116,7 @@ var profilePageInit = async function () {
 
   }
   await fetchProfileLog();
-  
+
   const graphTypes = ["points over time", "participation"];
   window.selectedGraphType = 0;
 
@@ -148,7 +148,7 @@ var profilePageInit = async function () {
             data[i] = lastDataPoint;
             continue;
           }
-          
+
           const currDataPoint = statistics[weeksIn];
           for (let i = 0; i < currDataPoint.length; i ++) {
             totalPoints += currDataPoint[i];
@@ -160,9 +160,9 @@ var profilePageInit = async function () {
             else lastDataPoint = totalPoints + 100;
           }
           data[i] = lastDataPoint;
-          
+
           weeksIn ++;
-          
+
         }
 
         for (let i = weeks[0] - 1; i < hiddenUntil; i ++) {
@@ -205,7 +205,7 @@ var profilePageInit = async function () {
         break;
 
       }
-    
+
     }
 
     // clone the last element twice to get the bezier
@@ -255,17 +255,17 @@ var profilePageInit = async function () {
 
     const hoverInfo = document.querySelector("#profile-graph-hover");
     const hoverLine = document.querySelector("#profile-graph-line");
-    
+
     // Add event listener for mousemove to display index on hover
     canvas.addEventListener("mousemove", function (event) {
 
       const mouseX = event.clientX - bbox.left;
       const mouseY = event.clientY - bbox.top;
-      
+
       // Calculate the index of the data point under the mouse
       const uncappedIndex = Math.round((mouseX - margin) / xStep);
       const index = Math.max(Math.min(uncappedIndex, data.length - 1), 0);
-      
+
       // Display the index in hoverInfo
       const dataPoint = Math.round(data[index]);
       if (selectedGraphType === 0) {
@@ -278,7 +278,7 @@ var profilePageInit = async function () {
       // Update the position of hoverInfo and hoverLine
       hoverInfo.style.transform = `translate(${Math.round((mouseX - margin) / xStep) * xStep + bbox.left + margin}px, calc(${event.clientY - 10}px - 100%))`;
       hoverLine.style.transform = `translate(${Math.round((mouseX - margin) / xStep) * xStep + bbox.left + margin}px, ${bbox.top}px)`;
-      
+
       // Control opacity if within margins
       if (uncappedIndex < 0 || uncappedIndex > data.length - 3) {
         hoverLine.style.opacity = 0;
@@ -336,7 +336,7 @@ var profilePageInit = async function () {
 
     const startedWeek = Math.floor(profileLog[0].timestamp / 604800) + 1;
     const endedWeek = Math.floor(profileLog[profileLog.length - 1].timestamp / 604800) + 1;
-  
+
     let scoredRuns = 0;
     const { statistics } = profileUserData;
     for (let i = 0; i < statistics.length; i ++) {
@@ -352,12 +352,12 @@ var profilePageInit = async function () {
       &nbsp;•&nbsp;&nbsp;${profileLog.length} Total Submissions<br>
       <br>
     `;
-  
+
     for (let i = 0; i < categorySubmissions.length; i ++) {
       const { submissions, category } = categorySubmissions[i];
       statsTextOutput += `&nbsp;•&nbsp;&nbsp;<b>${submissions}</b> in category <b>${category}</b><br>`;
     }
-  
+
     statsText.innerHTML = statsTextOutput;
 
   }
@@ -370,7 +370,7 @@ var profilePageInit = async function () {
     if (e.key === "Control") cliKeysControl = true;
     if (e.key === "`") cliKeysTilde = true;
     if (cliKeysControl && cliKeysTilde) {
-      
+
       const features = "popup=yes,width=640,height=400,left=20,top=20";
 
       const popupWindow = window.open("/admin/cli/index.html", "_blank", features);
