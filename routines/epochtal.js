@@ -209,7 +209,7 @@ async function releaseMap (context) {
     context.data.week.number ++;
     context.data.week.map = newmap;
 
-    announceText = `With a community vote of ${context.data.week.map.upvotes} upvotes to ${context.data.week.map.downvotes} downvotes, the map for week ${context.data.week.number} of PortalRunner's Weekly Tournament was decided to be ${context.data.week.map.title} by ${context.data.week.map.author}.`;
+    announceText = `With a community vote of ${context.data.week.map.upvotes} upvotes to ${context.data.week.map.downvotes} downvotes, the map for week ${context.data.week.number} of the weekly tournament was decided to be ${context.data.week.map.title} by ${context.data.week.map.author}.`;
 
     let thumbnail = context.data.week.map.thumbnail;
     if (!thumbnail.startsWith("http")) {
@@ -331,7 +331,7 @@ async function rebuildMap (context) {
   if (!thumbnail.startsWith("http")) {
     thumbnail = `https://steamuserimages-a.akamaihd.net/ugc/${thumbnail}?impolicy=Letterbox&imh=360`;
   }
-  const announceText = `With a community vote of ${context.data.week.map.upvotes} upvotes to ${context.data.week.map.downvotes} downvotes, the map for week ${context.data.week.number} of PortalRunner's Weekly Tournament was decided to be ${context.data.week.map.title} by ${context.data.week.map.author}.`;
+  const announceText = `With a community vote of ${context.data.week.map.upvotes} upvotes to ${context.data.week.map.downvotes} downvotes, the map for week ${context.data.week.number} of the weekly tournament was decided to be ${context.data.week.map.title} by ${context.data.week.map.author}.`;
 
   if (await spplice(["get", "epochtal"])) {
     await spplice(["remove", "epochtal"]);
