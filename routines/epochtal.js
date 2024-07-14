@@ -26,11 +26,11 @@ async function concludeWeek (context) {
 
   week.voting = false;
   week.bonus = true;
-  
+
   for (let i = 0; i < week.categories.length; i ++) {
     week.categories[i].lock = true;
   }
-  
+
   await points(["award"], context);
 
   await discord(["announce", "The leaderboard has been locked."], context);
@@ -100,7 +100,7 @@ async function releaseMap (context) {
 
     const details = await workshopper(["get", allmaps[i].id]);
     if (votingmaps.find(curr => curr.author === details.author)) continue;
-    
+
     votingmaps.push(details);
     if (votingmaps.length === VOTING_MAPS_COUNT) break;
 
@@ -108,7 +108,7 @@ async function releaseMap (context) {
 
   // Create Spplice package for voting list maps
   UtilPrint("epochtal(releaseMap): Creating voting map Spplice package...");
-  
+
   const votingContext = {
     data: { week: { number: ((context.data.week.number + 1) + "-voting"), map: votingmaps } },
     file: { portal2: context.file.portal2 }
@@ -155,7 +155,7 @@ async function releaseMap (context) {
     throw e;
 
   }
-  
+
   // Count votes and pick the next active map
   UtilPrint("epochtal(releaseMap): Counting map votes...");
 
@@ -165,26 +165,26 @@ async function releaseMap (context) {
     const totalVotes = Array(VOTING_MAPS_COUNT).fill(0);
     const totalUpvotes = Array(VOTING_MAPS_COUNT).fill(0);
     const totalDownvotes = Array(VOTING_MAPS_COUNT).fill(0);
-  
+
     for (const steamid in context.data.week.votes) {
-  
+
       const curr = context.data.week.votes[steamid];
-      
+
       for (let i = 0; i < VOTING_MAPS_COUNT; i ++) {
         if (curr[i] > 0) totalUpvotes[i] += curr[i];
         else if (curr[i] < 0) totalDownvotes[i] -= curr[i];
         totalVotes[i] += curr[i];
       }
-  
+
     }
-  
+
     let highestVoted = 0;
     for (let i = 1; i < VOTING_MAPS_COUNT; i ++) {
       if (totalVotes[i] > totalVotes[highestVoted]) {
         highestVoted = i;
       }
     }
-  
+
     newmap = await workshopper(["get", context.data.week.votingmaps[highestVoted].id]);
     newmap.upvotes = totalUpvotes[highestVoted];
     newmap.downvotes = totalDownvotes[highestVoted];
@@ -215,7 +215,7 @@ async function releaseMap (context) {
     if (!thumbnail.startsWith("http")) {
       thumbnail = `https://steamuserimages-a.akamaihd.net/ugc/${thumbnail}?impolicy=Letterbox&imh=360`;
     }
-    
+
     // If the routine fails somewhere here, we can't easily revert a Spplice package change
     // However, since the board would be locked by now, we can afford deleting the old package
     // The focus should be on not "leaking" the new package early
@@ -225,7 +225,7 @@ async function releaseMap (context) {
 
     const portal2 = await gamefiles(["build"], context);
     const vmf = await gamefiles(["getvmf", `${portal2.output}/maps/${portal2.map[0]}`, true], context);
-    
+
     try {
       sppliceResult = await spplice(["add",
         "epochtal",
@@ -243,7 +243,7 @@ async function releaseMap (context) {
     fs.renameSync(vmf, `${__dirname}/../vmfs/${context.data.week.map.id}.vmf.xz`);
 
     context.data.week.map.file = portal2.map[0];
-  
+
   } catch (e) {
 
     await flush(["memory"], context);
@@ -276,7 +276,7 @@ async function releaseMap (context) {
 
     weekString = JSON.stringify(context.data.week);
     leaderboardString = JSON.stringify(context.data.leaderboard);
-  
+
   } catch (e) {
 
     await flush(["memory"], context);
@@ -288,9 +288,9 @@ async function releaseMap (context) {
     throw e;
 
   }
-  
+
   try {
-    
+
     const suggestionsFile = Bun.file(`${__dirname}/../suggestions.json`);
     const suggestions = await suggestionsFile.json();
 
@@ -426,7 +426,7 @@ async function summarizeDemoEvents (context) {
     const fileNoExtension = files[i].slice(0, -7);
 
     for (const event of mdp.demos[0].events) {
-      
+
       if (event.type === "timescale") {
 
         if (!(fileNoExtension in timescales)) {
@@ -447,7 +447,7 @@ async function summarizeDemoEvents (context) {
       const value = event.type === "cvar" ? event.val.val : event.value.split(" ").slice(1).join(" ");
 
       const verdict = await testcvar([cvar, value], context);
-      
+
       if (verdict !== VERDICT_SAFE) {
 
         if (cvar === "sv_portal_placement_never_fail" && files[i].endsWith("_ppnf.dem.xz")) {
@@ -506,7 +506,7 @@ async function summarizeDemoEvents (context) {
 async function rebuildProfiles (context) {
 
   const userList = await users(["list"], context);
-  
+
   for (const steamid in userList) {
     await profiledata(["forceadd", steamid], context);
     await users(["apiupdate", steamid], context);
