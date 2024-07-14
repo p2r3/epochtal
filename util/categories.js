@@ -1,9 +1,24 @@
 const UtilError = require("./error.js");
 
+/**
+ * Handles the `categories` utility call. This utility can do the following based on the (sub)command that gets called:
+ *
+ * - `list`: Lists all categories.
+ * - `getall`: Gets all category data.
+ * - `get`: Gets the category data of the specified category.
+ * - `remove`: Removes the specified category.
+ * - `add`: Adds a new category.
+ * - `edit`: Edits the specified category.
+ *
+ * @param args Arguments for the utility call
+ * @param context The context on which to execute the call
+ * @returns {Promise<unknown>} The result of the utility call
+ */
 module.exports = async function (args, context = epochtal) {
 
   const [command, name] = args;
 
+  // Grab the week data and file
   const file = context.file.week;
   const week = context.data.week;
 
@@ -11,6 +26,7 @@ module.exports = async function (args, context = epochtal) {
 
     case "list": {
 
+      // Return an array of category names
       const output = [];
 
       for (let i = 0; i < week.categories.length; i ++) {
@@ -18,7 +34,7 @@ module.exports = async function (args, context = epochtal) {
       }
 
       return output;
-    
+
     }
 
     case "getall": {
@@ -29,19 +45,24 @@ module.exports = async function (args, context = epochtal) {
 
     case "get": {
 
+      // Find the category index by name
       const index = week.categories.findIndex(curr => curr.name === name);
       if (index === -1) throw new UtilError("ERR_CATEGORY", args, context);
 
+      // Return appropriate category data
       return week.categories[index];
 
     }
 
     case "remove": {
 
+      // Find the category index by name
       const index = week.categories.findIndex(curr => curr.name === name);
       if (index === -1) throw new UtilError("ERR_CATEGORY", args, context);
 
+      // Remove the category
       week.categories.splice(index, 1);
+      // Write the changes to the file
       if (file) Bun.write(file, JSON.stringify(week));
 
       return "SUCCESS";
@@ -50,6 +71,7 @@ module.exports = async function (args, context = epochtal) {
 
     case "add": {
 
+      // Ensure all required arguments are present
       for (let i = 2; i <= 7; i ++) {
         if (args[i] === undefined) throw new UtilError("ERR_ARGS", args, context);
       }
@@ -58,12 +80,14 @@ module.exports = async function (args, context = epochtal) {
 
       const newCategory = { name, title, portals, coop, lock, proof, points };
 
+      // Add the category to a specific slot or at the end
       if (slot === undefined) {
         week.categories.push(newCategory);
       } else {
         week.categories.splice(slot, 0, newCategory);
       }
 
+      // Write the changes to the file
       if (file) Bun.write(file, JSON.stringify(week));
 
       return "SUCCESS";
@@ -72,9 +96,11 @@ module.exports = async function (args, context = epochtal) {
 
     case "edit": {
 
+      // Find the category index by name
       const index = week.categories.findIndex(curr => curr.name === name);
       if (index === -1) throw new UtilError("ERR_CATEGORY", args, context);
 
+      // Ensure all required arguments are present
       const key = args[2];
       let value = args[3];
 
@@ -82,11 +108,14 @@ module.exports = async function (args, context = epochtal) {
         throw new UtilError("ERR_ARGS", args, context);
       }
 
+      // Parse value argument
       if (value === "true") value = true;
       else if (value === "false") value = false;
 
+      // Edit the category data
       week.categories[index][key] = value;
 
+      // Write the changes to the file
       if (file) Bun.write(file, JSON.stringify(week));
 
       return "SUCCESS";
@@ -94,7 +123,7 @@ module.exports = async function (args, context = epochtal) {
     }
 
   }
-  
+
   throw new UtilError("ERR_COMMAND", args, context);
 
 };
