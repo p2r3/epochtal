@@ -1,9 +1,21 @@
 const UtilError = require("./error.js");
 
+/**
+ * Handles the `config` utility call. This utility can do the following based on the (sub)command that gets called:
+ *
+ * - `get`: Gets the specified configuration value.
+ * - `edit`: Edits the specified configuration value.
+ * - `fixdate`: ???
+ *
+ * @param args Arguments for the utility call
+ * @param context The context on which to execute the call
+ * @returns {Promise<unknown>} The result of the utility call
+ */
 module.exports = async function (args, context = epochtal) {
 
   const [command, field] = args;
 
+  // Grab the week data and file
   const file = context.file.week;
   const week = context.data.week;
 
@@ -23,7 +35,10 @@ module.exports = async function (args, context = epochtal) {
       if (!(field in week)) throw new UtilError("ERR_FIELD", args, context);
       if (value === undefined) throw new UtilError("ERR_VALUE", args, context);
 
+      // Update the configuration value
       week[field] = value;
+
+      // Write the updated week data to the file
       if (file) Bun.write(file, JSON.stringify(week));
 
       return "SUCCESS";
@@ -31,6 +46,8 @@ module.exports = async function (args, context = epochtal) {
     }
 
     case "fixdate": {
+
+      // TODO: what does this do?
 
       const today = new Date();
 
@@ -50,4 +67,3 @@ module.exports = async function (args, context = epochtal) {
   throw new UtilError("ERR_COMMAND", args, context);
 
 };
-
