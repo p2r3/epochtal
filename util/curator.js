@@ -483,8 +483,6 @@ module.exports = async function (args, context = epochtal) {
         if (weekNumber == 53) continue;
         // Competitiveness and density are out of this world, textbook outlier
         if (weekNumber === 95) continue;
-        // Anything past this is a repochtal testing map. REMOVE AFTER RELEASE!
-        if (weekNumber > 128) continue;
 
         const mainCategory = archiveContext.data.week.categories.find(curr => curr.name === "main");
         const mainLeaderboard = archiveContext.data.leaderboard.main;
