@@ -470,10 +470,11 @@ var homepageInit = async function () {
     const safeLink = encodeURIComponent(link);
     const safeNote = encodeURIComponent(note);
 
+    let data;
     try {
 
       const response = await fetch(`/api/leaderboard/submitlink/${category}/${safeLink}/${safeNote}/${time}/${portals}`);
-      const data = await response.json();
+      data = await response.json();
 
       if (typeof data === "string") switch (data) {
         case "ERR_LOGIN":
@@ -503,7 +504,7 @@ var homepageInit = async function () {
     leaderboard = await (await fetch("/api/leaderboard/get")).json();
     displayLeaderboard(leaderboardCategorySelect.value);
 
-    return showPopup("Success", "Your run has been submitted!<br>Time: " + ticksToString(data));
+    return showPopup("Success", "Your run has been submitted!<br>Time: " + ticksToString(data.time));
 
   }
 
