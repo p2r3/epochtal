@@ -6,8 +6,36 @@ const demo = require("../util/demo.js");
 const discord = require("../util/discord.js");
 const leaderboard = require("../util/leaderboard.js");
 const categories = require("../util/categories.js");
+const users = require("../util/users.js");
 
 const api_users = require("./users.js");
+
+function ticksToString (t) {
+
+  let output = "",
+      hrs = Math.floor(t / 216000)
+      min = Math.floor(t / 3600),
+      sec = t % 3600 / 60;
+
+  if (hrs !== 0) output += `${hrs}:${min % 60 < 10 ? "0" : ""}${min % 60}:`;
+  else if (min !== 0) output += `${min}:`;
+  if (sec < 10) output += "0";
+  output += sec.toFixed(3);
+
+  return output;
+
+}
+
+async function discordUpdate (data, user, categoryData) {
+
+  const username = user.epochtal.name;
+  const category = categoryData.title;
+  const time = ticksToString(data.time);
+  const portals = categoryData.portals ? `(${data.portals} portals)` : "";
+
+  await discord(["update", `${username} submitted a new run to "${category}" with a time of \`${time}\` ${portals}`]);
+
+}
 
 module.exports = async function (args, request) {
 
@@ -21,9 +49,9 @@ module.exports = async function (args, request) {
   switch (command) {
 
     case "get": {
-    
+
       return epochtal.data.leaderboard;
-    
+
     }
 
     case "submit": {
@@ -56,16 +84,16 @@ module.exports = async function (args, request) {
         const verdict = await demo(["verify", path]);
         if (verdict !== "VALID" && !(verdict === "PPNF" && category === "ppnf")) {
           fs.rmSync(path);
-  
+
           const reportText = `${user.username}'s run was rejected. ${verdict}\nSteam ID: \`${user.steamid}\``;
           await discord(["report", reportText]);
-  
+
           return "ERR_ILLEGAL";
         }
       }
 
       const data = await demo(["parse", path]);
-      
+
       if (user.steamid !== data.steamid) {
         fs.rmSync(path);
         return "ERR_STEAMID";
@@ -98,7 +126,7 @@ module.exports = async function (args, request) {
         fs.rmSync(path);
         return "ERR_NOPARTNER";
       }
-      
+
       try {
         await leaderboard(["add", category, data.steamid, data.time, note, data.portals, false]);
       } catch (e) {
@@ -109,6 +137,8 @@ module.exports = async function (args, request) {
       const newPath = `${epochtal.file.demos}/${data.steamid}_${category}.dem`;
       fs.renameSync(path, newPath);
       await $`xz -zf9e ${newPath}`.quiet();
+
+      await discordUpdate(data, user, categoryData);
 
       return data;
 
@@ -139,6 +169,8 @@ module.exports = async function (args, request) {
       const newPath = `${epochtal.file.demos}/${data.steamid}_${category}.link`;
       await Bun.write(newPath, link);
 
+      await discordUpdate(data, user, categoryData);
+
       return data;
 
     }
@@ -146,29 +178,29 @@ module.exports = async function (args, request) {
     case "remove": {
 
       if (categoryData.lock) return "ERR_LOCKED";
-      
+
       const user = await api_users(["whoami"], request);
       if (!user) return "ERR_LOGIN";
-      
+
       await leaderboard(["remove", category, user.steamid]);
 
       return "SUCCESS";
-      
+
     }
 
     case "edit": {
 
       if (categoryData.lock) return "ERR_LOCKED";
-      
+
       const user = await api_users(["whoami"], request);
       if (!user) return "ERR_LOGIN";
-      
+
       const note = args[2];
 
       await leaderboard(["edit", category, user.steamid, note]);
 
       return "SUCCESS";
-      
+
     }
 
   }

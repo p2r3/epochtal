@@ -19,8 +19,9 @@ epochtal.data = {
   profiles: {},
   week: await epochtal.file.week.json(),
   discord: {
-    announce: "1063171316875788338",
-    report: "1059311594116497509"
+    announce: "1260596922419380246",
+    report: "1260606647450079283",
+    update: "1260597527133163610"
   },
   spplice: {
     address: "http://epochtal.p2r3.com:3002/spplice",

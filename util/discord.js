@@ -16,10 +16,15 @@ module.exports = async function (args, context = epochtal) {
       return "SUCCESS";
 
     case "report":
-      
+
       await discordClient.channels.cache.get(context.data.discord.report).send({ content, files });
       return "SUCCESS";
-  
+
+    case "update":
+
+      await discordClient.channels.cache.get(context.data.discord.update).send({ content, files });
+      return "SUCCESS";
+
   }
 
   throw new UtilError("ERR_COMMAND", args, context);
