@@ -1,10 +1,18 @@
+/**
+ * Convert demo ticks to a string representation
+ *
+ * @param {number} t The number of ticks
+ * @returns {string} The formatted string
+ */
 function ticksToString (t) {
 
+  // Split the ticks into hours, minutes, and seconds
   let output = "",
       hrs = Math.floor(t / 216000)
       min = Math.floor(t / 3600),
       sec = t % 3600 / 60;
 
+  // Format the output string
   if (hrs !== 0) output += `${hrs}:${min % 60 < 10 ? "0" : ""}${min % 60}:`;
   else if (min !== 0) output += `${min}:`;
   if (sec < 10) output += "0";
@@ -14,8 +22,15 @@ function ticksToString (t) {
 
 }
 
+/**
+ * Convert demo ticks into minutes, seconds, and milliseconds
+ *
+ * @param {number} t The number of ticks
+ * @returns {string[]} The formatted string array [minutes, seconds, milliseconds]
+ */
 function ticksToStringArray (t) {
 
+  // Split the ticks into hours, minutes, and seconds
   let sec = t % 3600 / 60;
   const min = Math.floor(t / 3600).toString();
   const ms = (sec % 1).toFixed(3).slice(2);
@@ -26,24 +41,44 @@ function ticksToStringArray (t) {
 
 }
 
+/**
+ * Convert a string array of time to demo ticks
+ *
+ * @param {string[]} a The string array [hours, minutes, seconds]
+ * @returns The number of ticks
+ */
 function stringArrayToTicks (a) {
 
   a[0] = Math.abs(Number(a[0]));
   a[1] = Math.abs(Number(a[1]));
   a[2] = Math.abs(Number(a[2]));
-  
+
   return Math.round(a[0] * 3600 + a[1] * 60 + a[2] * 0.06);
 
 }
 
+/**
+ * Parse a string representation of time into demo ticks
+ *
+ * @param {string} str The string representation of time
+ * @returns The number of ticks
+ */
 function stringToTicks (str) {
 
+  // Split string into array
   const arr = str.replace(/:/g, ".").replace(/,/g, ".").split(".");
 
+  // Convert to ticks
   return stringArrayToTicks(arr);
 
 }
 
+/**
+ * Cheaply URL-encode a string
+ *
+ * @param {string} str The string to encode
+ * @returns The encoded string
+ */
 function toHTMLString (str) {
   return str.replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
@@ -55,34 +90,48 @@ const tooltip = document.querySelector("#global-tooltip");
 const [POPUP_INFO, POPUP_ERROR, POPUP_WARN] = [0, 1, 2];
 if (popup) {
 
+  // Handle events in the popup
   function popupKeyHandler (event) {
     if (event.key === "Escape") popupOnCancel();
     if (event.key === "Enter") popupOnOkay();
   }
-  
+
   const popupCloseEvent = new Event("close");
 
   const titleElement = document.querySelector("#global-popup-title");
   const textElement = document.querySelector("#global-popup-text");
   const cancelButton = document.querySelector("#global-popup-cancel");
- 
+
+  /**
+   * Show a popup with the given title and text
+   *
+   * @param {string} title The title of the popup
+   * @param {string} text The text of the popup
+   * @param {POPUP_INFO, POPUP_ERROR, POPUP_WARN} type The type of popup
+   * @param {boolean} hasCancel Whether the popup has a cancel button
+   */
   var showPopup = function (title, text, type = POPUP_INFO, hasCancel = false) {
-  
+
+    // If the popup is already visible, set the cancel and okay functions to hide the popup
     if (popup.style.opacity == 1) {
       popupOnCancel = hidePopup;
       popupOnOkay = hidePopup;
     }
 
+    // Set the title and text of the popup
     titleElement.innerHTML = title;
     textElement.innerHTML = text;
 
+    // Show or hide the cancel button
     if (hasCancel) cancelButton.style.display = "unset";
     else cancelButton.style.display = "none";
-  
+
+    // Show the popup
     popup.style.opacity = 1;
     popup.style.pointerEvents = "auto";
     popup.style.transform = "translate(-50%, -50%)";
-  
+
+    // Set the border color based on the type
     switch (type) {
       case POPUP_INFO:
         popup.style.borderColor = "white";
@@ -93,45 +142,57 @@ if (popup) {
       case POPUP_WARN:
         popup.style.borderColor = "#ff6400";
         break;
-    
+
       default:
         popup.style.borderColor = "white";
         break;
     }
-  
+
+    // Add the key handler
     document.addEventListener("keydown", popupKeyHandler);
-  
+
   };
-  
+
+  /**
+   * Hide the popup
+   */
   var hidePopup = function () {
-  
+
+    // Hide the popup
     popup.style.opacity = 0;
     popup.style.pointerEvents = "none";
     popup.style.transform = "translate(-50%, 0)";
-  
+
+    // Remove the key handler
     document.removeEventListener("keydown", popupKeyHandler);
-  
+
+    // Dispatch the close event
     popup.dispatchEvent(popupCloseEvent);
-    
+
+    // Reset the popup functions
     popupOnCancel = hidePopup;
     popupOnOkay = hidePopup;
-  
+
   };
+
+  // Set the initial popup functions
   var popupOnCancel = hidePopup;
   var popupOnOkay = hidePopup;
 
 }
 
+// TODO: tooltip? owo what dis
+
 if (tooltip) {
 
   var tooltipVisible = false, tooltipTimeout = null;
   var showTooltip = function (text) {
-  
+
     tooltipVisible = true;
-  
+
     tooltip.innerHTML = text;
     tooltip.style.opacity = 1;
-  
+
     if (tooltipTimeout) {
       clearTimeout(tooltipTimeout);
       tooltipTimeout = null;
@@ -143,22 +204,22 @@ if (tooltip) {
     }
 
   };
-  
+
   var hideTooltip = function (text) {
-  
+
     tooltipVisible = false;
-  
+
     tooltip.style.opacity = 0;
-  
+
   };
-  
+
   window.addEventListener("mousemove", function (event) {
-  
+
     if (!tooltipVisible) return;
-    
+
     const { clientX, clientY } = event;
     tooltip.style.transform = `translate(${clientX}px, ${clientY}px)`;
-  
+
   });
-  
+
 }

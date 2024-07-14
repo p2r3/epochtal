@@ -37,7 +37,7 @@ class Dot {
     this.size = size * gscale;
     this.speedX = Math.random() * maxSpeed * 2 - maxSpeed;
     this.speedY = Math.random() * maxSpeed * 2 - maxSpeed;
-    
+
   }
 
   draw () {
@@ -55,10 +55,10 @@ class Dot {
 
       const nextX = this.x + this.speedX;
       const nextY = this.y + this.speedY;
-      
+
       const nextDistance = Math.sqrt(Math.pow(nextX - canvas.width / 2, 2) + Math.pow(nextY - canvas.height / 2, 2));
       const currDistance = Math.sqrt(Math.pow(this.x - canvas.width / 2, 2) + Math.pow(this.y - canvas.height / 2, 2));
-      
+
       if (nextDistance < avoidCenterRadius && currDistance >= avoidCenterRadius) {
         this.speedX = -this.speedX;
         this.speedY = -this.speedY;
@@ -73,7 +73,7 @@ class Dot {
       if ((this.x < 0 && this.speedX < 0) || (this.x > canvas.width && this.speedX > 0)) {
         this.speedX = -this.speedX;
       }
-  
+
       if ((this.y < 0 && this.speedY < 0) || (this.y > canvas.height && this.speedY > 0)) {
         this.speedY = -this.speedY;
       }
