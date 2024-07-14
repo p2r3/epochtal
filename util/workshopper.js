@@ -13,7 +13,7 @@ async function getData (mapid, raw) {
   const detailsData = await detailsRequest.json();
   if (!("response" in detailsData && "publishedfiledetails" in detailsData.response)) return "ERR_STEAMAPI";
   const details = detailsData.response.publishedfiledetails[0];
-  
+
   if (details.result !== 1) return "ERR_MAPID";
 
   if (raw) return details;
@@ -120,7 +120,7 @@ async function curateWorkshop (maps = []) {
   maps.sort(function (a, b) {
     return b.points - a.points;
   });
-  
+
   return maps;
 
 }
