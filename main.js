@@ -204,8 +204,8 @@ epochtal.data.events.server = server;
 
 console.log(`Listening on http://localhost:${server.port}...`);
 
-utils.routine(["schedule", "epochtal", "concludeWeek", "0 0 10 * * *"]);
-utils.routine(["schedule", "epochtal", "releaseMap", "0 0 12 * * *"]);
+utils.routine(["schedule", "epochtal", "concludeWeek", "0 0 15 * * 7"]);
+utils.routine(["schedule", "epochtal", "releaseMap", "0 0 12 * * 1"]);
 
 utils.events(["create", "utilError", steamid => epochtal.data.users[steamid].admin]);
 utils.events(["create", "utilPrint", steamid => epochtal.data.users[steamid].admin]);
