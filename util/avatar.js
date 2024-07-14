@@ -4,11 +4,11 @@ const keys = require("../../keys.js");
 const profiledata = require("./profiledata.js");
 
 /**
- * Handles the <code>avatar</code> utility call. This utility can do the following based on the (sub)command that gets called:
+ * Handles the `avatar` utility call. This utility can do the following based on the (sub)command that gets called:
  *
- * - <code>get</code>: Gets the locally stored avatar of the user with the specified SteamID.
- * - <code>update</code>: Fetches the avatar of the given SteamID from the Steam API, and updates the locally stored version.
- * - <code>fetch</code>: Fetches the avatar of the given SteamID from the Steam API and returns it.
+ * - `get`: Gets the locally stored avatar of the user with the specified SteamID.
+ * - `update`: Fetches the avatar of the given SteamID from the Steam API, and updates the locally stored version.
+ * - `fetch`: Fetches the avatar of the given SteamID from the Steam API and returns it.
  *
  * @param args An array where the first item is the (sub)command to call, and the second item is the appropriate SteamID
  * @param context The context on which to execute the call

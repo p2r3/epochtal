@@ -54,14 +54,14 @@ class SteamAuth {
    * The promise gets rejected if there are no users with the given SteamID or if Steam returns any other errors. If the
    * latter is the case, the error will also be passed along as part of the rejection.
    *
-   * @param steamOpenId The user's 64-bit SteamID in full format (<code>https://steamcommunity.com/openid/id/&lt;steamid></code>)
+   * @param steamOpenId The user's 64-bit SteamID in full format (`https://steamcommunity.com/openid/id/&lt;steamid>`)
    * @returns {Promise<unknown>} The following user data:
-   * - <code>_json</code>: All gathered information
-   * - <code>steamid</code>: The user's SteamID
-   * - <code>username</code>: The Steam username
-   * - <code>name</code>: The real name of the user
-   * - <code>profile</code>: The Steam profile URL
-   * - <code>avatar</code>: An array containing the URLs of the user's avatar, in different sizes
+   * - `_json`: All gathered information
+   * - `steamid`: The user's SteamID
+   * - `username`: The Steam username
+   * - `name`: The real name of the user
+   * - `profile`: The Steam profile URL
+   * - `avatar`: An array containing the URLs of the user's avatar, in different sizes
    *
    * @see https://developer.valvesoftware.com/wiki/Steam_Web_API#GetPlayerSummaries_.28v0002.29
    */

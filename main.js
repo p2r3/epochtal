@@ -1,13 +1,13 @@
 /**
- * The global <code>epochtal</code> object makes all context data for epochtal globally available. This is to skip
+ * The global `epochtal` object makes all context data for epochtal globally available. This is to skip
  * waiting for file I/O everywhere else later on.
  *
- * The <code>file</code> entry contains references to all files and directories on disk that are being used by epochtal.
+ * The `file` entry contains references to all files and directories on disk that are being used by epochtal.
  *
- * The <code>data</code> entry parses a lot of these files into a more readable object format for better integration
+ * The `data` entry parses a lot of these files into a more readable object format for better integration
  * with the code.
  *
- * The <code>name</code> field can be omitted, but helps keeping track of different contexts in environments where
+ * The `name` field can be omitted, but helps keeping track of different contexts in environments where
  * that's necessary.
  *
  * @type {{file: {}, data: {}, name: string}}
@@ -104,7 +104,7 @@ apisdir.forEach(api => {
 });
 
 /**
- * The <code>UtilError</code> field is a local class reference to the <code>error</code> utility. This lets the
+ * The `UtilError` field is a local class reference to the `error` utility. This lets the
  * application throw more readable error messages.
  */
 const UtilError = utils["error"];

@@ -20,9 +20,9 @@ function isValidName (name) {
  *
  * @param path The path to the context root
  * @returns {Promise<{file: {}, data: {}}>} A context object with the following fields:
- * - <code>file</code>: References to all files and directories on disk that are being used by the context
- * - <code>data</code>: Context data, stored in a more readable object format for better integration with the code
- * - <code>name</code>: The name of the context
+ * - `file`: References to all files and directories on disk that are being used by the context
+ * - `data`: Context data, stored in a more readable object format for better integration with the code
+ * - `name`: The name of the context
  */
 async function getArchiveContext (name) {
 
@@ -70,31 +70,31 @@ async function getArchiveContext (name) {
 }
 
 /**
- * Handles the <code>archive</code> utility call. This utility can do the following based on the first value passed to
- * <code>args</code>:
+ * Handles the `archive` utility call. This utility can do the following based on the first value passed to
+ * `args`:
  *
- * <code>list</code>: Gets all archive entries and returns a sorted list of the archive names.
+ * `list`: Gets all archive entries and returns a sorted list of the archive names.
  *
- * <code>get</code>: Creates the full context of an archive with the name as specified as the second value passed to <code>args</code>.
+ * `get`: Creates the full context of an archive with the name as specified as the second value passed to `args`.
  * See {@link getArchiveContext}.
  *
- * <code>assume</code>: Runs a utility by assuming an archive's context. The name of the archive has to be passed as the
- * second value in <code>args</code>, and the name of the utility to run as the third value in <code>args</code>. All
+ * `assume`: Runs a utility by assuming an archive's context. The name of the archive has to be passed as the
+ * second value in `args`, and the name of the utility to run as the third value in `args`. All
  * other remaining arguments will be passed to the utility.
  *
- * <code>create</code>: Copies the current context to an archive. Demo files are moved to the archive upon creation. The
- * name of the archive to create may to be passed as the second value in <code>args</code>. If it isn't, the name will
- * automatically be created based on the week number found in the context data (formatted as <code>weekX</code> where
- * <code>X</code> is the week number). Fails if an archive with this name already exists on disk. Can optionally be
- * forced by passing <code>true</code> as the third value in <code>args</code>. If forced, and an archive with this name
- * already exists, it will iterate up to 32 times, appending <code>_i</code> to the end of the archive name (where
- * <code>i</code> is the iteration number, starting at 1). If it finds an available name, the archive creation process
+ * `create`: Copies the current context to an archive. Demo files are moved to the archive upon creation. The
+ * name of the archive to create may to be passed as the second value in `args`. If it isn't, the name will
+ * automatically be created based on the week number found in the context data (formatted as `weekX` where
+ * `X` is the week number). Fails if an archive with this name already exists on disk. Can optionally be
+ * forced by passing `true` as the third value in `args`. If forced, and an archive with this name
+ * already exists, it will iterate up to 32 times, appending `_i` to the end of the archive name (where
+ * `i` is the iteration number, starting at 1). If it finds an available name, the archive creation process
  * will continue with the new name.
  *
- * <code>demo</code>: Gets the proof for a run in a given archive with the specified SteamID and category. Throws
+ * `demo`: Gets the proof for a run in a given archive with the specified SteamID and category. Throws
  * ERR_NOTFOUND if no proof exists within the given criteria. Needs the name of the archive to be passed as the second
- * value in <code>args</code>, the SteamID to check as the third value in <code>args</code>, and the category to check
- * as the fourth value in <code>args</code>.
+ * value in `args`, the SteamID to check as the third value in `args`, and the category to check
+ * as the fourth value in `args`.
  *
  * @param args The arguments for the call
  * @param context The context on which to execute the call
@@ -112,7 +112,7 @@ module.exports = async function (args, context = epochtal) {
        * Gets the week number from the archive name.
        *
        * @param str The archive name
-       * @returns {number|null} The week number. Returns <code>null</code> if the archive name contains no numbers
+       * @returns {number|null} The week number. Returns `null` if the archive name contains no numbers
        */
       const getWeekNumber = function (str) {
         let match = str.match(/\d+/);
@@ -172,9 +172,9 @@ module.exports = async function (args, context = epochtal) {
       let archivePath = `${__dirname}/../pages/archive/${name || ("week" + context.data.week.number)}`;
 
       /**
-       * Whether to force the archive creation. If this is <code>true</code> and the filesystem path of the archive
-       * already exists, it will iterate up to 32 times, appending <code>_i</code> to the end of the file path (where
-       * <code>i</code> is the iteration number, starting at 1). When it finds an available path, it will be logged and
+       * Whether to force the archive creation. If this is `true` and the filesystem path of the archive
+       * already exists, it will iterate up to 32 times, appending `_i` to the end of the file path (where
+       * `i` is the iteration number, starting at 1). When it finds an available path, it will be logged and
        * the archive creation process will continue with the new path.
        *
        * @type {boolean}
