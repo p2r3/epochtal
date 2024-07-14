@@ -14,33 +14,53 @@ const archive = require("./archive.js");
 // Besides, this has slightly less overhead, which is arguably important here
 const STEAM_API = "https://api.steampowered.com";
 
+/**
+ * Fetches the workshop data for a given map ID.
+ *
+ * @param mapid The map ID to fetch data for.
+ * @return {json} The workshop data for the map.
+ */
 async function getWorkshopData (mapid) {
 
+  // Fetch the workshop data for the map
   const detailsRequest = await fetch(`${STEAM_API}/IPublishedFileService/GetDetails/v1/?key=${keys.steam}&publishedfileids[0]=${mapid}&includeadditionalpreviews=true`);
   if (detailsRequest.status !== 200) throw new UtilError("ERR_STEAMAPI", args, context);
 
+  // Parse the response, throwing an error if the data is invalid
   const detailsData = await detailsRequest.json();
   if (!("response" in detailsData && "publishedfiledetails" in detailsData.response)) {
     throw new UtilError("ERR_STEAMAPI", args, context);
   }
   const data = detailsData.response.publishedfiledetails[0];
 
+  // Check if the response is valid
   if (data.result !== 1) return "ERR_MAPID";
   return data;
 
 }
 
+/**
+ * Fetches the entity lump for a given map ID and ignores everything else.
+ *
+ * @author PancakeTAS
+ * @param mapid The map ID to fetch the entity lump for.
+ * @returns {Promise<string>} The entity lump for the map.
+ */
 async function downloadEntityLump (mapid) {
 
+  // Fetch the workshop data for the map
   const data = await getWorkshopData(mapid);
   if (typeof data === "string") return data;
 
+  // Ensure the map is a Portal 2 map
   if (data.file_url === undefined) return "";
   if (data.consumer_appid !== 620) return "";
 
+  // Fetch the BSP file for the map
   const request = await fetch(data.file_url);
   if (request.status !== 200) throw new UtilError("ERR_STEAMAPI", args, context);
 
+  // Read the entity lump from the BSP file
   return await (new Promise(function (resolve, reject) {
     https.request(data.file_url, function (response) {
 
@@ -125,6 +145,12 @@ async function downloadEntityLump (mapid) {
 
 }
 
+/**
+ * Parses the entity lump string into an array of entities.
+ *
+ * @param inputString The entity lump string to parse.
+ * @returns {Array} The array of entities.
+ */
 function parseLump (inputString) {
 
   const entities = [];
@@ -169,6 +195,13 @@ function parseLump (inputString) {
 }
 
 const VOLUME_BLOCK_SIZE = 2097152;
+
+/**
+ * Calculates the densities of objects in the map.
+ *
+ * @param entities The entities in the map.
+ * @returns {Object} The densities of objects in the map.
+ */
 function calculateDensities (entities) {
 
   // To calculate the density of objects, we first need to find the test chamber
@@ -243,13 +276,22 @@ function calculateDensities (entities) {
 
 }
 
+/**
+ * Handles the `curator` utility call. This utility can do the following based on the (sub)command that gets called:
+ *
+ * - `v1`: The "original" Epochtal metadata curation algorithm.
+ * - `v2`: The "new" Repochtal object density curation algorithm.
+ *
+ * @param args Arguments for the utility call.
+ * @param context The context on which to execute the call.
+ * @returns {Promise<unknown>} The result of the utility call.
+ */
 module.exports = async function (args, context = epochtal) {
 
   const [command, mapid] = args;
 
   switch (command) {
 
-    // The "original" Epochtal metadata curation algorithm
     case "v1": {
 
       const authorcache = args[2] || {};
@@ -385,7 +427,6 @@ module.exports = async function (args, context = epochtal) {
 
     }
 
-    // The "new" Repochtal object density curation algorithm
     case "v2": {
 
       // Whether to report density anomalies
@@ -671,4 +712,3 @@ module.exports = async function (args, context = epochtal) {
   throw new UtilError("ERR_COMMAND", args, context);
 
 };
-
