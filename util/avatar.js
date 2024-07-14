@@ -10,9 +10,9 @@ const profiledata = require("./profiledata.js");
  * - `update`: Fetches the avatar of the given SteamID from the Steam API, and updates the locally stored version.
  * - `fetch`: Fetches the avatar of the given SteamID from the Steam API and returns it.
  *
- * @param args An array where the first item is the (sub)command to call, and the second item is the appropriate SteamID
+ * @param args The arguments for the call
  * @param context The context on which to execute the call
- * @returns {Promise<*|string|undefined>} The result of the utility call
+ * @returns {unknown} The result of the utility call
  */
 module.exports = async function (args, context = epochtal) {
 

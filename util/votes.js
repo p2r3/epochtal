@@ -13,9 +13,9 @@ const UtilError = require("./error.js");
  *
  * - `reset`: Resets the votes of a user by their SteamID. Throws ERR_LOCKED if the week is not in voting mode and ERR_MAP if the map index is invalid.
  *
- * @param args An array where the first item is the (sub)command to call, and the second item is the appropriate SteamID
+ * @param args The arguments for the call
  * @param context The context on which to execute the call
- * @returns {Promise<int|string>} The result of the utility call
+ * @returns {unknown} The result of the utility call
  */
 module.exports = async function (args, context = epochtal) {
 

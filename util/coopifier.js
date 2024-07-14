@@ -54,9 +54,9 @@ function findPattern (array, pattern, index = 0) {
  *
  * - `inject`: Injects the co-op script into the specified BSP file.
  *
- * @param args Arguments for the utility call
+ * @param args The arguments for the call
  * @param context The context on which to execute the call
- * @returns {Promise<unknown>} The result of the utility call
+ * @returns {unknown} The result of the utility call
  */
 module.exports = async function (args, context = epochtal) {
 

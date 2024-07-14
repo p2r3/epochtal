@@ -282,9 +282,9 @@ function calculateDensities (entities) {
  * - `v1`: The "original" Epochtal metadata curation algorithm.
  * - `v2`: The "new" Repochtal object density curation algorithm.
  *
- * @param args Arguments for the utility call.
- * @param context The context on which to execute the call.
- * @returns {Promise<unknown>} The result of the utility call.
+ * @param args The arguments for the call
+ * @param context The context on which to execute the call
+ * @returns {unknown} The result of the utility call
  */
 module.exports = async function (args, context = epochtal) {
 

@@ -98,7 +98,7 @@ async function getArchiveContext (name) {
  *
  * @param args The arguments for the call
  * @param context The context on which to execute the call
- * @returns {Promise<*|{file: {}, data: {}}|string[]|BunFile|string>} The result of the utility call
+ * @returns {unknown} The result of the utility call
  */
 module.exports = async function (args, context = epochtal) {
 

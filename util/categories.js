@@ -10,9 +10,9 @@ const UtilError = require("./error.js");
  * - `add`: Adds a new category.
  * - `edit`: Edits the specified category.
  *
- * @param args Arguments for the utility call
+ * @param args The arguments for the call
  * @param context The context on which to execute the call
- * @returns {Promise<unknown>} The result of the utility call
+ * @returns {unknown} The result of the utility call
  */
 module.exports = async function (args, context = epochtal) {
 
