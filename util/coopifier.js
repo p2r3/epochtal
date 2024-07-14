@@ -17,7 +17,16 @@ const replacePattern = encoder.encode(`"}{"`, "ascii");
 // We need to perform exactly 23 such pattern replacements to make enough space for the injection
 const REPLACE_COUNT = 23;
 
-// Unfortunately, TypedArrays don't have a native pattern matching method
+/**
+ * Find a pattern within an array.
+ * Unfortunately, TypedArrays don't have a native pattern matching method
+ *
+ * @param array The array to search
+ * @param pattern The pattern to search for
+ * @param index The index to start searching from
+ *
+ * @returns {number} The index of the pattern in the array, or -1 if not found
+ */
 function findPattern (array, pattern, index = 0) {
 
   // Iterate through the array to find the pattern
@@ -40,6 +49,15 @@ function findPattern (array, pattern, index = 0) {
 
 }
 
+/**
+ * Handles the `coopifier` utility call. This utility can do the following based on the (sub)command that gets called:
+ *
+ * - `inject`: Injects the co-op script into the specified BSP file.
+ *
+ * @param args Arguments for the utility call
+ * @param context The context on which to execute the call
+ * @returns {Promise<unknown>} The result of the utility call
+ */
 module.exports = async function (args, context = epochtal) {
 
   const [command, filename] = args;
@@ -48,8 +66,9 @@ module.exports = async function (args, context = epochtal) {
 
     case "inject": {
 
+      // Ensure a filename is provided
       if (!filename) throw new UtilError("ERR_FILE", args, context);
-      
+
       const file = Bun.file(filename);
       if (file.size === 0) throw new UtilError("ERR_FILE", args, context);
 
@@ -98,7 +117,7 @@ module.exports = async function (args, context = epochtal) {
       return "SUCCESS";
 
     }
-    
+
   }
 
   throw new UtilError("ERR_COMMAND", args, context);
