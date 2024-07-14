@@ -24,7 +24,7 @@ async function getWorkshopData (mapid) {
     throw new UtilError("ERR_STEAMAPI", args, context);
   }
   const data = detailsData.response.publishedfiledetails[0];
-  
+
   if (data.result !== 1) return "ERR_MAPID";
   return data;
 
@@ -101,7 +101,7 @@ async function downloadEntityLump (mapid) {
             const outputString = buffer.toString();
 
             resolve(outputString);
-            
+
             // close connection early
             response.destroy();
 
@@ -184,7 +184,7 @@ function calculateDensities (entities) {
     centroid[0] += entity.origin[0];
     centroid[1] += entity.origin[1];
     centroid[2] += entity.origin[2];
-    
+
     considered ++;
 
   }
@@ -220,19 +220,19 @@ function calculateDensities (entities) {
       return Math.abs(c - centroid[i]) > mapSize;
     });
     if (isOutsideMap) continue;
-    
+
     const name = entity.model || entity.classname;
     if (!name) continue;
     if (name.startsWith("*")) continue;
-    
+
     if (!(name in counts)) counts[name] = 1;
     else counts[name] ++;
 
     // Keep track of the total density
     counts.total ++;
-    
+
   }
-  
+
   // Convert the above counts to object density
   const output = {};
   for (const name in counts) {
@@ -387,7 +387,7 @@ module.exports = async function (args, context = epochtal) {
 
     // The "new" Repochtal object density curation algorithm
     case "v2": {
-      
+
       // Whether to report density anomalies
       const report = args[2];
 
@@ -419,9 +419,9 @@ module.exports = async function (args, context = epochtal) {
 
         // If the density is outside of the acceptable range, punish severely
         if (norm < -0.25 || norm > 1.25) {
-          
+
           if (report) UtilPrint(`Density of "${ent}" is outside of acceptable range. (${norm})`);
-          
+
           if (ent === "total") {
             totalDensityScore = -weights.v2.QUALITY_DEFAULT;
           } else {
@@ -470,7 +470,7 @@ module.exports = async function (args, context = epochtal) {
       const output = {}, density = {}, scores = [], bounds = {};
 
       for (const archiveName of archiveList) {
-        
+
         // Don't treat duplicates
         if (archiveName.includes("_")) continue;
 
@@ -512,7 +512,7 @@ module.exports = async function (args, context = epochtal) {
           // If a cache was not found, try to download the BSP and calculate graphs
           const entityLump = await downloadEntityLump(archiveContext.data.week.map.id);
           if (entityLump === "") continue;
-          
+
           const entities = parseLump(entityLump);
           mapDensity = calculateDensities(entities);
 
@@ -522,14 +522,14 @@ module.exports = async function (args, context = epochtal) {
         // The above code gets the density of each entity type in the current map
         // This loop adds those values to the "density" table containing data for all maps
         for (const name in mapDensity) {
-          
+
           if (!(name in density)) {
             density[name] = Array(scores.length).fill(null);
           } else if (density[name].length < scores.length) {
             const delta = scores.length - density[name].length;
             density[name].push(...(Array(delta).fill(null)));
           }
-          
+
           density[name].push(mapDensity[name]);
 
         }
@@ -590,7 +590,7 @@ module.exports = async function (args, context = epochtal) {
           output[name][normInt].count ++;
 
         }
-        
+
       }
 
       // Calculate average of competitiveness scores
@@ -633,7 +633,7 @@ module.exports = async function (args, context = epochtal) {
         // Do not average with the first entry, as that's density with 0 entities (a special case)
         const result = [data[0]];
         data = data.slice(1);
-        
+
         const halfWindow = Math.floor(windowSize / 2);
 
         for (let i = 0; i < data.length; i++) {
