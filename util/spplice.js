@@ -13,34 +13,6 @@ async function archiveFiles (portal2) {
 
 }
 
-async function buildManifest (packages, context) {
-  
-  if (!packages) {
- 
-    const week = context.data.week;
-
-    let thumbnail = week.map.thumbnail;
-    if (!thumbnail.startsWith("http")) thumbnail = `https://steamuserimages-a.akamaihd.net/ugc/${thumbnail}?impolicy=Letterbox&imh=360`;
-
-    packages = [{
-      title: "Tournament Week " + week.number,
-      name: "epochtal",
-      author: "PortalRunner",
-      file: "http://epochtal.p2r3.com:3002/epochtal.tar.xz",
-      icon: thumbnail,
-      description: `With a community vote of ${week.map.upvotes} upvotes to ${week.map.downvotes} downvotes, the map for week ${week.number} of PortalRunner's Weekly Tournament was decided to be ${week.map.title} by ${week.map.author}.`,
-      weight: 100
-    }];
-  
-  }
-
-  const output = (await tmppath()) + ".json";
-  await Bun.write(output, JSON.stringify({ packages }));
-
-  return output;
-
-}
-
 module.exports = async function (args, context = epochtal) {
 
   const [command, name] = args;
@@ -153,7 +125,7 @@ module.exports = async function (args, context = epochtal) {
       return "SUCCESS";
 
     }
-    
+
   }
 
   throw new UtilError("ERR_COMMAND", args, context);
