@@ -46,9 +46,8 @@ async function curateWorkshop (maps = []) {
 
   // Super long workshop API query requesting pretty much everything you can
   const requestData = `${STEAM_API}/IPublishedFileService/QueryFiles/v1/?key=${keys.steam}&query_type=1&numperpage=100&appid=620&requiredtags=Singleplayer&match_all_tags=true&filetype=0&return_vote_data=false&return_tags=true&return_kv_tags=true&return_previews=true&return_children=true&return_short_description=false&return_for_sale_data=false&return_metadata=true&return_playtime_stats=false`;
-  
-  // const weekSeconds = 604800; // one week
-  const weekSeconds = 86400; // one day
+
+  const weekSeconds = 604800; // one week
   const startDate = Date.now() / 1000;
 
   const authorcache = {};
