@@ -3,7 +3,6 @@ const { appendFileSync } = require("node:fs");
 /**
  * This class represents an error that occurred during the execution of a utility.
  * When constructed, it logs the error to the console and a file as well as publish it to the user.
- *
  */
 module.exports = class UtilError extends Error {
 
