@@ -91,6 +91,10 @@ module.exports = async function (args, context = epochtal) {
       
       const partners = context.data.week.partners;
 
+      if (categoryData.points && !categoryData.coop && steamid in partners) {
+        throw new UtilError("ERR_PARTNERLOCK", args, context);
+      }
+
       const oldRunIndex = lb.findIndex(function (curr) {
         if (categoryData.coop) {
           return curr.steamid === steamid || curr.steamid === partners[steamid];
