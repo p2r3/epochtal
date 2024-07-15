@@ -26,14 +26,20 @@ function ticksToString (t) {
 
 }
 
-async function discordUpdate (data, user, categoryData) {
+async function discordUpdate (steamid, category) {
 
-  const username = user.epochtal.name;
-  const category = categoryData.title;
-  const time = ticksToString(data.time);
-  const portals = categoryData.portals ? `(${data.portals} portals)` : "";
+  const currBoard = await leaderboard(["get", category]);
+  const currCategory = await categories(["get", category]);
 
-  await discord(["update", `${username} submitted a new run to "${category}" with a time of \`${time}\` ${portals}`]);
+  const run = currBoard.find(c => c.steamid === steamid);
+  const user = await users(["get", steamid]);
+
+  const time = ticksToString(run.time);
+  const portals = currCategory.portals ? ` (${run.portals} portals)` : "";
+  const suffix = ["st", "nd", "rd", "th"][Math.min(run.placement - 1, 3)];
+  const placement = `${run.placement}${suffix} place`
+
+  await discord(["update", `**${user.name}** submitted a new run to "${currCategory.title}" with a time of \`${time}\`${portals} in ${run.placement}${suffix} place.`]);
 
 }
 
@@ -138,7 +144,7 @@ module.exports = async function (args, request) {
       fs.renameSync(path, newPath);
       await $`xz -zf9e ${newPath}`.quiet();
 
-      await discordUpdate(data, user, categoryData);
+      discordUpdate(user.steamid, categoryData.name);
 
       return data;
 
@@ -169,7 +175,7 @@ module.exports = async function (args, request) {
       const newPath = `${epochtal.file.demos}/${data.steamid}_${category}.link`;
       await Bun.write(newPath, link);
 
-      await discordUpdate(data, user, categoryData);
+      discordUpdate(user.steamid, categoryData.name);
 
       return data;
 
