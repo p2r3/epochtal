@@ -19,7 +19,7 @@ epochtal.data = {
   profiles: {},
   week: await epochtal.file.week.json(),
   discord: {
-    announce: "1260596922419380246",
+    announce: "1262178097684418593",
     report: "1260606647450079283",
     update: "1260597527133163610"
   },
