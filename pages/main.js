@@ -690,7 +690,7 @@ var homepageInit = async function () {
     const outputPoints = Math.round(user.points);
     if (user.points !== -Infinity) pointsString = `${outputPoints} point${outputPoints === 1 ? "" : "s"}`;
 
-    output += `<a href="http://epochtal.p2r3.com:3002/profile/#${user.steamid}" target="_blank" style="color:white;text-decoration:none"><div class="lb-entry lb-rank${placement}">
+    output += `<a href="https://epochtal.p2r3.com/profile/#${user.steamid}" target="_blank" style="color:white;text-decoration:none"><div class="lb-entry lb-rank${placement}">
       <p class="lb-text">${username}</p>
       <p class="lb-text font-light">${pointsString}</p>
     </div></a>`;

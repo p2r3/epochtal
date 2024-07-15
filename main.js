@@ -24,7 +24,7 @@ epochtal.data = {
     update: "1260597527133163610"
   },
   spplice: {
-    address: "http://epochtal.p2r3.com:3002/spplice",
+    address: "https://epochtal.p2r3.com/spplice",
     index: await epochtal.file.spplice.index.json()
   },
   // Epochtal Live
@@ -192,12 +192,16 @@ const fetchHandler = async function (req) {
 };
 
 const server = Bun.serve({
-  port: 3002,
+  port: 8080,
   fetch: fetchHandler,
   websocket: {
     open: await utils.events(["wshandler", "open"]),
     message: await utils.events(["wshandler", "message"]),
     close: await utils.events(["wshandler", "close"])
+  },
+  tls: {
+    key: Bun.file("/etc/letsencrypt/live/p2r3.com/privkey.pem"),
+    cert: Bun.file("/etc/letsencrypt/live/p2r3.com/fullchain.pem")
   }
 });
 epochtal.data.events.server = server;

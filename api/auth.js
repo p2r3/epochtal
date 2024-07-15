@@ -5,8 +5,8 @@ const keys = require("../../keys.js");
 const users = require("../util/users.js");
 
 const steam = new SteamAuth({
-  realm: "http://epochtal.p2r3.com:3002", // Site name displayed to users on logon
-  returnUrl: "http://epochtal.p2r3.com:3002/api/auth/return", // Return route
+  realm: "https://epochtal.p2r3.com", // Site name displayed to users on logon
+  returnUrl: "https://epochtal.p2r3.com/api/auth/return", // Return route
   apiKey: keys.steam // Steam API key
 });
 
@@ -60,7 +60,7 @@ module.exports = async function (args, request) {
       });
 
     }
-  
+
   }
 
   return "ERR_COMMAND";
