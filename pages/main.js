@@ -422,6 +422,14 @@ var homepageInit = async function () {
           return showPopup("Invalid proof type", "This category does not accept demo submissions.", POPUP_ERROR);
         case "ERR_PORTALS":
           return showPopup("Invalid portal count", "The portal count could not be parsed.", POPUP_ERROR);
+        case "ERR_NOTCOOP":
+          return showPopup("Category not co-op", "You're trying to submit a co-op demo to a single player category.", POPUP_ERROR);
+        case "ERR_PARTNER":
+          return showPopup("Partner mismatch", "You cannot change partners during a week.", POPUP_ERROR);
+        case "ERR_NOPARTNER":
+          return showPopup("Partner required", "You're trying to submit a single player demo to a co-op category.", POPUP_ERROR);
+        case "ERR_PARTNERLOCK":
+          return showPopup("Category unavailable", "Submitting single player runs after playing co-op is not allowed. This is done to prevent route sharing.", POPUP_ERROR);
 
         default:
           throw data;
