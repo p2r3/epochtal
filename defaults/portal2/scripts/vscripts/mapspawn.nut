@@ -17,7 +17,7 @@ auto.AddScript("OnMapSpawn", function () {
   };
 
   local playerStart = ppmod.get("info_player_start");
-  
+
   // Before blue spawns, move the spawner away from the teleport trigger
   ::playerStartPos <- playerStart.GetOrigin();
   playerStart.SetOrigin(::playerStartPos - Vector(0, 0, 128));
@@ -105,7 +105,7 @@ ppmod.onauto(async(function () {
     ppmod.getall(["prop_testchamber_door"], function (ent) {
 
       ent.AddScript("OnClose", function ():(ent) {
-        
+
         if (!ent.IsValid()) return;
 
         local curr = null;
@@ -113,11 +113,11 @@ ppmod.onauto(async(function () {
 
         for (local i = 0; i < classes.len(); i ++) {
           while (curr = ppmod.get(classes[i], curr)) {
-            
+
             local doorpos = ent.GetOrigin();
             local dist = (curr.GetOrigin() - doorpos).LengthSqr();
             if (dist > 65536) continue; // If over 256 units away, don't keep the door open
-            
+
             ppmod.addoutput(ent, "OnFullyClosed", ent, "Open");
 
             return;
@@ -130,7 +130,7 @@ ppmod.onauto(async(function () {
       ppmod.fire([ent.GetOrigin(), 32.0, "func_brush"], "Kill");
 
     });
-    
+
     ppmod.hook("linked_portal_door", "Close", function () { return false });
     ppmod.hook("linked_portal_door", "close", function () { return false });
     ppmod.hook("func_areaportal", "Close", function () { return false });
@@ -155,7 +155,7 @@ ppmod.onauto(async(function () {
 
         if (size.height == 54.0) size.height = 53.95;
         else size.height = 54.0;
-        
+
         ppmod.fire("prop_portal", "Resize", "32 " + size.height);
 
         SendToConsole("hud_saytext_time 12");
@@ -223,10 +223,10 @@ ppmod.onauto(async(function () {
     if (index + 1 < epochtal_map.len()) {
       SendToConsole("alias +mouse_menu \"changelevel "+ epochtal_map[index + 1] +"\"");
     }
-    
+
     // If this is the first map, teach the player about the map skip key
     if (index == 0) {
-      
+
       ppmod.wait(function () {
         SendToConsole("gameinstructor_enable 1");
       }, 7.0);
@@ -270,7 +270,7 @@ ppmod.onauto(async(function () {
 
     local player = IsMultiplayer() ? ppmod.get("blue") : GetPlayer();
     local startPos = player.GetOrigin();
-    
+
     // PeTI and BEEMod maps have world portals at the entrance
     local wPartner, wPortal = ppmod.get(startPos, 1024, "linked_portal_door");
     if (wPortal) {
@@ -344,7 +344,7 @@ ppmod.onauto(async(function () {
 
     // Check every tick if it's time to call the next split
     ppmod.interval(function ():(nextSplit, dummy) {
-      
+
       if (nextSplit.name == null) return;
       if (nextSplit.time + 0.1 > Time()) return;
 
