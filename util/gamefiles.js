@@ -49,7 +49,7 @@ async function getSAR () {
 
     // Causes a memory leak
     // await Bun.write(currPath, request);
-    
+
     await $`wget ${asset.browser_download_url} -O ${currPath}`.quiet();
 
     output.push({
@@ -78,7 +78,7 @@ async function getMap (mapid) {
 
   // Causes a memory leak
   // await Bun.write(output, request);
-  
+
   await $`wget ${data.file_url} -O ${output}`.quiet();
   return { output, workshop, bsp };
 
@@ -105,7 +105,7 @@ async function buildFiles (context) {
 
     const map = await getMap(week.map.id);
     mapPaths[0] = `workshop/${map.workshop}/${map.bsp}`;
-  
+
     fs.mkdirSync(`${portal2}/maps/workshop/${map.workshop}`);
     fs.renameSync(map.output, `${portal2}/maps/${mapPaths[0]}.bsp`);
 
@@ -149,7 +149,7 @@ async function buildFiles (context) {
 
     const file = files[i];
     if (!fs.lstatSync(`${portal2}/${file}`).isFile()) continue;
-    
+
     const extension = file.split(".").pop();
     if (!(checkExtensions.find(c => c === extension))) continue;
 
