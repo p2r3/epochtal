@@ -6,8 +6,8 @@ const api_users = require("./users.js");
  *
  * - `suggest`: Suggest a map for the workshop.
  *
- * @param args The arguments for the api request
- * @param request The http request object
+ * @param {string[]} args The arguments for the api request
+ * @param {HttpRequest} request The http request object
  * @returns {string} The response of the api request
  */
 module.exports = async function (args, request) {

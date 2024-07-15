@@ -8,8 +8,8 @@ const archive = require("../util/archive.js");
  * - `config`: Fetches the configuration of a given archive. Throws ERR_NAME if the archive does not exist.
  * - `demo`: Fetches the proof of a given player in a given category. Throws ERR_ARGS if the arguments are invalid and ERR_NOTFOUND if no proof is found.
  *
- * @param args The arguments for the api request
- * @param request The http request object
+ * @param {string[]} args The arguments for the api request
+ * @param {HttpRequest} request The http request object
  * @returns {string|Response<BunFile>} The response of the api request
  */
 module.exports = async function (args, request) {

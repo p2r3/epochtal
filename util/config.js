@@ -1,15 +1,16 @@
 const UtilError = require("./error.js");
 
 /**
- * Handles the `config` utility call. This utility can do the following based on the (sub)command that gets called:
+ * Handles the `config` utility call. This utility is used to interact with the configuration of the current week.
  *
- * - `get`: Gets the specified configuration value.
- * - `edit`: Edits the specified configuration value.
+ * The following subcommands are available:
+ * - `get`: Get the in `args[1]` specified configuration value.
+ * - `edit`: Edit the in `args[1]` specified configuration value to `args[2]`.
  * - `fixdate`: ???
  *
- * @param args The arguments for the call
- * @param context The context on which to execute the call
- * @returns {unknown} The result of the utility call
+ * @param {string[]} args The arguments for the call
+ * @param {unknown} context The context on which to execute the call (defaults to epochtal)
+ * @returns {unknown|string} The output of the call
  */
 module.exports = async function (args, context = epochtal) {
 

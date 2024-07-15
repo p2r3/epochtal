@@ -1,18 +1,19 @@
 const UtilError = require("./error.js");
 
 /**
- * Handles the `categories` utility call. This utility can do the following based on the (sub)command that gets called:
+ * Handles the `categories` utility call. This utility is used to manage categories for the week.
  *
- * - `list`: Lists all categories.
- * - `getall`: Gets all category data.
- * - `get`: Gets the category data of the specified category.
- * - `remove`: Removes the specified category.
- * - `add`: Adds a new category.
- * - `edit`: Edits the specified category.
+ * The following subcommands are available:
+ * - `list`: List all categories.
+ * - `getall`: Get all category data.
+ * - `get`: Get the category data of the category specified in `args[1]`.
+ * - `remove`: Remove the in `args[1]` specified category.
+ * - `add`: Add a new category named `args[1]`.
+ * - `edit`: Edit the in `args[1]` specified category to `args[2]`.
  *
- * @param args The arguments for the call
- * @param context The context on which to execute the call
- * @returns {unknown} The result of the utility call
+ * @param {string[]} args The arguments for the call
+ * @param {unknown} context The context on which to execute the call (defaults to epochtal)
+ * @returns {string[]|object|string} The output of the call
  */
 module.exports = async function (args, context = epochtal) {
 

@@ -8,7 +8,7 @@ const proof = require("./proof.js");
  * Checks if the given name is valid.
  * A name is considered valid if it is not falsy, does not contain two consecutive dots or a forward slash.
  *
- * @param name The name to check
+ * @param {string} name The name to check
  * @returns {boolean} Whether the name is valid
  */
 function isValidName (name) {
@@ -18,7 +18,7 @@ function isValidName (name) {
 /**
  * Creates a context from the given archive and returns it.
  *
- * @param path The path to the context root
+ * @param {string} path The path to the context root
  * @returns {Promise<{file: {}, data: {}}>} A context object with the following fields:
  * - `file`: References to all files and directories on disk that are being used by the context
  * - `data`: Context data, stored in a more readable object format for better integration with the code
@@ -70,35 +70,17 @@ async function getArchiveContext (name) {
 }
 
 /**
- * Handles the `archive` utility call. This utility can do the following based on the first value passed to
- * `args`:
+ * Handles the `archive` utility call. This utility is used to manage the archives.
  *
- * `list`: Gets all archive entries and returns a sorted list of the archive names.
- *
- * `get`: Creates the full context of an archive with the name as specified as the second value passed to `args`.
- * See {@link getArchiveContext}.
- *
- * `assume`: Runs a utility by assuming an archive's context. The name of the archive has to be passed as the
- * second value in `args`, and the name of the utility to run as the third value in `args`. All
- * other remaining arguments will be passed to the utility.
- *
- * `create`: Copies the current context to an archive. Demo files are moved to the archive upon creation. The
- * name of the archive to create may to be passed as the second value in `args`. If it isn't, the name will
- * automatically be created based on the week number found in the context data (formatted as `weekX` where
- * `X` is the week number). Fails if an archive with this name already exists on disk. Can optionally be
- * forced by passing `true` as the third value in `args`. If forced, and an archive with this name
- * already exists, it will iterate up to 32 times, appending `_i` to the end of the archive name (where
- * `i` is the iteration number, starting at 1). If it finds an available name, the archive creation process
- * will continue with the new name.
- *
- * `demo`: Gets the proof for a run in a given archive with the specified SteamID and category. Throws
- * ERR_NOTFOUND if no proof exists within the given criteria. Needs the name of the archive to be passed as the second
- * value in `args`, the SteamID to check as the third value in `args`, and the category to check
- * as the fourth value in `args`.
- *
- * @param args The arguments for the call
- * @param context The context on which to execute the call
- * @returns {unknown} The result of the utility call
+ * The following subcommands are available:
+ * - `list`: Get all archive entries sorted by week number.
+ * - `get`: Get the full archived context of the in `args[1]` specified archive.
+ * - `assume`: Run the `args[2]` utility with `args[3..]` parameters by assuming the archived context of `args[1]`.
+ * - `create`: Create an archive based on the current context, with the name specified in `args[1]`. If `args[2]` is `true`, the archive creation will not fail if the archive already exists.
+
+ * @param {string[]} args The arguments for the call
+ * @param {unknown} context The context on which to execute the call (defaults to epochtal)
+ * @returns {object|string} The output of the call
  */
 module.exports = async function (args, context = epochtal) {
 
@@ -111,7 +93,7 @@ module.exports = async function (args, context = epochtal) {
       /**
        * Gets the week number from the archive name.
        *
-       * @param str The archive name
+       * @param {string} str The archive name
        * @returns {number|null} The week number. Returns `null` if the archive name contains no numbers
        */
       const getWeekNumber = function (str) {
@@ -119,9 +101,8 @@ module.exports = async function (args, context = epochtal) {
         return match ? parseInt(match[0], 10) : null;
       };
 
-      // Get the archive names from the filesystem
+      // List and sort archive names
       const list = fs.readdirSync(`${__dirname}/../pages/archive`);
-      // Sort the archive entries by week number
       list.sort(function (a, b) {
         return getWeekNumber(b) - getWeekNumber(a);
       });
@@ -165,7 +146,7 @@ module.exports = async function (args, context = epochtal) {
 
     case "create": {
 
-      /// Throw an error if the name is invalid
+      // Throw an error if the name is invalid
       if (name && !isValidName(name)) throw new UtilError("ERR_NAME", args, context);
 
       // Get the path of the archive to create
@@ -181,7 +162,6 @@ module.exports = async function (args, context = epochtal) {
        */
       const force = !!args[2];
 
-      // See the JSDoc above, it pretty much sums up this loop lol
       if (force && fs.existsSync(archivePath)) {
         const originalPath = archivePath;
         for (let i = 1; i < 32; i ++) {
@@ -197,15 +177,13 @@ module.exports = async function (args, context = epochtal) {
       if (fs.existsSync(archivePath)) {
         throw new UtilError("ERR_EXISTS", args, context);
       }
-      // If it doesn't, create the directory
-      fs.mkdirSync(archivePath);
 
       // Copy context files to the archive
+      fs.mkdirSync(archivePath);
       await Bun.write(`${archivePath}/leaderboard.json`, context.file.leaderboard);
       await Bun.write(`${archivePath}/week.json`, context.file.week);
       await Bun.write(`${archivePath}/week.log`, Bun.file(context.file.log));
 
-      // Copy "mapmod" file to archive if it exists
       const mapmodPath = `${context.file.portal2}/scripts/vscripts/epochtalmapmod.nut`;
       if (fs.existsSync(mapmodPath)) {
         await Bun.write(`${archivePath}/epochtalmapmod.nut`, Bun.file(mapmodPath));
@@ -214,7 +192,6 @@ module.exports = async function (args, context = epochtal) {
       fs.mkdirSync(`${archivePath}/demos`);
 
       // Move context demo files to archive
-      // This moves (renames) the files instead of copying them. This differs from other data, which gets copied.
       const files = fs.readdirSync(context.file.demos);
       for (let i = 0; i < files.length; i ++) {
         fs.renameSync(`${context.file.demos}/${files[i]}`, `${archivePath}/demos/${files[i]}`);

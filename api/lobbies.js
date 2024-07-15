@@ -14,8 +14,8 @@ const api_users = require("./users.js");
  * - `rename`: Rename a lobby.
  * - `password`: Set a lobby's password.
  *
- * @param args The arguments for the api request
- * @param request The http request object
+ * @param {string[]} args The arguments for the api request
+ * @param {HttpRequest} request The http request object
  * @returns {string|object|boolean} The response of the api request
  */
 module.exports = async function (args, request) {

@@ -1,5 +1,5 @@
 /**
- * Convert demo ticks to a string representation
+ * Converts demo ticks to a string representation
  *
  * @param {number} t The number of ticks
  * @returns {string} The formatted string
@@ -23,7 +23,7 @@ function ticksToString (t) {
 }
 
 /**
- * Convert demo ticks into minutes, seconds, and milliseconds
+ * Converts demo ticks into minutes, seconds, and milliseconds
  *
  * @param {number} t The number of ticks
  * @returns {string[]} The formatted string array [minutes, seconds, milliseconds]
@@ -42,10 +42,10 @@ function ticksToStringArray (t) {
 }
 
 /**
- * Convert a string array of time to demo ticks
+ * Converts a string array of time to demo ticks
  *
  * @param {string[]} a The string array [hours, minutes, seconds]
- * @returns The number of ticks
+ * @returns {int} The number of ticks
  */
 function stringArrayToTicks (a) {
 
@@ -58,10 +58,10 @@ function stringArrayToTicks (a) {
 }
 
 /**
- * Parse a string representation of time into demo ticks
+ * Parses a string representation of time into demo ticks
  *
  * @param {string} str The string representation of time
- * @returns The number of ticks
+ * @returns {int} The number of ticks
  */
 function stringToTicks (str) {
 
@@ -77,7 +77,7 @@ function stringToTicks (str) {
  * Cheaply URL-encode a string
  *
  * @param {string} str The string to encode
- * @returns The encoded string
+ * @returns {string} The encoded string
  */
 function toHTMLString (str) {
   return str.replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");

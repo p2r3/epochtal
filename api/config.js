@@ -3,9 +3,9 @@
  *
  * - `get`: Fetch the current week configuration
  *
- * @param args The arguments for the api request
- * @param request The http request object
- * @returns {unknown} The response of the api request
+ * @param {string[]} args The arguments for the api request
+ * @param {HttpRequest} request The http request object
+ * @returns {object} The response of the api request
  */
 module.exports = async function (args, request) {
 

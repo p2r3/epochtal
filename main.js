@@ -119,7 +119,7 @@ profilesdir.forEach(steamid => {
 /**
  * This function handles all requests made to the web server.
  *
- * @param req The request made to the web server
+ * @param {HttpRequest} req The request made to the web server
  * @returns {Promise<Response|*>} The response to send back to the client. May be formatted as JSON for API calls, or be
  * any other file for viewing in a web browser.
  */

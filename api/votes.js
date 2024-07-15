@@ -8,9 +8,9 @@ const api_users = require("./users.js");
  * - `upvote`: Upvote a map.
  * - `downvote`: Downvote a map.
  *
- * @param args The arguments for the api request
- * @param request The http request object
- * @returns {int|object} The response of the api request
+ * @param {string[]} args The arguments for the api request
+ * @param {HttpRequest} request The http request object
+ * @returns {int[]|string} The response of the api request
  */
 module.exports = async function (args, request) {
 

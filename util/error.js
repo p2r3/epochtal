@@ -12,6 +12,7 @@ module.exports = class UtilError extends Error {
   util = null;
 
   /**
+   * Constructs a new UtilError instance.
    *
    * @param {string} message Error message
    * @param {object[]} args Command arguments

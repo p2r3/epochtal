@@ -7,7 +7,7 @@ const profiledata = require("../util/profiledata.js");
 /**
  * Decrypt the user token cookie from the request headers.
  *
- * @param request The request object
+ * @param {HttpRequest} request The request object
  * @returns {object} The user data
  */
 function getUserToken (request) {
@@ -51,8 +51,8 @@ const serverUser = {
  * - `get`: Get all users.
  * - `profile`: Get a user's profile data.
  *
- * @param args The arguments for the api request
- * @param request The http request object
+ * @param {string[]} args The arguments for the api request
+ * @param {HttpRequest} request The http request object
  * @returns {string|object} The response of the api request
  */
 module.exports = async function (args, request) {

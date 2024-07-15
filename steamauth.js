@@ -54,7 +54,7 @@ class SteamAuth {
    * The promise gets rejected if there are no users with the given SteamID or if Steam returns any other errors. If the
    * latter is the case, the error will also be passed along as part of the rejection.
    *
-   * @param steamOpenId The user's 64-bit SteamID in full format (`https://steamcommunity.com/openid/id/&lt;steamid>`)
+   * @param {string} steamOpenId The user's 64-bit SteamID in full format (`https://steamcommunity.com/openid/id/&lt;steamid>`)
    * @returns {Promise<unknown>} The following user data:
    * - `_json`: All gathered information
    * - `steamid`: The user's SteamID
@@ -114,7 +114,7 @@ class SteamAuth {
    *
    * The promise gets rejected if the user does not authenticate properly or if the claimed identity is invalid.
    *
-   * @param req The request to verify
+   * @param {HttpRequest} req The request to verify
    * @returns {Promise<unknown>} The authenticated user and all relevant user data
    */
   async authenticate(req) {

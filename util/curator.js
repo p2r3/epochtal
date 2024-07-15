@@ -17,7 +17,7 @@ const STEAM_API = "https://api.steampowered.com";
 /**
  * Fetches the workshop data for a given map ID.
  *
- * @param mapid The map ID to fetch data for.
+ * @param {string} mapid The map ID to fetch data for.
  * @return {json} The workshop data for the map.
  */
 async function getWorkshopData (mapid) {
@@ -43,7 +43,7 @@ async function getWorkshopData (mapid) {
  * Fetches the entity lump for a given map ID and ignores everything else.
  *
  * @author PancakeTAS
- * @param mapid The map ID to fetch the entity lump for.
+ * @param {string} mapid The map ID to fetch the entity lump for.
  * @returns {Promise<string>} The entity lump for the map.
  */
 async function downloadEntityLump (mapid) {
@@ -148,8 +148,8 @@ async function downloadEntityLump (mapid) {
 /**
  * Parses the entity lump string into an array of entities.
  *
- * @param inputString The entity lump string to parse.
- * @returns {Array} The array of entities.
+ * @param {string} inputString The entity lump string to parse.
+ * @returns {object[]} The array of entities.
  */
 function parseLump (inputString) {
 
@@ -199,8 +199,8 @@ const VOLUME_BLOCK_SIZE = 2097152;
 /**
  * Calculates the densities of objects in the map.
  *
- * @param entities The entities in the map.
- * @returns {Object} The densities of objects in the map.
+ * @param {object} entities The entities in the map.
+ * @returns {object} The densities of objects in the map.
  */
 function calculateDensities (entities) {
 
@@ -277,14 +277,17 @@ function calculateDensities (entities) {
 }
 
 /**
- * Handles the `curator` utility call. This utility can do the following based on the (sub)command that gets called:
+ * Handles the `curator` utility call. This utility is used to curate maps based on various criteria.
  *
+ * The following subcommands are available:
  * - `v1`: The "original" Epochtal metadata curation algorithm.
  * - `v2`: The "new" Repochtal object density curation algorithm.
  *
- * @param args The arguments for the call
- * @param context The context on which to execute the call
- * @returns {unknown} The result of the utility call
+ * The mapid is specified in `args[1]`.
+ *
+ * @param {string[]} args The arguments for the call
+ * @param {unknown} context The context on which to execute the call (defaults to epochtal)
+ * @returns {unknown} The output of the call
  */
 module.exports = async function (args, context = epochtal) {
 

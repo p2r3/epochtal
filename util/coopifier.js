@@ -21,9 +21,9 @@ const REPLACE_COUNT = 23;
  * Find a pattern within an array.
  * Unfortunately, TypedArrays don't have a native pattern matching method
  *
- * @param array The array to search
- * @param pattern The pattern to search for
- * @param index The index to start searching from
+ * @param {string[]} array The array to search
+ * @param {string} pattern The pattern to search for
+ * @param {number} index The index to start searching from
  *
  * @returns {number} The index of the pattern in the array, or -1 if not found
  */
@@ -50,13 +50,14 @@ function findPattern (array, pattern, index = 0) {
 }
 
 /**
- * Handles the `coopifier` utility call. This utility can do the following based on the (sub)command that gets called:
+ * Handles the `coopifier` utility call. This utility is used to modify maps for co-op play.
  *
- * - `inject`: Injects the co-op script into the specified BSP file.
+ * The following subcommands are available:
+ * - `inject`: Inject the co-op script into the in `args[1]` specified .bsp file.
  *
- * @param args The arguments for the call
- * @param context The context on which to execute the call
- * @returns {unknown} The result of the utility call
+ * @param {string[]} args The arguments for the call
+ * @param {unknown} context The context on which to execute the call (defaults to epochtal)
+ * @returns {string} The output of the call
  */
 module.exports = async function (args, context = epochtal) {
 

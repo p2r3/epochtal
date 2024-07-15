@@ -1,21 +1,15 @@
 const UtilError = require("./error.js");
 
 /**
- * Handles the `votes` utility call. This utility can do the following based on the (sub)command that gets called:
+ * Handles the `votes` utility call. This utility is used to manage votes for maps.
  *
- * - `get`: Gets the votes of a steam user by their SteamID. If the user has not voted yet,
- * it returns an array of zeroes of the same length as the number of maps in the current week.
- * Throws ERR_STEAMID if the SteamID is not found in all users.
+ * The following subcommands are available:
+ * - `get`: Get all votes of the in `args[1]` specified steamid.
+ * - `upvote/downvote/reset`: Upvotes, downvotes or resets the vote for steamid `args[1]` on map `args[2]`.
  *
- * - `upvote`: Upvotes a map for a user by their SteamID. Throws ERR_LOCKED if the week is not in voting mode and ERR_MAP if the map index is invalid.
- *
- * - `downvote`: Downvotes a map for a user by their SteamID. Throws ERR_LOCKED if the week is not in voting mode and ERR_MAP if the map index is invalid.
- *
- * - `reset`: Resets the votes of a user by their SteamID. Throws ERR_LOCKED if the week is not in voting mode and ERR_MAP if the map index is invalid.
- *
- * @param args The arguments for the call
- * @param context The context on which to execute the call
- * @returns {unknown} The result of the utility call
+ * @param {string[]} args The arguments for the call
+ * @param {unknown} context The context on which to execute the call
+ * @returns {int[]|string} The result of the utility call
  */
 module.exports = async function (args, context = epochtal) {
 

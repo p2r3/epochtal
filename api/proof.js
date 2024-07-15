@@ -9,9 +9,9 @@ const archive = require("../util/archive.js");
  * - `download`: Download a proof file.
  * - `archive`: Download a proof file from an archive.
  *
- * @param args The arguments for the api request
- * @param request The http request object
- * @returns {Response<BunFile>} The response of the api request
+ * @param {string[]} args The arguments for the api request
+ * @param {HttpRequest} request The http request object
+ * @returns {string|Response<BunFile>} The response of the api request
  */
 module.exports = async function (args, request) {
 

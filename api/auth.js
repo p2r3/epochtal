@@ -24,9 +24,9 @@ const steam = new SteamAuth({
  * - `login`: Redirects the user to the Steam login page
  * - `logout`: Clears the user's session cookie
  *
- * @param args The arguments for the api request
- * @param request The http request object
- * @returns {Response} The response of the api request
+ * @param {string[]} args The arguments for the api request
+ * @param {HttpRequest} request The http request object
+ * @returns {Response<object|Redirect>} The response of the api request
  */
 module.exports = async function (args, request) {
 

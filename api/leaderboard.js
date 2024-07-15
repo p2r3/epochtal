@@ -14,8 +14,8 @@ const api_users = require("./users.js");
 /**
  * Converts ticks to a string format.
  *
- * @param t Ticks
- * @returns
+ * @param {int} t Ticks
+ * @returns {string} The formatted time string
  */
 function ticksToString (t) {
 
@@ -38,8 +38,8 @@ function ticksToString (t) {
 /**
  * Pushes a run update to the discord.
  *
- * @param steamid Steam user id
- * @param category Category name
+ * @param {string} steamid Steam user id
+ * @param {string} category Category name
  */
 async function discordUpdate (steamid, category) {
 
@@ -86,8 +86,8 @@ async function discordUpdate (steamid, category) {
  * - `submitlink`: Submit a new run to the leaderboard with a link proof.
  * - `remove`: Remove the active user's run from the leaderboard.
  *
- * @param args The arguments for the api request
- * @param request The http request object
+ * @param {string[]} args The arguments for the api request
+ * @param {HttpRequest} request The http request object
  * @returns {string|object} The response of the api request
  */
 module.exports = async function (args, request) {
