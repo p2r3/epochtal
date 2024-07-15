@@ -284,20 +284,26 @@ ppmod.onauto(async(function () {
     };
 
     local targets = [
-      { classname = "prop_testchamber_door", prefix = "epochtal_split_door", output = "OnOpen", array = pparray() },
-      { classname = "prop_button", prefix = "epochtal_split_pbutton", output = "OnPressed", array = pparray() },
-      { classname = "prop_floor_button", prefix = "epochtal_split_fbutton", output = "OnPressed", array = pparray() },
-      { classname = "prop_floor_cube_button", prefix = "epochtal_split_cbutton", output = "OnPressed", array = pparray() },
-      { classname = "prop_laser_catcher", prefix = "epochtal_split_bbutton", output = "OnPowered", array = pparray() }
-      { classname = "prop_laser_relay", prefix = "epochtal_split_bbutton", output = "OnPowered", array = pparray() }
+      { name = "prop_testchamber_door", prefix = "epochtal_split_door", output = "OnOpen", array = pparray() },
+      { name = "prop_button", prefix = "epochtal_split_pbutton", output = "OnPressed", array = pparray() },
+      { name = "prop_floor_button", prefix = "epochtal_split_fbutton", output = "OnPressed", array = pparray() },
+      { name = "prop_floor_cube_button", prefix = "epochtal_split_cbutton", output = "OnPressed", array = pparray() },
+      { name = "prop_laser_catcher", prefix = "epochtal_split_bbutton", output = "OnPowered", array = pparray() }
+      { name = "prop_laser_relay", prefix = "epochtal_split_bbutton", output = "OnPowered", array = pparray() }
     ];
+
+    // Old Aperture equivalents of the above targets
+    // These are pushed after declaration to allow for sharing the targets' arrays
+    targets.push({ name = "models/props_underground/test_chamber_door.mdl", prefix = "epochtal_split_door", output = "OnAnimationBegun", array = targets[0].array });
+    targets.push({ name = "prop_under_button", prefix = "epochtal_split_pbutton", output = "OnPressed", array = targets[1].array });
+    targets.push({ name = "prop_under_floor_button", prefix = "epochtal_split_fbutton", output = "OnPressed", array = targets[2].array });
 
     for (local i = 0; i < targets.len(); i ++) {
 
       local target = targets[i];
       local ent = null;
 
-      while (ent = Entities.FindByClassname(ent, target.classname)) {
+      while (ent = ppmod.get(target.name, ent)) {
 
         if (!ent.IsValid()) continue;
         target.array.push(ent);
@@ -324,10 +330,13 @@ ppmod.onauto(async(function () {
       targets[0].array.remove(0);
 
       local firstDoor = ppmod.get(player.GetOrigin(), 1024, "prop_testchamber_door");
-      local index = targets[0].array.find(firstDoor);
+      if (!firstDoor) firstDoor = ppmod.get(player.GetOrigin(), 1024, "models/props_underground/test_chamber_door.mdl");
 
-      targets[0].array.remove(index);
-      targets[0].array.insert(0, firstDoor);
+      local index = targets[0].array.find(firstDoor);
+      if (index != -1) {
+        targets[0].array.remove(index);
+        targets[0].array.insert(0, firstDoor);
+      }
 
     }
 
