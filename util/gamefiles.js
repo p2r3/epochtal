@@ -154,7 +154,7 @@ async function buildFiles (context) {
     if (!(checkExtensions.find(c => c === extension))) continue;
 
     const checksum = await getChecksum(`${portal2}/${file}`);
-    checksums += `\n./portal2_tempcontent/${file} ${checksum}`;
+    checksums += `\n/portal2_tempcontent/${file} ${checksum}`;
 
   }
 
