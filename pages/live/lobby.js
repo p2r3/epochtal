@@ -154,7 +154,7 @@ async function lobbyInit () {
   updateLobbyMap();
 
   if (lobbySocket) lobbySocket.close();
-  lobbySocket = new WebSocket("ws://epochtal.p2r3.com:3002/ws/lobby_" + encodedName);
+  lobbySocket = new WebSocket("wss://epochtal.p2r3.com:8080/ws/lobby_" + encodedName);
   lobbySocket.addEventListener("message", lobbyEventHandler);
 
   window.changeLobbyName = function () {
