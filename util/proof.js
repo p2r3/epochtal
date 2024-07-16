@@ -2,6 +2,18 @@ const UtilError = require("./error.js");
 
 const fs = require("node:fs");
 
+/**
+ * Handles the `proof` utility call. This is used to get proof information for a given run.
+ *
+ * The following subcommands are available:
+ * - `type`: Gets the type of proof (demo or video)
+ * - `file`: Gets the path to the proof file
+ *
+ * @param {string[]} args The arguments for the call. `args[1]` should contain the SteamID of the user that submitted
+ * the run, `args[2]` should contain the category of the run.
+ * @param {unknown} context The context on which to execute the call (defaults to epochtal)
+ * @returns {Promise<string|string|null>} The output of the call
+ */
 module.exports = async function (args, context = epochtal) {
 
   const [command, steamid, category] = args;
