@@ -11,7 +11,7 @@ const fs = require("node:fs");
  *
  * @param {string[]} args The arguments for the call
  * @param {unknown} context The context on which to execute the call (defaults to epochtal)
- * @returns {Promise<string>}
+ * @returns {Promise<string>} The output of the call
  */
 module.exports = async function (args, context = epochtal) {
 
