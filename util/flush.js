@@ -2,6 +2,17 @@ const UtilError = require("./error.js");
 
 const fs = require("node:fs");
 
+/**
+ * Handles the `flush` utility call. This utility is used to synchronize the application memory and the filesystem.
+ *
+ * The following subcommands are available:
+ * - `memory`: Sets application memory equal to data found on disk
+ * - `disk`: Sets filesystem data equal to application memory
+ *
+ * @param {string[]} args The arguments for the call
+ * @param {unknown} context The context on which to execute the call (defaults to epochtal)
+ * @returns {Promise<string>}
+ */
 module.exports = async function (args, context = epochtal) {
 
   const [command] = args;
