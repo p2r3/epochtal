@@ -181,11 +181,16 @@ if (popup) {
 
 }
 
-// TODO: tooltip? owo what dis
-
+// Check if the tooltip element exists
 if (tooltip) {
 
   var tooltipVisible = false, tooltipTimeout = null;
+
+  /**
+   * Displays a tooltip with the specified text
+   *
+   * @param {string} text The text to display in the tooltip
+   */
   var showTooltip = function (text) {
 
     tooltipVisible = true;
@@ -193,18 +198,24 @@ if (tooltip) {
     tooltip.innerHTML = text;
     tooltip.style.opacity = 1;
 
+    // Reset tooltip timeout if it isn't null
     if (tooltipTimeout) {
       clearTimeout(tooltipTimeout);
       tooltipTimeout = null;
     }
 
-    // Hiding the tooltip is unituitive on touchscreen, so just fade it out on a timeout
+    // If the client is using a touchscreen, fade out the tooltip after 5 seconds - hiding the tooltip is unintuitive on touchscreen
     if ("ontouchstart" in window) {
       tooltipTimeout = setTimeout(hideTooltip, 5000);
     }
 
   };
 
+  /**
+   * Hides the tooltip from the user
+   *
+   * @param {string} text FIXME: Unused parameter
+   */
   var hideTooltip = function (text) {
 
     tooltipVisible = false;
@@ -213,6 +224,7 @@ if (tooltip) {
 
   };
 
+  // Move any visible tooltip to the mouse cursor's location
   window.addEventListener("mousemove", function (event) {
 
     if (!tooltipVisible) return;
