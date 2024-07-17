@@ -81,16 +81,16 @@ module.exports = async function (args, context = epochtal) {
   const [command, file] = args;
 
   switch (command) {
-    
+
     case "dump": {
 
       const path = extendFilePath(file);
       if (!fs.existsSync(path)) throw new UtilError("ERR_FILE", args, context);
 
       return await parseDump(path);
-    
+
     }
-  
+
     case "mdp": {
 
       const path = extendFilePath(file);
@@ -115,7 +115,7 @@ module.exports = async function (args, context = epochtal) {
       };
 
       for (const event of mdp.demos[0].events) {
-      
+
         if (event.type === "speedrun") {
           output.time = event.value.total.ticks;
           continue;
@@ -126,7 +126,7 @@ module.exports = async function (args, context = epochtal) {
         }
 
       }
-      
+
       if (!output.time || !output.steamid) throw new UtilError("ERR_PARSE", args, context);
 
       return output;
@@ -187,14 +187,14 @@ module.exports = async function (args, context = epochtal) {
 
           const cvar = (event.type === "cvar" ? event.val.cvar : event.value.split(" ")[0]).trim().toLowerCase();
           const value = event.type === "cvar" ? event.val.val : event.value.split(" ").slice(1).join(" ");
-        
+
           if (cvar === "sv_cheats") {
             if (!value || value == "0") sv_cheats = false;
             else sv_cheats = true;
           }
 
           const verdict = await testcvar([cvar, value, sv_cheats], context);
-          
+
           if (verdict === VERDICT_ILLEGAL) {
             if (cvar.trim().toLowerCase() === "sv_portal_placement_never_fail") {
               ppnf = true;
@@ -202,7 +202,7 @@ module.exports = async function (args, context = epochtal) {
             }
             return `Illegal command: \`${cvar}${value !== "" ? " " + value : ""}\``;
           }
-          
+
         }
 
       }
