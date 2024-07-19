@@ -29,8 +29,8 @@ module.exports = async function (args, context = epochtal) {
 
       if (!name) return index;
 
-      const package = index.packages.find(c => c.name === name);
-      if (package) return package;
+      const curr = index.packages.find(c => c.name === name);
+      if (curr) return curr;
       return null;
 
     }
@@ -111,10 +111,10 @@ module.exports = async function (args, context = epochtal) {
       const packageIndex = index.packages.findIndex(c => c.name === name);
       if (packageIndex === -1) throw new UtilError("ERR_NAME", args, context);
 
-      const package = index.packages[packageIndex];
+      const curr = index.packages[packageIndex];
 
-      const iconPath = package.icon.replace(address, repository);
-      const filePath = package.file.replace(address, repository);
+      const iconPath = curr.icon.replace(address, repository);
+      const filePath = curr.file.replace(address, repository);
 
       fs.unlinkSync(iconPath);
       fs.unlinkSync(filePath);
