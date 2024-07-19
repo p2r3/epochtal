@@ -177,11 +177,11 @@ dist
 # Epochtal databases
 pages/leaderboard.json
 pages/users.json
-pages/week.json
 pages/week.log
 pages/spplice
 pages/archive/*
 pages/profiles/*
+week.json
 lobbies.json
 
 .tmp
