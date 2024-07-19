@@ -9,11 +9,19 @@ const tmppath = require("./tmppath.js");
 const workshopper = require("./workshopper.js");
 const coopifier = require("./coopifier.js");
 
+/**
+ * Generates a checksum from the contents of a file.
+ *
+ * @param {string} path The path to the file
+ * @returns {string} The checksum of the file
+ */
 async function getChecksum (path) {
 
+  // Load file and generate checksum
   const file = await Bun.file(path).arrayBuffer();
   let checksum = crc.crc32(file).toString(16).toUpperCase();
 
+  // Pad with zeroes
   while (checksum.length < 8) {
     checksum = "0" + checksum;
   }
@@ -22,8 +30,14 @@ async function getChecksum (path) {
 
 }
 
+/**
+ * Grab SAR from the p2sr/SourceAutoRecord GitHub repository.
+ *
+ * @returns {object[]} An array of objects containing the name, output path, and checksum of the downloaded SAR files
+ */
 async function getSAR () {
 
+  // Request latest release from GitHub
   const headers = {
     "Accept": "application/vnd.github+json",
     "Authorization": "Bearer " + keys.github,
@@ -34,11 +48,13 @@ async function getSAR () {
   const request = await fetch("https://api.github.com/repos/p2sr/SourceAutoRecord/releases", { headers: headers });
   if (request.status !== 200) throw "ERR_GITHUBAPI";
 
+  // Parse returned assets for linux and windows
   const latest = (await request.json())[0];
   const output = [];
 
   for (let i = 0; i < latest.assets.length; i ++) {
 
+    // Check for sar.dll and sar.so
     const asset = latest.assets[i];
     if (asset.name !== "sar.dll" && asset.name !== "sar.so") continue;
 
@@ -50,8 +66,10 @@ async function getSAR () {
     // Causes a memory leak
     // await Bun.write(currPath, request);
 
+    // Download SAR to tmp path
     await $`wget ${asset.browser_download_url} -O ${currPath}`.quiet();
 
+    // Generate checksum for SAR and add to output
     output.push({
       name: asset.name,
       output: currPath,
@@ -64,13 +82,21 @@ async function getSAR () {
 
 }
 
+/**
+ * Grab a map from the Steam Workshop.
+ *
+ * @param {Number} mapid The ID of the map to download
+ * @returns {object} An object containing the output path, workshop ID, and BSP name of
+ */
 async function getMap (mapid) {
 
+  // Get map data from workshopper
   const data = await workshopper(["get", mapid, true]);
 
   const workshop = data.file_url.startsWith("http") ? data.file_url.split("/ugc/")[1].split("/")[0] : data.file_url.split("/")[0];
   const bsp = data.filename.split("/").pop().slice(0, -4); // Just the file name, no extension
 
+  // Download map to tmp path
   const output = (await tmppath()) + ".bsp";
 
   const request = await fetch(data.file_url);
@@ -84,6 +110,12 @@ async function getMap (mapid) {
 
 }
 
+/**
+ * Build the game files for the current week.
+ *
+ * @param {object} context The context
+ * @returns {object} An object containing the output path and map path(s)
+ */
 async function buildFiles (context) {
 
   const week = context.data.week;
@@ -179,6 +211,13 @@ async function buildFiles (context) {
 
 }
 
+/**
+ * Decompiles a map to a VMF file.
+ *
+ * @param {*} path Path to the BSP file
+ * @param {*} compress Whether to compress the VMF file
+ * @returns {string} Path to the decompiled VMF file
+ */
 async function getVMF (path, compress = false) {
 
   if (path.endsWith(".bsp")) path = path.slice(0, -4);
@@ -204,6 +243,19 @@ async function getVMF (path, compress = false) {
 
 }
 
+/**
+ * Handles the `gamefiles` utility call. This utility is used to manage user game files.
+ *
+ * The following subcommands are available:
+ * - `build`: Build the game files for the current week
+ * - `getsar`: Grab SAR from the p2sr/SourceAutoRecord GitHub repository
+ * - `getmap`: Grab a map from the Steam Workshop
+ * - `getvmf`: Decompile a map to a VMF file
+ *
+ * @param {string[]} args The arguments for the utility call
+ * @param {unknown} context The context on which to execute the call (defaults to epochtal)
+ * @returns {object|object[]|string} The output of the utility call
+ */
 module.exports = async function (args, context = epochtal) {
 
   const [command] = args;
