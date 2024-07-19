@@ -23,13 +23,13 @@
   }
   "empty"
   {
-    
+
   }
   "spcoop"
   {
     "title"         "Single Player Co-Op"
     "subtitle"      "Single player split-screen co-op"
-    "command"       "ss_map mp_coop_community_hub"
+    "command"       "sv_portal_placement_never_fail 0;sv_cheats 0;ss_map mp_coop_community_hub"
     "pic"           "vgui/extras/attract01"
   }
 }
