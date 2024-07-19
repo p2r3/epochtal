@@ -6,6 +6,7 @@ const demo = require("../util/demo.js");
 const discord = require("../util/discord.js");
 const leaderboard = require("../util/leaderboard.js");
 const categories = require("../util/categories.js");
+const config = require("../util/config.js");
 const users = require("../util/users.js");
 
 const api_users = require("./users.js");
@@ -33,13 +34,33 @@ async function discordUpdate (steamid, category) {
 
   const run = currBoard.find(c => c.steamid === steamid);
   const user = await users(["get", steamid]);
-
   const time = ticksToString(run.time);
-  const portals = currCategory.portals ? ` (${run.portals} portals)` : "";
-  const suffix = ["st","nd","rd"][((run.placement + 90) % 100 - 10) % 10 - 1] || "th";
-  const placement = `${run.placement}${suffix} place`
 
-  await discord(["update", `**${user.name}** submitted a new run to "${currCategory.title}" with a time of \`${time}\`${portals} in ${run.placement}${suffix} place.`]);
+  let emoji = "🎲";
+  let output = `**${user.name}**`;
+
+  if (currCategory.coop) {
+    const partners = await config(["get", "partners"]);
+    const partner = await users(["get", partners[steamid]]);
+    output += ` and **${partner.name}**`;
+  }
+
+  output += ` submitted a new run to "${currCategory.title}" with a time of \`${time}\``;
+
+  if (currCategory.portals) {
+    output += ` (${run.portals} portals)`;
+  }
+
+  if (currCategory.points) {
+    const suffix = ["st","nd","rd"][((run.placement + 90) % 100 - 10) % 10 - 1] || "th";
+    output += ` in ${run.placement}${suffix} place`;
+  }
+
+  if (currCategory.coop) emoji = "👥";
+  else if (currCategory.portals) emoji = "📉";
+  else if (currCategory.points) emoji = "🏁";
+
+  await discord(["update", `${emoji} ${output}.`]);
 
 }
 
