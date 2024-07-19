@@ -1,5 +1,12 @@
 const { readdirSync } = require("node:fs");
 
+/**
+ * Handles the `help` utility call. Outputs usage information about the given command.
+ *
+ * @param {string[]} args The arguments for the call
+ * @param {unknown} context The context on which to execute the call (defaults to epochtal)
+ * @returns {string} The output of the call
+ */
 module.exports = async function (args, context) {
 
   const [util] = args;
@@ -71,7 +78,7 @@ Commands:
 
 Commands:
     memory -- flushes data to memory from disk
-    disk -- flushes data to disk from memory 
+    disk -- flushes data to disk from memory
 `);
 
     case "archive":
@@ -120,7 +127,7 @@ Outputs a randomly generated, unoccupied path.
 `Usage: coopify [PATH]
 
 Injects the co-op script into a bsp. The file is modified in-place.
-The return value is either true or false depending on whether or not the operation succeeded. 
+The return value is either true or false depending on whether or not the operation succeeded.
 `);
 
     case "votes":
@@ -244,6 +251,7 @@ Commands:
 
   }
 
+  // List all available utilities if no valid utility name is provided
   const files = readdirSync(__dirname);
   let list = [];
 
@@ -251,7 +259,7 @@ Commands:
     if (!files[i].endsWith(".js")) continue;
     list.push(files[i].slice(0, -3));
   }
-  
+
   return "Available utilities: " + list.join(", ");
 
 };
