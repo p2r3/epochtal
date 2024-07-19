@@ -310,7 +310,11 @@ ppmod.onauto(async(function () {
         target.array.push(ent);
 
         ppmod.addscript(ent, target.output, function ():(nextSplit, ent, target) {
-          nextSplit.name = target.prefix + (target.array.find(ent) + 1);
+          local index = target.array.find(ent);
+          if (index == -1) return;
+          target.array[index] = null;
+
+          nextSplit.name = target.prefix + (index + 1);
           nextSplit.time = Time();
         });
 
