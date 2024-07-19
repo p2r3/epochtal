@@ -288,8 +288,9 @@ ppmod.onauto(async(function () {
       { name = "prop_button", prefix = "epochtal_split_pbutton", output = "OnPressed", array = pparray() },
       { name = "prop_floor_button", prefix = "epochtal_split_fbutton", output = "OnPressed", array = pparray() },
       { name = "prop_floor_cube_button", prefix = "epochtal_split_cbutton", output = "OnPressed", array = pparray() },
-      { name = "prop_laser_catcher", prefix = "epochtal_split_bbutton", output = "OnPowered", array = pparray() }
-      { name = "prop_laser_relay", prefix = "epochtal_split_bbutton", output = "OnPowered", array = pparray() }
+      { name = "prop_floor_ball_button", prefix = "epochtal_split_bbutton", output = "OnPressed", array = pparray() },
+      { name = "prop_laser_catcher", prefix = "epochtal_split_laserc", output = "OnPowered", array = pparray() },
+      { name = "prop_laser_relay", prefix = "epochtal_split_laserrl", output = "OnPowered", array = pparray() }
     ];
 
     // Old Aperture equivalents of the above targets
