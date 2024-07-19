@@ -7,27 +7,20 @@ module.exports = async function (args, context = epochtal) {
   const file = context.file.week;
   const week = context.data.week;
 
-  const config = {
-    number: week.number,
-    date: week.date,
-    voting: week.voting,
-    bonus: week.bonus
-  };
-
   switch (command) {
 
     case "get": {
 
-      if (!field) return config;
-      if (!(field in config)) throw new UtilError("ERR_FIELD", args, context);
-      return config[field];
+      if (!field) return week;
+      if (!(field in week)) throw new UtilError("ERR_FIELD", args, context);
+      return week[field];
 
     }
 
     case "edit": {
 
       const value = args[2];
-      if (!(field in config)) throw new UtilError("ERR_FIELD", args, context);
+      if (!(field in week)) throw new UtilError("ERR_FIELD", args, context);
       if (value === undefined) throw new UtilError("ERR_VALUE", args, context);
 
       week[field] = value;
