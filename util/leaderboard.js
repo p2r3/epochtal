@@ -3,8 +3,23 @@ const UtilError = require("./error.js");
 const categories = require("./categories.js");
 const weeklog = require("./weeklog.js");
 
+/**
+ * Handles the `leaderboard` utility call. Manages the leaderboard for a given category.
+ *
+ * The following subcommands are available:
+ * - `list`: List all categories with leaderboards (minimum 1 run)
+ * - `get`: List all runs in category `args[1]`
+ * - `remove`: Remove a player's run from the given category by steamid `args[2]`
+ * - `add`: Add a run to the category `args[1]` for the player with steamid `args[2]`
+ * - `edit`: Edit the run note for the player with steamid `args[2]` in the category `args[1]`
+ *
+ * @param {string[]} args The arguments for the call
+ * @param {unknown} context The context on which to execute the call (defaults to epochtal)
+ * @returns {object|string} The output of the call
+ */
 module.exports = async function (args, context = epochtal) {
 
+  // Parse the arguments and fetch the necessary data
   const [command, category, steamid] = args;
 
   const data = context.data.leaderboard;
@@ -17,6 +32,7 @@ module.exports = async function (args, context = epochtal) {
 
   let lb;
   if (categoryData) {
+    // Find or create the leaderboard for the given category
     if (!(category in data)) data[category] = [];
     lb = data[category];
   }
@@ -35,6 +51,7 @@ module.exports = async function (args, context = epochtal) {
 
       if (lb === undefined) throw new UtilError("ERR_CATEGORY", args, context);
 
+      // Add placement to each run
       let placement = 1;
       for (let i = 0; i < lb.length; i ++) {
 
@@ -55,15 +72,18 @@ module.exports = async function (args, context = epochtal) {
 
       if (lb === undefined) throw new UtilError("ERR_CATEGORY", args, context);
 
+      // Find the run to remove
       const idx = lb.findIndex(function (curr) {
         return curr.steamid === steamid;
       });
 
       if (idx === -1) throw new UtilError("ERR_NOTFOUND", args, context);
 
+      // Remove the run from the leaderboard and write the changes
       data[category].splice(idx, 1);
       if (file) Bun.write(file, JSON.stringify(data));
 
+      // Log the removal
       await weeklog(["add", steamid, category, 0, 0], context);
 
       return "SUCCESS";
@@ -72,9 +92,11 @@ module.exports = async function (args, context = epochtal) {
 
     case "add": {
 
+      // Ensure the category exists and is not locked
       if (lb === undefined) throw new UtilError("ERR_CATEGORY", args, context);
       if (categoryData.lock) throw new UtilError("ERR_LOCKED", args, context);
 
+      // Parse arguments and validate them
       const [time, note, portals, segmented] = args.slice(3);
 
       for (let i = 2; i <= 4; i ++) {
@@ -85,16 +107,19 @@ module.exports = async function (args, context = epochtal) {
 
       if (note.length > 200) throw new UtilError("ERR_NOTE", args, context);
 
+      // Grab portal count if the category requires it
       if (!("portals" in categoryData)) throw new UtilError("ERR_CATEGORY", args, context);
       const countPortals = categoryData.portals;
       if (countPortals && isNaN(portals)) throw new UtilError("ERR_PORTALS", args, context);
 
+      // Grab coop partners if the category requires it
       const partners = context.data.week.partners;
 
       if (categoryData.points && !categoryData.coop && steamid in partners) {
         throw new UtilError("ERR_PARTNERLOCK", args, context);
       }
 
+      // Remove the old run if it exists
       const oldRunIndex = lb.findIndex(function (curr) {
         if (categoryData.coop) {
           return curr.steamid === steamid || curr.steamid === partners[steamid];
@@ -104,6 +129,7 @@ module.exports = async function (args, context = epochtal) {
       });
       if (oldRunIndex !== -1) lb.splice(oldRunIndex, 1);
 
+      // Insert the new run into the leaderboard
       const newRun = { steamid, time, note };
 
       let inserted = false;
@@ -146,8 +172,10 @@ module.exports = async function (args, context = epochtal) {
 
       if (!inserted) lb.push(newRun);
 
+      // Write the changes to the leaderboard
       if (file) Bun.write(file, JSON.stringify(data));
 
+      // Log the addition
       await weeklog(["add", steamid, category, time, portals], context);
 
       return "SUCCESS";
@@ -156,6 +184,7 @@ module.exports = async function (args, context = epochtal) {
 
     case "edit": {
 
+      // Validate parameters
       if (lb === undefined) throw new UtilError("ERR_CATEGORY", args, context);
       if (categoryData.lock) throw new UtilError("ERR_LOCKED", args, context);
 
@@ -164,9 +193,11 @@ module.exports = async function (args, context = epochtal) {
 
       if (note.length > 200) throw new UtilError("ERR_NOTE", args, context);
 
+      // Edit the note
       const run = lb.find(curr => curr.steamid === steamid);
       run.note = note;
 
+      // Write the changes to the leaderboard
       if (file) Bun.write(file, JSON.stringify(data));
       return "SUCCESS";
 
