@@ -167,7 +167,7 @@ var homepageInit = async function () {
 
       const portalCount = ("portals" in run && categoryData.portals) ? `, ${run.portals} portal${run.portals === 1 ? "" : "s"}` : "";
 
-      const suffix = placement < 4 ? suffixes[placement - 1] : "th";
+      const suffix = ["st","nd","rd"][((placement + 90) % 100 - 10) % 10 - 1] || "th";
 
       output += `
 <div class="lb-entry lb-rank${placement}">

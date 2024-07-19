@@ -36,7 +36,7 @@ async function discordUpdate (steamid, category) {
 
   const time = ticksToString(run.time);
   const portals = currCategory.portals ? ` (${run.portals} portals)` : "";
-  const suffix = ["st", "nd", "rd", "th"][Math.min(run.placement - 1, 3)];
+  const suffix = ["st","nd","rd"][((run.placement + 90) % 100 - 10) % 10 - 1] || "th";
   const placement = `${run.placement}${suffix} place`
 
   await discord(["update", `**${user.name}** submitted a new run to "${currCategory.title}" with a time of \`${time}\`${portals} in ${run.placement}${suffix} place.`]);
