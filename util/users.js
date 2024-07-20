@@ -38,7 +38,7 @@ module.exports = async function (args, context = epochtal) {
     }
 
     case "get": {
-      
+
       if (!(steamid in users)) return null;
       return users[steamid];
 
@@ -65,7 +65,7 @@ module.exports = async function (args, context = epochtal) {
     }
 
     case "ban": {
-      
+
       if (!(steamid in users)) throw new UtilError("ERR_STEAMID", args, context);
 
       const time = args[2];
@@ -147,19 +147,6 @@ module.exports = async function (args, context = epochtal) {
         users[steamid].name = player.personaname;
       } else {
         UtilPrint(`Warning: User ${steamid} has no Steam profile, no changes made.`);
-      }
-
-      if (file) Bun.write(file, JSON.stringify(users));
-      return "SUCCESS";
-
-    }
-
-    case "cleanup": {
-
-      for (const steamid in users) {
-        delete users[steamid].banned;
-        delete users[steamid].runs;
-        users[steamid].points = null;
       }
 
       if (file) Bun.write(file, JSON.stringify(users));
