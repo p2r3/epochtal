@@ -21,7 +21,7 @@ function calculateEloDelta (playerElo, opponentElo, result, kFactor = 32) {
 
   let playerScore, opponentScore;
   switch (result) {
-  
+
     case WIN:
       playerScore = 1;
       opponentScore = 0;
@@ -37,7 +37,7 @@ function calculateEloDelta (playerElo, opponentElo, result, kFactor = 32) {
       playerScore = 0.5;
       opponentScore = 0.5;
       break;
-  
+
   }
 
   return {
@@ -93,7 +93,7 @@ async function calculatePointsDelta (context = epochtal) {
   const catlist = await categories(["list"], context);
   const partners = context.data.week.partners;
   const catDeltaElo = {};
-  
+
   for (let i = 0; i < boards.length; i ++) {
 
     const catname = boards[i];
@@ -105,7 +105,7 @@ async function calculatePointsDelta (context = epochtal) {
 
     catDeltaElo[catname] = {};
     const deltaElo = catDeltaElo[catname];
-    
+
     for (let j = 0; j < lb.length; j ++) {
       const playerTime = lb[j].time;
       const player = lb[j].steamid;
@@ -122,7 +122,7 @@ async function calculatePointsDelta (context = epochtal) {
 
           const playerPartner = lb[j].partner || partners[player];
           const opponentPartner = lb[k].partner || partners[opponent];
-          
+
           if (!(playerPartner in deltaElo)) deltaElo[playerPartner] = 0;
           if (!(opponentPartner in deltaElo)) deltaElo[opponentPartner] = 0;
 
@@ -225,7 +225,7 @@ module.exports = async function (args, context = epochtal) {
         for (const steamid in deltaElo) {
 
           const profile = await profiledata(["get", steamid], context);
-          
+
           if (!usersList.includes(steamid)) {
             usersList.push(steamid);
             profile.statistics = [];
