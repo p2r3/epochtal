@@ -33,7 +33,7 @@ async function concludeWeek (context) {
 
   await points(["award"], context);
 
-  await discord(["announce", "The leaderboard has been locked."], context);
+  await discord(["announce", "The leaderboard and map voting have been locked. Points have been updated."], context);
 
   const { summary, timescales } = await summarizeDemoEvents(context);
 
