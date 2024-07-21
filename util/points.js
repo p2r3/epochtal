@@ -91,6 +91,7 @@ async function calculatePointsDelta (context = epochtal) {
   const users = context.data.users;
   const boards = await leaderboard(["list"], context);
   const catlist = await categories(["list"], context);
+  const partners = context.data.week.partners;
   const catDeltaElo = {};
   
   for (let i = 0; i < boards.length; i ++) {
@@ -117,10 +118,10 @@ async function calculatePointsDelta (context = epochtal) {
 
         const result = playerTime === opponentTime ? DRAW : WIN;
 
-        if ((lb[j].partner && lb[k].partner) || (cat.coop && ("partners" in cat) && cat.partners[player] && cat.partners[opponent])) {
+        if ((lb[j].partner && lb[k].partner) || (cat.coop && partners && partners[player] && partners[opponent])) {
 
-          const playerPartner = lb[j].partner || cat.partners[player];
-          const opponentPartner = lb[k].partner || cat.partners[opponent];
+          const playerPartner = lb[j].partner || partners[player];
+          const opponentPartner = lb[k].partner || partners[opponent];
           
           if (!(playerPartner in deltaElo)) deltaElo[playerPartner] = 0;
           if (!(opponentPartner in deltaElo)) deltaElo[opponentPartner] = 0;
