@@ -215,7 +215,12 @@ module.exports = async function (args, context = epochtal) {
 
     case "rebuild": {
 
-      const usersList = [];
+      for (const steamid in users) {
+        const profile = await profiledata(["get", steamid], context);
+        profile.statistics = [];
+        profile.weeks = [];
+      }
+
       const archiveList = (await archive(["list"], context)).reverse();
       for (const week of archiveList) {
 
@@ -226,12 +231,6 @@ module.exports = async function (args, context = epochtal) {
 
           const profile = await profiledata(["get", steamid], context);
 
-          if (!usersList.includes(steamid)) {
-            usersList.push(steamid);
-            profile.statistics = [];
-            profile.weeks = [];
-          }
-
           profile.statistics.push(deltaElo[steamid]);
           profile.weeks.push(archiveContext.data.week.number);
 
@@ -239,10 +238,10 @@ module.exports = async function (args, context = epochtal) {
 
       }
 
-      for (const steamid of usersList) {
+      for (const steamid in users) {
         const profile = await profiledata(["get", steamid], context);
         users[steamid].points = calculateDisplayPoints(profile.statistics);
-        profiledata(["flush", steamid], context);
+        await profiledata(["flush", steamid], context);
       }
 
       if (file) Bun.write(file, JSON.stringify(users));
