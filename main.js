@@ -136,6 +136,7 @@ const fetchHandler = async function (req) {
   }
 
   if (urlPath[0] === "util") {
+    if (req.method !== "POST") return Response("ERR_METHOD", { status: 405 });
 
     const util = utils[urlPath[1]];
     const args = urlPath.slice(2).map(decodeURIComponent);

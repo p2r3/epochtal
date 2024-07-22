@@ -165,7 +165,9 @@
 
         }
 
-        const response = await fetch(`/util/${util}/${args.join("/")}`);
+        const response = await fetch(`/util/${util}/${args.join("/")}`, {
+          method: 'POST'
+        });
         console.log(response);
 
         if (response.status === 404) return output.innerHTML += "Command or module not found.<br>";
