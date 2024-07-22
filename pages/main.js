@@ -24,6 +24,12 @@ var smoothScroll = function (queryString) {
 
 };
 
+/**
+ * Sanitizes a string for safe use in javascript
+ *
+ * @param {string} str String to sanitize
+ * @returns {string} Sanitized string
+ */
 function sanitizeStringJS (str) {
   return (
     str.replaceAll("<", "&lt;")
@@ -37,6 +43,12 @@ function sanitizeStringJS (str) {
   );
 }
 
+/**
+ * Sanitizes a string for safe use in html
+ *
+ * @param {string} str String to sanitize
+ * @returns {string} Sanitized string
+ */
 function sanitizeStringHTML (str) {
   return (
     str.replaceAll("<", "&lt;")
@@ -47,6 +59,7 @@ function sanitizeStringHTML (str) {
 
 var homepageInit = async function () {
 
+  // Fetch all the data we need
   var config = await (await fetch("/api/config/get")).json();
   var leaderboard = await (await fetch("/api/leaderboard/get")).json();
   const users = await (await fetch("/api/users/get")).json();
@@ -55,6 +68,7 @@ var homepageInit = async function () {
 
   const whoami = await (await fetch("/api/users/whoami")).json();
 
+  // Change the login button to a logout button if the user is logged in
   if (whoami !== null) {
 
     const loginButton = document.querySelector("#login-button");
@@ -66,10 +80,14 @@ var homepageInit = async function () {
 
   }
 
+  // Update week number
   document.querySelector("#intro-week").innerHTML = config.number;
 
   const activeMapContainer = document.querySelector("#active-map");
 
+  /**
+   * Updates the active map display
+   */
   function updateActiveMap () {
 
     const map = config.map;
@@ -92,6 +110,9 @@ var homepageInit = async function () {
   const leaderboardCategorySelect = document.querySelector("#leaderboard-category-select");
   const leaderboardArchiveSelect = document.querySelector("#leaderboard-archive-select");
 
+  /**
+   * Updates the category select dropdown
+   */
   function updateCategorySelect () {
 
     let output = "";
@@ -106,6 +127,9 @@ var homepageInit = async function () {
   }
   updateCategorySelect();
 
+  /**
+   * Updates the archive select dropdown
+   */
   function updateArchiveSelect () {
 
     let output = "<option value='active' selected=''>active</option>";
@@ -117,10 +141,16 @@ var homepageInit = async function () {
   }
   updateArchiveSelect();
 
+  /**
+   * Updates the leaderboard display
+   *
+   * @param {string} category Category to display
+   */
   async function displayLeaderboard (category) {
 
     leaderboardCategorySelect.value = category;
 
+    // Grab leaderboard data
     const categoryData = config.categories.find(curr => curr.name === category);
     const leaderboardData = leaderboard[categoryData.name];
 
@@ -138,6 +168,7 @@ var homepageInit = async function () {
     let output = "", placement = 1;
     const suffixes = ["st", "nd", "rd"];
 
+    // Place each run in the leaderboard
     for (let i = 0; i < leaderboardData.length; i ++) {
 
       const run = leaderboardData[i];
@@ -145,6 +176,7 @@ var homepageInit = async function () {
 
       const note = sanitizeStringJS(run.note);
 
+      // Handle Co-op runs
       let username = user.name;
       if ((categoryData.coop && ("partners" in config && config.partners[run.steamid]) || run.partner)) {
         const partner = users[("partners" in config && config.partners[run.steamid]) ? config.partners[run.steamid] : run.partner];
@@ -158,6 +190,7 @@ var homepageInit = async function () {
 
       const isArchive = leaderboardArchiveSelect.value !== "active";
 
+      // Grab proof url
       let downloadURL = `/api/proof/archive/"${run.steamid}"/${category}/${leaderboardArchiveSelect.value}`;
       if (run.proof === "video") {
         try {
@@ -167,7 +200,7 @@ var homepageInit = async function () {
 
       const portalCount = ("portals" in run && categoryData.portals) ? `, ${run.portals} portal${run.portals === 1 ? "" : "s"}` : "";
 
-      const suffix = ["st","nd","rd"][((placement + 90) % 100 - 10) % 10 - 1] || "th";
+      const suffix = ["st","nd","rd"][((placement + 90) % 100 - 10) % 10 - 1] || "th"; // what the fuck
 
       output += `
 <div class="lb-entry lb-rank${placement}">
@@ -189,10 +222,12 @@ var homepageInit = async function () {
   }
   displayLeaderboard("main");
 
+  // Change leaderboard when category is changed
   leaderboardCategorySelect.onchange = function () {
     displayLeaderboard(leaderboardCategorySelect.value);
   };
 
+  // Change leaderboard when archive is changed/selected/
   leaderboardArchiveSelect.onchange = async function () {
 
     const archive = leaderboardArchiveSelect.value;
@@ -215,6 +250,7 @@ var homepageInit = async function () {
 
   };
 
+  // Handle remove run confirmations
   var removeRunConfirm = null;
   window.removeRun = async function (category) {
 
@@ -227,6 +263,7 @@ var homepageInit = async function () {
 
     try {
 
+      // Fetch api to remove run
       const response = await fetch("/api/leaderboard/remove/" + category);
       const data = await response.json();
 
@@ -262,6 +299,7 @@ var homepageInit = async function () {
 
   };
 
+  // Handle edit comment
   window.editComment = function (category) {
 
     const run = leaderboard[category].find(curr => curr.steamid === whoami.steamid);
@@ -275,6 +313,7 @@ var homepageInit = async function () {
         const note = document.querySelector("#edit-note").value.trim();
         const safeNote = encodeURIComponent(note);
 
+        // Fetch api to edit run
         const response = await fetch(`/api/leaderboard/edit/${category}/${safeNote}`);
         const data = await response.json();
 
@@ -323,6 +362,7 @@ var homepageInit = async function () {
 
   let demoFile = null;
 
+  // Handle url submit input
   linkInput.oninput = function () {
 
     if (demoFile) return;
@@ -332,6 +372,7 @@ var homepageInit = async function () {
 
   };
 
+  // Handle demo file submit input
   fakeInput.onchange = async function (evt) {
 
     demoFile = evt.target.files[0];
@@ -358,6 +399,7 @@ var homepageInit = async function () {
     demoClearButton.style.display = "none";
   });
 
+  // Add categories to submit dropdown
   const categorySelect = document.querySelector("#submit-category");
   for (let i = 0; i < config.categories.length; i ++) {
 
@@ -367,6 +409,7 @@ var homepageInit = async function () {
 
   }
 
+  // Handle category select
   categorySelect.onchange = function () {
 
     const category = categorySelect.value;
@@ -383,19 +426,26 @@ var homepageInit = async function () {
   const timeInput = document.querySelector("#submit-time");
   const portalsInput = document.querySelector("#submit-portals");
 
+  /**
+   * Submits to the leaderboard
+   */
   async function submitDemo () {
 
+    // File upload
     const formData = new FormData();
     formData.append("demo", demoFile);
 
+    // Ensure category is selected
     const category = categorySelect.value;
     if (!category) return showPopup("No category selected", "Please select a category to submit your speedrun to.", POPUP_ERROR);
 
+    // Ensure note is not too long
     const note = noteInput.value.trim();
     if (note.length > 200) return showPopup("Comment too long", "Please keep your run comments to 200 characters or under.", POPUP_ERROR);
 
     const safeNote = encodeURIComponent(note);
 
+    // Fetch api to submit run
     let data;
     try {
 
@@ -442,24 +492,32 @@ var homepageInit = async function () {
 
     }
 
+    // Refresh leaderboard
     leaderboard = await (await fetch("/api/leaderboard/get")).json();
     displayLeaderboard(leaderboardCategorySelect.value);
 
+    // Show success message
     return showPopup("Success", "Your run has been submitted!<br>Time: " + ticksToString(data.time));
 
   }
 
 
+  /**
+   * Submits a link to the leaderboard
+   */
   async function submitLink () {
 
+    // Ensure link is not empty
     const link = linkInput.value.trim();
 
     if (!link) return showPopup("Empty submission", "Please provide either a demo file or a link to a YouTube video.", POPUP_ERROR);
     if (!link.includes("youtu")) return showPopup("Invalid link", "The link you provided doesn't look like a YouTube video.", POPUP_ERROR);
 
+    // Ensure category is selected
     const category = categorySelect.value;
     if (!category) return showPopup("No category selected", "Please select a category to submit your speedrun to.", POPUP_ERROR);
 
+    // Ensure time and portals is valid
     const time = stringToTicks(timeInput.value.trim());
     let portals = parseInt(portalsInput.value.trim());
 
@@ -472,12 +530,14 @@ var homepageInit = async function () {
       }
     }
 
+    // Ensure note is not too long
     const note = noteInput.value.trim();
     if (note.length > 200) return showPopup("Comment too long", "Please keep your run comments to 200 characters or under.", POPUP_ERROR);
 
     const safeLink = encodeURIComponent(link);
     const safeNote = encodeURIComponent(note);
 
+    // Fetch api to submit run
     let data;
     try {
 
@@ -509,13 +569,16 @@ var homepageInit = async function () {
 
     }
 
+    // Refresh leaderboard
     leaderboard = await (await fetch("/api/leaderboard/get")).json();
     displayLeaderboard(leaderboardCategorySelect.value);
 
+    // Show success message
     return showPopup("Success", "Your run has been submitted!<br>Time: " + ticksToString(data.time));
 
   }
 
+  // Handle submit button
   const submitButton = document.querySelector("#submit-button");
   submitButton.onclick = async function () {
 
@@ -530,21 +593,26 @@ var homepageInit = async function () {
 
   }
 
+  // Handle drag and drop
   pageContent.ondragover = function (e) {
     e.preventDefault();
   };
 
+  // Handle file drop on page
   pageContent.ondrop = function (e) {
     e.preventDefault();
 
     const items = e.dataTransfer.items;
 
+    // Ensure only one file is dropped
     if (items[0].kind !== "file") return;
     const file = items[0].getAsFile();
 
+    // Ensure file is a demo
     if (!file.name.endsWith(".dem")) return;
     demoFile = file;
 
+    // Update demo button
     linkInfo.style.display = "none";
     linkContainer.style.display = "none";
 
@@ -557,6 +625,7 @@ var homepageInit = async function () {
   const votesContainer = document.querySelector("#votes-container");
   let votesOutput = "";
 
+  // Display voting maps
   for (let i = 0; i < config.votingmaps.length; i ++) {
 
     const map = config.votingmaps[i];
@@ -582,10 +651,12 @@ var homepageInit = async function () {
 
   votesContainer.innerHTML = votesOutput;
 
+  // Handle voting
   window.submitVote = async function (map, vote) {
 
     try {
 
+      // Fetch api to submit vote
       const response = await fetch(`/api/votes/${vote === 1 ? "upvote" : "downvote"}/${map}`);
       const data = await response.json();
 
@@ -601,6 +672,7 @@ var homepageInit = async function () {
           throw data;
       }
 
+      // Update vote buttons
       const buttonUp = document.querySelector(`#votes-button${map}-up`);
       const buttonDown = document.querySelector(`#votes-button${map}-down`);
 
@@ -623,8 +695,11 @@ var homepageInit = async function () {
   };
 
   const suggestMapButton = document.querySelector("#suggest-map-button");
+
+  // Handle map suggestion
   suggestMapButton.onclick = function () {
 
+    // Show popup to suggest map
     showPopup("Suggest a Map", `<p>Suggest a map to the tournament.
       Every submission will be considered by the curation algorithm until it appears in the voting top 5 list.</p>
       <input type="text" placeholder="Workshop Link" id="suggest-input"></input>`, POPUP_INFO, true);
@@ -634,6 +709,7 @@ var homepageInit = async function () {
       const suggestInput = document.querySelector("#suggest-input");
       const mapid = suggestInput.value.trim().toLowerCase().split("https://steamcommunity.com/sharedfiles/filedetails/?id=").pop().split("?")[0];
 
+      // Ensure mapid is valid
       if (!mapid || isNaN(mapid)) {
         showPopup("Invalid link", "The workshop link you provided could not be parsed.", POPUP_ERROR);
         return;
@@ -641,6 +717,7 @@ var homepageInit = async function () {
 
       hidePopup();
 
+      // Fetch api to suggest map
       try {
 
         const response = await fetch(`/api/workshopper/suggest/"${mapid}"`);
@@ -674,6 +751,7 @@ var homepageInit = async function () {
   const playersContainer = document.querySelector("#players-container");
   const playersSearch = document.querySelector("#players-search");
 
+  // Sort users by points
   const sortedUsers = [];
   for (const steamid in users) {
     const user = JSON.parse(JSON.stringify(users[steamid]));
@@ -683,6 +761,7 @@ var homepageInit = async function () {
   }
   sortedUsers.sort((a, b) => b.points - a.points);
 
+  // Display global players leaderboard
   let output = "", placement = 1;
   for (let i = 0; i < sortedUsers.length; i ++) {
 
@@ -706,6 +785,7 @@ var homepageInit = async function () {
   }
   playersContainer.innerHTML = output;
 
+  // Handle player search
   playersSearch.oninput = function () {
 
     const query = playersSearch.value.trim().toLowerCase();
@@ -733,6 +813,7 @@ var homepageInit = async function () {
     powerSavingSwitch.checked = false;
   }
 
+  // Handle animation toggle
   powerSavingSwitch.onchange = function () {
     if (powerSavingSwitch.checked) {
       localStorage.setItem("powerSaving", "on");
@@ -743,6 +824,7 @@ var homepageInit = async function () {
     }
   };
 
+  // Handle 404 redirect
   if (window.location.href.endsWith("#404")) {
     showPopup("Not found", "The page you were trying to access does not exist. You've been brought back to the homepage.", POPUP_ERROR);
   }
@@ -750,6 +832,7 @@ var homepageInit = async function () {
   let cliKeysControl = false;
   let cliKeysTilde = false;
 
+  // Handle CLI popup
   const keyDownFunc = function (e) {
     if (e.key === "Control") cliKeysControl = true;
     if (e.key === "`") cliKeysTilde = true;
@@ -779,6 +862,7 @@ var homepageInit = async function () {
 let homepageInitAttempts = 0;
 const homepageInitAttemptsMax = 5;
 
+// Attempt to initialize the homepage
 var tryHomepageInit = async function () {
   try {
     await homepageInit();
