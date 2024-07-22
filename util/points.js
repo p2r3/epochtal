@@ -10,15 +10,35 @@ const profilelog = require("./profilelog.js");
 const profiledata = require("./profiledata.js");
 
 const [ WIN, LOSS, DRAW ] = [1, -1, 0];
+
+/**
+ * Calculate the elo delta for a player against an opponent.
+ *
+ * @param {Number} playerElo The player's elo
+ * @param {Number} opponentElo The opponent's elo
+ * @param {Enum} result The result of the match
+ * @param {Number} kFactor The k-factor for the elo calculation (max elo change)
+ * @returns
+ */
 function calculateEloDelta (playerElo, opponentElo, result, kFactor = 32) {
 
+  /**
+   * Function to calculate the expected score of a player against an opponent.
+   * This is the probability of the player winning against the opponent according to their elo.
+   *
+   * @param {Number} ratingA The player's elo
+   * @param {Number} ratingB The opponent's elo
+   * @returns {Number} The expected score
+   */
   function expectedScore (ratingA, ratingB) {
     return 1 / (1 + Math.pow(10, (ratingB - ratingA) / 400));
   }
 
+  // Calculate the expected scores for the player and opponent
   const playerExpected = expectedScore(playerElo, opponentElo);
   const opponentExpected = expectedScore(opponentElo, playerElo);
 
+  // Get multipliers for the elo change based on the result
   let playerScore, opponentScore;
   switch (result) {
 
@@ -40,6 +60,7 @@ function calculateEloDelta (playerElo, opponentElo, result, kFactor = 32) {
 
   }
 
+  // Calculate the elo change for the player and opponent
   return {
     player: kFactor * (playerScore - playerExpected),
     opponent: kFactor * (opponentScore - opponentExpected)
@@ -47,10 +68,20 @@ function calculateEloDelta (playerElo, opponentElo, result, kFactor = 32) {
 
 }
 
+/**
+ * Simple function to calculate the total points for a user,
+ * by adding all of their individual delta points together.
+ * Unlike display points, this does not include the lower bound,
+ * but still includes the 1000 base points.
+ *
+ * @param {Number[][]} statistics The user's statistics
+ * @returns {Number} The total points
+ */
 function calculateTotalPoints (statistics) {
 
   let totalPoints = 1000;
 
+  // Calculate the total points
   for (let i = 0; i < statistics.length; i ++) {
     for (let j = 0; j < statistics[i].length; j ++) {
       totalPoints += statistics[i][j];
@@ -61,11 +92,20 @@ function calculateTotalPoints (statistics) {
 
 }
 
+/**
+ * Calculate the display points for a user based on their statistics.
+ * Display points are all of the players elo points added together with additionally
+ * offset and lower bound to increase the appeal of the visual representation.
+ *
+ * @param {Number[][]} statistics Elo points for each participation
+ * @returns {Number} The display points
+ */
 function calculateDisplayPoints (statistics) {
 
   let runs = 0;
-  let totalPoints = 1000;
+  let totalPoints = 1000; // To avoid negative points
 
+  // Calculate the total points and runs
   for (let i = 0; i < statistics.length; i ++) {
     for (let j = 0; j < statistics[i].length; j ++) {
       runs ++;
@@ -73,12 +113,24 @@ function calculateDisplayPoints (statistics) {
     }
   }
 
+  // If the user has less than 10 runs, return null
   if (runs < 10) return null;
+
+  // If the user has negative points, calculate points towards 0.
   if (totalPoints < 0) return Number((-100 / totalPoints).toFixed(2));
+
+  // Otherwise, return totalPoints + 100
   return Number((totalPoints + 100).toFixed(2));
 
 }
 
+/**
+ * Grab a user's total elo to this point as stored in their profile data.
+ *
+ * @param {string} steamid The user's steamid
+ * @param {object} context The context object, defaults to epochtal
+ * @returns {number} The user's total elo
+ */
 async function pointsFromSteamID (steamid, context = epochtal) {
 
   const profile = await profiledata(["get", steamid], context);
@@ -86,6 +138,14 @@ async function pointsFromSteamID (steamid, context = epochtal) {
 
 }
 
+/**
+ * Calculate the elo acquired or lost for each player in this week.
+ * Note: Despite only returning the elo delta, the calculation itself is
+ * based on the elo already found in the profile data (see pointsFromSteamID).
+ *
+ * @param {unknown} context The context object, defaults to epochtal
+ * @returns {object} The elo delta for each player
+ */
 async function calculatePointsDelta (context = epochtal) {
 
   const users = context.data.users;
@@ -94,23 +154,29 @@ async function calculatePointsDelta (context = epochtal) {
   const partners = context.data.week.partners;
   const catDeltaElo = {};
 
+  // For each board (category with at least 1 run)
   for (let i = 0; i < boards.length; i ++) {
 
+    // Ensure the category is in the list of active categories at the conclusion of the week
     const catname = boards[i];
     if (!catlist.includes(catname)) continue;
 
+    // Ensure the category is scored
     const cat = await categories(["get", catname], context);
     if (!cat.points) continue;
+
     const lb = await leaderboard(["get", catname], context);
 
     catDeltaElo[catname] = {};
     const deltaElo = catDeltaElo[catname];
 
+    // Calculate the elo delta for each run starting at the fastest
     for (let j = 0; j < lb.length; j ++) {
       const playerTime = lb[j].time;
       const player = lb[j].steamid;
       if (!(player in deltaElo)) deltaElo[player] = 0;
 
+      // Calculate the elo against every run placed lower than the current run
       for (let k = j + 1; k < lb.length; k ++) {
         const opponentTime = lb[k].time;
         const opponent = lb[k].steamid;
@@ -118,6 +184,7 @@ async function calculatePointsDelta (context = epochtal) {
 
         const result = playerTime === opponentTime ? DRAW : WIN;
 
+        // Check if the run is a coop run
         if ((lb[j].partner && lb[k].partner) || (cat.coop && partners && partners[player] && partners[opponent])) {
 
           const playerPartner = lb[j].partner || partners[player];
@@ -126,9 +193,11 @@ async function calculatePointsDelta (context = epochtal) {
           if (!(playerPartner in deltaElo)) deltaElo[playerPartner] = 0;
           if (!(opponentPartner in deltaElo)) deltaElo[opponentPartner] = 0;
 
+          // Calculate elo averages between the two players and their partners
           const playerAverage = (await pointsFromSteamID(player, context) + await pointsFromSteamID(playerPartner, context)) / 2;
           const opponentAverage = (await pointsFromSteamID(opponent, context) + await pointsFromSteamID(opponentPartner, context)) / 2;
 
+          // Run the elo calculation
           const elo = calculateEloDelta(playerAverage, opponentAverage, result);
 
           deltaElo[player] += elo.player;
@@ -138,6 +207,7 @@ async function calculatePointsDelta (context = epochtal) {
 
         } else {
 
+          // Run the elo calculation
           const elo = calculateEloDelta(await pointsFromSteamID(player), await pointsFromSteamID(opponent), result);
 
           deltaElo[player] += elo.player;
@@ -152,6 +222,7 @@ async function calculatePointsDelta (context = epochtal) {
 
   const output = {};
 
+  // Copy the category delta elo into the output object
   for (const cat in catDeltaElo) {
     for (const steamid in catDeltaElo[cat]) {
       if (!(steamid in output)) output[steamid] = [];
@@ -163,6 +234,19 @@ async function calculatePointsDelta (context = epochtal) {
 
 }
 
+/**
+ * Handles the `points` utility call. This utility is used to manage user points/elo.
+ *
+ * The following subcommands are available:
+ * - `user`: Get the total and display elo for a user
+ * - `calculate`: Calculate the elo delta for this week
+ * - `award`: Award elo to each user
+ * - `rebuild`: Reset all user statistics and recalculate points from archive data
+ *
+ * @param {string[]} args The arguments for the call
+ * @param {unknown} context The context on which to execute the call (defaults to epochtal)
+ * @returns {object|string} The output of the call
+ */
 module.exports = async function (args, context = epochtal) {
 
   const [command] = args;
@@ -174,11 +258,13 @@ module.exports = async function (args, context = epochtal) {
 
     case "user": {
 
+      // Ensure user is provided
       const steamid = args[1];
       if (!steamid) throw new UtilError("ERR_ARGS", args, context);
 
       const profile = await profiledata(["get", steamid], context);
 
+      // Return total and display points for specified user, for all weeks
       return {
         total: calculateTotalPoints(profile.statistics),
         display: calculateDisplayPoints(profile.statistics)
@@ -194,33 +280,40 @@ module.exports = async function (args, context = epochtal) {
 
     case "award": {
 
+      // Calculate the points delta for this week
       const deltaElo = await calculatePointsDelta(context);
 
+      // Award the points to each user
       for (const steamid in deltaElo) {
 
         const profile = await profiledata(["get", steamid], context);
         profile.statistics.push(deltaElo[steamid]);
         profile.weeks.push(context.data.week.number);
 
+        // Recalculate the display points for the user
         users[steamid].points = calculateDisplayPoints(profile.statistics);
 
         profiledata(["flush", steamid], context);
 
       }
 
+      // Write the changes to the users file if it exists
       if (file) Bun.write(file, JSON.stringify(users));
+
       return "SUCCESS";
 
     }
 
     case "rebuild": {
 
+      // Reset all user statistics
       for (const steamid in users) {
         const profile = await profiledata(["get", steamid], context);
         profile.statistics = [];
         profile.weeks = [];
       }
 
+      // Calculate the points delta for each week and add it to the user's statistics
       const archiveList = (await archive(["list"], context)).reverse();
       for (const week of archiveList) {
 
@@ -238,13 +331,16 @@ module.exports = async function (args, context = epochtal) {
 
       }
 
+      // Calculate the display points for each user
       for (const steamid in users) {
         const profile = await profiledata(["get", steamid], context);
         users[steamid].points = calculateDisplayPoints(profile.statistics);
         await profiledata(["flush", steamid], context);
       }
 
+      // Write the changes to the users file if it exists
       if (file) Bun.write(file, JSON.stringify(users));
+
       return "SUCCESS";
 
     }
