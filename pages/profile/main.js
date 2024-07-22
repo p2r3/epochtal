@@ -1,3 +1,10 @@
+/**
+ * Decode the player profile log from a buffer
+ *
+ * @param {Array} buffer The buffer to decode
+ * @param {string[]} categoryList The list of categories
+ * @returns {Object[]} The decoded log
+ */
 function decodeLog (buffer, categoryList) {
 
   const log = [];
@@ -34,12 +41,20 @@ function decodeLog (buffer, categoryList) {
 }
 
 var profileSteamID = window.location.href.split("#")[1].split("/")[0].split("?")[0].split("&")[0];
+
+/**
+ * Open the Steam profile of the user
+ */
 function openSteamProfile () {
   window.open(`https://steamcommunity.com/profiles/${profileSteamID}`, "_blank");
 }
 
+/**
+ * Open the Steam profile of the user
+ */
 var profilePageInit = async function () {
 
+  // Change the login button to a logout button if the user is logged in
   const whoami = await (await fetch("/api/users/whoami")).json();
   if (whoami !== null) {
 
@@ -54,10 +69,12 @@ var profilePageInit = async function () {
 
   const users = await (await fetch("/api/users/get")).json();
 
+  // Refresh when page url changes
   window.addEventListener("hashchange", function(){
     window.location.reload();
   });
 
+  // Setup the profile page
   const profileUser = users[profileSteamID];
   const profileUserData = await (await fetch(`/api/users/profile/"${profileSteamID}"`)).json();
 
@@ -74,6 +91,7 @@ var profilePageInit = async function () {
   graphLegend.style.transform = `translate(${bbox.left}px, ${bbox.top}px)`;
   graphLegendDropdown.style.transform = `translate(calc(${bbox.left + graphLegendBBox.left + graphLegendBBox.width / 2}px - 50%), ${bbox.top + graphLegendBBox.bottom}px)`;
 
+  // Update the graph when the window is resized
   window.onresize = function () {
     bbox = canvas.getBoundingClientRect();
     graphLegend.style.transform = `translate(${bbox.left}px, ${bbox.top}px)`;
@@ -82,8 +100,15 @@ var profilePageInit = async function () {
   };
 
   var profileLog, leaderboards = {};
+
+  /**
+   * Fetch the profile log of the user
+   *
+   * @returns {unknown} A promise that resolves when the profile log is fetched
+   */
   async function fetchProfileLog () {
 
+    // Fetch the actual profile log
     const request = await fetch(`/profiles/${profileSteamID}/profile.log`);
     if (request.status === 200) {
       const buffer = new Uint8Array(await request.arrayBuffer());
@@ -94,6 +119,7 @@ var profilePageInit = async function () {
       return showPopup("Unknown error", "An unexpected error occurred while fetching the profile log. Check the JavaScript console for more info.", POPUP_ERROR);
     }
 
+    // Parse the profile log into leaderboards
     for (let i = 0; i < profileLog.length; i ++) {
 
       const week = Math.floor(profileLog[i].timestamp / 604800) + 1;
@@ -106,6 +132,7 @@ var profilePageInit = async function () {
 
     }
 
+    // Sort the leaderboards by timestamp
     for (const week in leaderboards) {
       for (const category in leaderboards[week]) {
         leaderboards[week][category].sort(function (a, b) {
@@ -114,16 +141,21 @@ var profilePageInit = async function () {
       }
     }
 
+    // > I have no idea if I documented this correctly
+    // - PancakeTAS
+
   }
   await fetchProfileLog();
 
   const graphTypes = ["points over time", "participation"];
   window.selectedGraphType = 0;
 
+  // Generate the graph
   window.generateGraph = async function () {
 
     graphLegendText.innerHTML = graphTypes[selectedGraphType];
 
+    // Setup graph type dropdown
     let dropdownOutput = "";
     for (let i = 0; i < graphTypes.length; i ++) {
       if (i === selectedGraphType) continue;
@@ -131,6 +163,7 @@ var profilePageInit = async function () {
     }
     graphLegendDropdown.innerHTML = dropdownOutput;
 
+    // Fill the graph with data
     let data, startOffset = null, hiddenUntil = null;
     switch (graphTypes[selectedGraphType]) {
 
@@ -141,19 +174,24 @@ var profilePageInit = async function () {
         data = new Array(weeks[weeks.length - 1]).fill(1000);
         endOffset = 0;
 
+        // Calculate the total points for each week
         let totalPoints = 1000, lastDataPoint = 1000, weeksIn = 0, runsIn = 0;
         for (let i = weeks[0] - 1; i < data.length; i ++) {
 
+          // Copy the last data point if the week is not in the statistics
           if (i + 1 !== weeks[weeksIn]) {
             data[i] = lastDataPoint;
             continue;
           }
 
+          // Calculate the data point for this week
           const currDataPoint = statistics[weeksIn];
           for (let i = 0; i < currDataPoint.length; i ++) {
             totalPoints += currDataPoint[i];
             runsIn ++;
           }
+
+          // Only show the data point if there are at least 10 runs
           if (runsIn >= 10) {
             if (hiddenUntil === null) hiddenUntil = i;
             if (totalPoints < 0) lastDataPoint = -100 / totalPoints;
@@ -178,6 +216,7 @@ var profilePageInit = async function () {
 
       case "participation": {
 
+        // Find the first and last week
         let first = Infinity, last = -Infinity;
         for (const week in leaderboards) {
           const weeknum = Number(week);
@@ -187,10 +226,12 @@ var profilePageInit = async function () {
 
         data = new Array(last).fill(0);
 
+        // For each week, count the number of submissions
         for (let i = first - 1; i < last; i ++) {
 
           if (!(i in leaderboards)) continue;
 
+          // Count the number of submissions in this week
           let submissions = 0;
           for (const category in leaderboards[i]) {
             submissions += leaderboards[i][category].length;
@@ -200,6 +241,7 @@ var profilePageInit = async function () {
 
         }
 
+        // Slice the data to start from the first week with submissions
         data = data.slice(startOffset);
 
         break;
@@ -208,7 +250,7 @@ var profilePageInit = async function () {
 
     }
 
-    // clone the last element twice to get the bezier
+    // Clone the last element twice to get the bezier
     data.push(data[data.length - 1]);
     data.push(data[data.length - 1]);
 
@@ -297,27 +339,34 @@ var profilePageInit = async function () {
   }
   generateGraph();
 
+  // Calculate the number of submissions in each category
   const categorySubmissions = [];
   for (const week in leaderboards) {
     for (const category in leaderboards[week]) {
 
+      // Find the index of the category in categorySubmissions
       let index = categorySubmissions.findIndex(function (curr) {
         return curr.category === category;
       });
 
+      // Add the category to categorySubmissions if it doesn't exist
       if (index === -1) {
         index = categorySubmissions.length;
         categorySubmissions.push({ category, submissions: 0 });
       }
+
+      // Add the number of submissions in this category
       categorySubmissions[index].submissions += leaderboards[week][category].length;
 
     }
   }
 
+  // Sort the categorySubmissions by number of submissions
   categorySubmissions.sort(function(a, b) {
     return b.submissions - a.submissions;
   });
 
+  // Calculate the rank of the user
   let rank = 1;
   for (const steamid in users) {
     const user = users[steamid];
@@ -328,6 +377,7 @@ var profilePageInit = async function () {
 
   const statsText = document.querySelector("#profile-stats-text");
 
+  // Display the stats of the user
   if (profileLog.length === 0) {
 
     statsText.innerHTML = "This user has not yet submitted a run to the tournament.";
@@ -366,6 +416,7 @@ var profilePageInit = async function () {
   let cliKeysControl = false;
   let cliKeysTilde = false;
 
+  // Handle CLI popup
   const keyDownFunc = function (e) {
     if (e.key === "Control") cliKeysControl = true;
     if (e.key === "`") cliKeysTilde = true;
