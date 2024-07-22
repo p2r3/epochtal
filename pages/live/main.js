@@ -1,5 +1,9 @@
+/**
+ * Initializes the lobby list page.
+ */
 var lobbyListInit = async function () {
 
+  // Change the login button to a logout button if the user is logged in
   const whoami = await (await fetch("/api/users/whoami")).json();
   if (whoami !== null) {
 
@@ -15,8 +19,12 @@ var lobbyListInit = async function () {
   const users = await (await fetch("/api/users/get")).json();
   const avatarCache = {};
 
+  /**
+   * Fetches the list of lobbies and updates the lobby list.
+   */
   const fetchLobbies = async function () {
 
+    // Fetch the list of lobbies
     const lobbies = await (await fetch("/api/lobbies/list")).json();
 
     let output = "";
@@ -33,6 +41,7 @@ var lobbyListInit = async function () {
         .replaceAll("\\", "\\\\")
         .replaceAll("'", "\\'");
 
+      // Generate the player list
       let playersString = "";
       for (let i = 0; i < lobby.players.length; i ++) {
 
@@ -42,6 +51,7 @@ var lobbyListInit = async function () {
           .replaceAll("<", "&lt;")
           .replaceAll(">", "&gt;");
 
+        // Fetch the user's avatar
         let avatar;
         if (steamid in avatarCache) avatar = avatarCache[steamid];
         else try {
@@ -56,12 +66,14 @@ var lobbyListInit = async function () {
 
       }
 
+      // Generate the mode string
       let modeString;
       switch (lobby.mode) {
         case "ffa": modeString = "Free For All"; break;
         default: modeString = "Unknown"; break;
       }
 
+      // Add the lobby entry to the output
       output += `
   <div class="lobby-entry marginx">
     <p class="lobby-name">${safeName}</p>
@@ -78,8 +90,11 @@ var lobbyListInit = async function () {
 
   };
   fetchLobbies();
+
+  // Refresh the lobby list every 5 seconds
   setInterval(fetchLobbies, 5000);
 
+  // Handle the search bar
   const lobbySearch = document.querySelector("#lobby-search");
   lobbySearch.oninput = function () {
 
@@ -90,6 +105,7 @@ var lobbyListInit = async function () {
 
       const name = entries[i].getElementsByClassName("lobby-name")[0].innerHTML.toLowerCase();
 
+      // Hide the entry if the name does not contain the query
       if (name.includes(query)) {
         entries[i].style.display = "";
       } else {
@@ -103,6 +119,7 @@ var lobbyListInit = async function () {
   let cliKeysControl = false;
   let cliKeysTilde = false;
 
+  // Handle CLI popup
   const keyDownFunc = function (e) {
     if (e.key === "Control") cliKeysControl = true;
     if (e.key === "`") cliKeysTilde = true;
@@ -130,8 +147,12 @@ var lobbyListInit = async function () {
 };
 lobbyListInit();
 
+/**
+ * Shows a popup to create a new lobby.
+ */
 function createLobbyPopup () {
 
+  // Show the popup
   showPopup("Create a Lobby", `
     Name of the new lobby<br>
     <input id="new-lobby-name" type="text" placeholder="Lobby name" spellcheck="false" style="margin-top:5px"></input><br><br>
@@ -146,8 +167,10 @@ function createLobbyPopup () {
     const name = encodeURIComponent(document.querySelector("#new-lobby-name").value.trim());
     const password = encodeURIComponent(document.querySelector("#new-lobby-password").value);
 
+    // Fetch the api to create a new lobby
     const request = await fetch(`/api/lobbies/create/${name}/${password}`);
 
+    // Handle the response and open the lobby window
     if (request.status !== 200) {
       return showPopup("Unknown error", "The server returned an unexpected response. Error code: " + request.status, POPUP_ERROR);
     } else {
@@ -173,14 +196,23 @@ function createLobbyPopup () {
 
 }
 
+/**
+ * Handles joining a lobby.
+ *
+ * @param {string} name
+ */
 async function joinLobby (name) {
 
+  // Check if the lobby is password-protected
   const isSecure = await (await fetch(`/api/lobbies/secure/${name}`)).json();
 
+  // Join the lobby if not
   if (!isSecure) {
 
+    // Fetch the api to join the lobby
     const request = await fetch(`/api/lobbies/join/${name}`);
 
+    // Handle the response and open the lobby window
     if (request.status !== 200) {
       return showPopup("Unknown error", "The server returned an unexpected response. Error code: " + request.status, POPUP_ERROR);
     } else {
@@ -203,6 +235,7 @@ async function joinLobby (name) {
 
   }
 
+  // Show the password prompt
   showPopup("Join this Lobby", `
     Password required<br>
     <input id="join-lobby-password" type="password" placeholder="Password" spellcheck="false" style="margin-top:5px"></input>
@@ -212,9 +245,11 @@ async function joinLobby (name) {
 
     hidePopup();
 
+    // Fetch the api to join the lobby
     const password = encodeURIComponent(document.querySelector("#join-lobby-password").value);
     const request = await fetch(`/api/lobbies/join/${name}/${password}`);
 
+    // Handle the response and open the lobby window
     if (request.status !== 200) {
       return showPopup("Unknown error", "The server returned an unexpected response. Error code: " + request.status, POPUP_ERROR);
     } else {

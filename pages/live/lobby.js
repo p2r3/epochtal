@@ -3,9 +3,15 @@ var avatarCache = {};
 var lobbySocket = null;
 
 const lobbyPlayersList = document.querySelector("#lobby-players-list");
+
+/**
+ * Update player list with current players in the lobby
+ */
 async function updatePlayerList () {
 
   let output = "";
+
+  // List all players in the lobby
   for (let i = 0; i < lobby.listEntry.players.length; i ++) {
 
     const steamid = lobby.listEntry.players[i];
@@ -15,6 +21,7 @@ async function updatePlayerList () {
       .replaceAll(">", "&gt;")
       .replaceAll("&", "&amp;");
 
+    // Fetch avatar from cache or API
     let avatar;
     if (steamid in avatarCache) avatar = avatarCache[steamid];
     else try {
@@ -39,8 +46,13 @@ async function updatePlayerList () {
 }
 
 const lobbyMapContainer = document.querySelector("#lobby-settings-map");
+
+/**
+ * Update the map display in the lobby
+ */
 async function updateLobbyMap () {
 
+  // If no map is selected, display a placeholder
   if (!lobby.data.map) {
     lobbyMapContainer.innerHTML = `
       <p class="votes-text">No map selected</p>
@@ -49,6 +61,7 @@ async function updateLobbyMap () {
     return;
   }
 
+  // Display the map thumbnail and title
   lobbyMapContainer.innerHTML = `
     <a href="https://steamcommunity.com/sharedfiles/filedetails/?id=${lobby.data.map.id}" target="_blank">
       <img class="votes-image" alt="thumbnail" src="https://steamuserimages-a.akamaihd.net/ugc/${lobby.data.map.thumbnail}?impolicy=Letterbox&imw=640&imh=360">
@@ -63,15 +76,24 @@ async function updateLobbyMap () {
 }
 
 var eventHandlerConnected = false;
+
+/**
+ * Handle incoming WebSocket events
+ *
+ * @param {MessageEvent} event
+ */
 async function lobbyEventHandler (event) {
 
+  // Parse the incoming data
   const data = JSON.parse(event.data);
   console.log(data, event);
 
+  // Handle the event
   switch (data.type) {
 
     case "lobby_name": {
 
+      // Rename the lobby
       const encodedName = window.location.href.split("#")[1];
       const name = decodeURIComponent(encodedName);
       const { newName } = data;
@@ -84,6 +106,7 @@ async function lobbyEventHandler (event) {
 
     case "lobby_leave": {
 
+      // Handle player leaving the lobby
       const { steamid } = data;
 
       const index = lobby.listEntry.players.indexOf(steamid);
@@ -97,6 +120,7 @@ async function lobbyEventHandler (event) {
 
     case "lobby_join": {
 
+      // Handle player joining the lobby
       const { steamid } = data;
 
       if (!lobby.listEntry.players.includes(steamid)) {
@@ -110,8 +134,12 @@ async function lobbyEventHandler (event) {
 
 }
 
+/**
+ * Initialize the lobby page
+ */
 async function lobbyInit () {
 
+  // Change the login button to a logout button if the user is logged in
   const whoami = await (await fetch("/api/users/whoami")).json();
   if (whoami !== null) {
 
@@ -124,6 +152,7 @@ async function lobbyInit () {
 
   }
 
+  // Fetch the lobby data
   const encodedName = window.location.href.split("#")[1];
   const name = decodeURIComponent(encodedName);
   const safeName = name.replaceAll("&", "&amp;")
@@ -141,6 +170,7 @@ async function lobbyInit () {
   const lobbyNameText = document.querySelector("#lobby-name");
   const lobbyModeText = document.querySelector("#lobby-mode");
 
+  // Display the lobby name and mode
   let modeString;
   switch (lobby.listEntry.mode) {
     case "ffa": modeString = "Free For All"; break;
@@ -150,15 +180,19 @@ async function lobbyInit () {
   lobbyNameText.innerHTML = safeName;
   lobbyModeText.innerHTML = "&nbsp;- " + modeString;
 
+  // Update the player list and map display
   updatePlayerList();
   updateLobbyMap();
 
+  // Connect to the WebSocket
   if (lobbySocket) lobbySocket.close();
   lobbySocket = new WebSocket("wss://epochtal.p2r3.com:8080/ws/lobby_" + encodedName);
   lobbySocket.addEventListener("message", lobbyEventHandler);
 
+  // Handle the lobby rename button
   window.changeLobbyName = function () {
 
+    // Display a popup to change the lobby name
     showPopup("Change Name", `
       Enter a new lobby name<br>
       <input id="new-lobby-name" type="text" placeholder="Lobby name" spellcheck="false" style="margin-top:5px"></input>
@@ -170,6 +204,7 @@ async function lobbyInit () {
 
       const newName = encodeURIComponent(document.querySelector("#new-lobby-name").value.trim());
 
+      // Fetch the api to change the lobby name
       const request = await fetch(`/api/lobbies/rename/${encodedName}/${newName}`);
       if (request.status !== 200) {
         return showPopup("Unknown error", "The server returned an unexpected response. Error code: " + request.status, POPUP_ERROR);
@@ -197,8 +232,10 @@ async function lobbyInit () {
 
   }
 
+  // Handle the lobby change password button
   window.changeLobbyPassword = function () {
 
+    // Display a popup to change the lobby password
     showPopup("Change Password", `
       Enter a new lobby password<br>(leave blank for none)<br>
       <input id="new-lobby-password" type="password" placeholder="Password" spellcheck="false" style="margin-top:5px"></input>
@@ -210,6 +247,7 @@ async function lobbyInit () {
 
       const newPassword = encodeURIComponent(document.querySelector("#new-lobby-password").value.trim());
 
+      // Fetch the api to change the lobby password
       const request = await fetch(`/api/lobbies/password/${encodedName}/${newPassword}`);
       if (request.status !== 200) {
         return showPopup("Unknown error", "The server returned an unexpected response. Error code: " + request.status, POPUP_ERROR);
