@@ -5,26 +5,39 @@ const keys = require("../../keys.js");
 
 const STEAM_API = "https://api.steampowered.com";
 
+/**
+ * Fetches map data from the Steam Workshop API.
+ *
+ * @param {string} mapid The map ID to fetch
+ * @param {boolean} raw Whether to return the raw data
+ * @returns {object|string} The map data or an error string
+ */
 async function getData (mapid, raw) {
 
+  // Fetch the map details
   const detailsRequest = await fetch(`${STEAM_API}/IPublishedFileService/GetDetails/v1/?key=${keys.steam}&publishedfileids[0]=${mapid}&includeadditionalpreviews=true`);
   if (detailsRequest.status !== 200) return "ERR_STEAMAPI";
 
+  // Ensure the response is valid
   const detailsData = await detailsRequest.json();
   if (!("response" in detailsData && "publishedfiledetails" in detailsData.response)) return "ERR_STEAMAPI";
-  const details = detailsData.response.publishedfiledetails[0];
 
+  const details = detailsData.response.publishedfiledetails[0];
   if (details.result !== 1) return "ERR_MAPID";
 
+  // Return the raw data if requested
   if (raw) return details;
 
+  // Fetch the author details
   const authorRequest = await fetch(`${STEAM_API}/ISteamUser/GetPlayerSummaries/v2/?key=${keys.steam}&steamids=${details.creator}`);
   if (authorRequest.status !== 200) return "ERR_STEAMAPI";
 
+  // Ensure the response is valid
   const authorData = await authorRequest.json();
   if (!("response" in authorData && "players" in authorData.response)) return "ERR_STEAMAPI";
-  const author = authorData.response.players[0];
 
+  // Build the output object
+  const author = authorData.response.players[0];
   let screenshot = details.preview_url;
 
   if ("previews" in details) {
@@ -42,6 +55,12 @@ async function getData (mapid, raw) {
 
 }
 
+/**
+ * Curates the workshop for the past week.
+ *
+ * @param {Array} maps Maps array to append to
+ * @returns {Array} Curated maps array
+ */
 async function curateWorkshop (maps = []) {
 
   // Super long workshop API query requesting pretty much everything you can
@@ -53,12 +72,15 @@ async function curateWorkshop (maps = []) {
   const authorcache = {};
   let page = 1, lastDate = startDate;
 
+  // Ensure we're not going back more than a week
   while (startDate - lastDate < weekSeconds) {
 
+    // Fetch page of workshop data
     const request = await fetch(`${requestData}&page=${page}`);
     const response = (await (await fetch(`${requestData}&page=${page++}`)).json()).response;
     const results = response.publishedfiledetails;
 
+    // Curate each result
     for (const data of results) {
 
       if (startDate - data.time_created >= weekSeconds) break;
@@ -125,6 +147,17 @@ async function curateWorkshop (maps = []) {
 
 }
 
+/**
+ * Handles the `workshopper` utility call. This utility is used to interact and curate the Steam Workshop.
+ *
+ * The following subcommands are available:
+ * - `get`: Fetch map data from the Steam Workshop API
+ * - `curateweek`: Curate the workshop for the past week
+ *
+ * @param {string[]} args The arguments for the call
+ * @param {unknown} context The context on which to execute the call (defaults to epochtal)
+ * @returns {object|string} The output of the call
+ */
 module.exports = async function (args, context = epochtal) {
 
   const [command, mapid] = args;
@@ -133,9 +166,11 @@ module.exports = async function (args, context = epochtal) {
 
     case "get": {
 
+      // Ensure the mapid is valid
       if (!mapid) throw new UtilError("ERR_MAPID", args, context);
       const raw = args[2];
 
+      // Fetch the map data
       const output = await getData(mapid, raw);
       if (typeof output === "string") {
         throw new UtilError(output, args, context);
@@ -147,11 +182,13 @@ module.exports = async function (args, context = epochtal) {
 
     case "curateweek": {
 
+      // Ensure specified maps array is valid
       const maps = args[1];
       if (maps && !Array.isArray(maps)) {
         throw new UtilError("ERR_ARGS", args, context);
       }
 
+      // Curate the workshop for the past week
       return await curateWorkshop(maps);
 
     }
