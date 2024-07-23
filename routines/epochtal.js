@@ -109,7 +109,9 @@ async function releaseMap (context) {
 
   // Update profile logs for all users
   UtilPrint("epochtal(releaseMap): Rebuilding profile logs...");
-  await profilelog(["build", steamid], context);
+  for (const steamid in context.data.users) {
+    await profilelog(["build", steamid], context);
+  }
 
   // Load the curated workshop map set, pick 5 for voting
   const allmaps = await Bun.file(`${__dirname}/../maps.json`).json();
