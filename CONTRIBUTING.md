@@ -29,6 +29,9 @@ contribution:
 documented following the [JSDoc](https://jsdoc.app/) standard.
 - Function parameters and return values MUST be documented properly in their respective JSDoc blocks, if they exist.
 Value types SHOULD also be documented (types are to be put in `{}`-blocks, see examples [here](https://jsdoc.app/tags-param)).
+- Individual lines of text in JSDoc blocks SHOULD NOT exceed any reasonable length. This is to keep the documentation
+easy to read, even in narrower code editors. There is no strict character limit, but basing your documentation style off
+already existing documentation is recommended.
 - Function and API endpoint documentation MUST be written in past tense, whereas utility documentation MUST be written
 in present tense. This allows for easier discernment between the two.
 - If code is authored by someone other than p2r3, the `@author` tag MUST be specified in the relevant JSDoc block.
