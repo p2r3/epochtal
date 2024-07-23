@@ -32,9 +32,6 @@ async function concludeWeek (context) {
 
   // Switch from voting phase to bonus phase
   week.voting = false;
-  week.bonus = true;
-
-  // Lock each category
   for (let i = 0; i < week.categories.length; i ++) {
     week.categories[i].lock = true;
   }
