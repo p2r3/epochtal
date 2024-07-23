@@ -20,21 +20,32 @@ const curator = require("../util/curator.js");
 // Scheduled routines are designed to revert all changes upon failing or to fail invisibly
 // This causes messy try/catches, but is better than leaving the system in a half-broken state
 
+/**
+ * Routine to conclude a week of the Epochtal tournament
+ *
+ * @param {unknown} context The context on which to execute the call
+ * @returns {string} The result of the routine
+ */
 async function concludeWeek (context) {
 
   const week = context.data.week;
 
+  // Switch from voting phase to bonus phase
   week.voting = false;
   week.bonus = true;
 
+  // Lock each category
   for (let i = 0; i < week.categories.length; i ++) {
     week.categories[i].lock = true;
   }
 
+  // Award points to participants
   await points(["award"], context);
 
+  // Announce the routine on Discord
   await discord(["announce", "The leaderboard and map voting have been locked. Points have been updated."], context);
 
+  // Create a summary of all suspicious demo events
   const { summary, timescales } = await summarizeDemoEvents(context);
 
   let textSummary = "## [ Demo event summary ]\n";
@@ -49,10 +60,11 @@ async function concludeWeek (context) {
   }
   if (timescales.length === 0) textTimescales += "*All demos clean, nothing to report.*";
 
+  // Print report to console
   const finalReportText = `${textSummary}\n${textTimescales}`;
   UtilPrint("epochtal(concludeWeek):\n" + finalReportText);
 
-  // Send the demos as a tar archive
+  // Report the summary including the demo files on Discord
   const demoTarPath = (await tmppath()) + ".tar";
   await $`tar -cf ${demoTarPath} -C ${context.file.demos} .`.quiet();
 
@@ -62,6 +74,7 @@ async function concludeWeek (context) {
     fs.unlinkSync(demoTarPath);
   }
 
+  // Write the week data to the file
   await Bun.write(context.file.week, JSON.stringify(week));
 
   // Parse suggested maps (remove those which have been picked)
@@ -85,11 +98,19 @@ async function concludeWeek (context) {
 
 }
 
+/**
+ * Routine to release the new map for the Epochtal tournament
+ *
+ * @param {unknown} context The context on which to execute the call
+ * @returns {string} The result of the routine
+ */
 async function releaseMap (context) {
 
+  // Archive the current week
   UtilPrint("epochtal(releaseMap): Creating archive...");
   await archive(["create", null, true], context);
 
+  // Update profile logs for all users
   UtilPrint("epochtal(releaseMap): Rebuilding profile logs...");
   await profilelog(["build", steamid], context);
 
@@ -259,6 +280,7 @@ async function releaseMap (context) {
 
   }
 
+  // Prepare the new week configuration
   UtilPrint(`epochtal(releaseMap): Writing configuration for week ${context.data.week.number}...`);
 
   let weekString, leaderboardString;
@@ -292,11 +314,13 @@ async function releaseMap (context) {
 
   }
 
+  // Update the suggestions file
   try {
 
     const suggestionsFile = Bun.file(`${__dirname}/../suggestions.json`);
     const suggestions = await suggestionsFile.json();
 
+    // Remove the suggestions that were voted on
     for (const map of votingmaps) {
       const suggestion = suggestions.find(c => c.id === map.id);
       if (!suggestion) continue;
@@ -318,16 +342,24 @@ async function releaseMap (context) {
 
   }
 
+  // Write the new week configuration to the file
   await Bun.write(context.file.week, weekString);
   await Bun.write(context.file.leaderboard, leaderboardString);
   await Bun.write(context.file.log, "");
 
+  // Announce the new week on Discord
   await discord(["announce", announceText], context);
 
   return "SUCCESS";
 
 }
 
+/**
+ * Routine to rebuild the spplice package for the current week
+ *
+ * @param {unknown} context The context on which to execute the call
+ * @returns {string} The result of the routine
+ */
 async function rebuildMap (context) {
 
   let thumbnail = context.data.week.map.thumbnail;
@@ -360,6 +392,12 @@ async function rebuildMap (context) {
 
 }
 
+/**
+ * Routine to rebuild the spplice package for the voting maps
+ *
+ * @param {unknown} context The context on which to execute the call
+ * @returns {string} The result of the routine
+ */
 async function rebuildVotingMaps (context) {
 
   const { votingmaps, number } = context.data.week;
@@ -404,20 +442,31 @@ async function rebuildVotingMaps (context) {
 }
 
 const [VERDICT_SAFE, VERDICT_UNSURE, VERDICT_ILLEGAL] = [0, 1, 2];
+
+/**
+ * Routine to summarize all demo events.
+ *
+ * @param {unknown} context The context on which to execute the call
+ * @returns {object} The summary of demo events
+ */
 async function summarizeDemoEvents (context) {
 
+  // Iterate through each demo file
   const summary = {}, timescales = {};
   const files = fs.readdirSync(context.file.demos);
 
   for (let i = 0; i < files.length; i ++) {
 
+    // Ignore non-demo files
     if (!files[i].endsWith(".dem.xz")) continue;
 
     const category = files[i].split("_")[1].split(".")[0];
     const categoryData = await categories(["get", category]);
 
+    // Ignore non-scored categories, excluding the PPNF category
     if (!categoryData.points && category !== "ppnf") continue;
 
+    // Analyze the demo file
     const xzFile = `${context.file.demos}/${files[i]}`;
     await $`xz -dkf ${xzFile}`.quiet();
 
@@ -428,8 +477,10 @@ async function summarizeDemoEvents (context) {
 
     const fileNoExtension = files[i].slice(0, -7);
 
+    // Iterate through each event in the demo
     for (const event of mdp.demos[0].events) {
 
+      // Report timescale events
       if (event.type === "timescale") {
 
         if (!(fileNoExtension in timescales)) {
@@ -444,15 +495,19 @@ async function summarizeDemoEvents (context) {
 
       }
 
+      // Ignore non-command events
       if (event.type !== "cvar" && event.type !== "cmd") continue;
 
+      // Test if cvar is safe
       const cvar = event.type === "cvar" ? event.val.cvar : event.value.split(" ")[0];
       const value = event.type === "cvar" ? event.val.val : event.value.split(" ").slice(1).join(" ");
 
       const verdict = await testcvar([cvar, value], context);
 
+      // If cvar is not safe, add it to the summary
       if (verdict !== VERDICT_SAFE) {
 
+        // Skip the PPNF category for the sv_portal_placement_never_fail cvar
         if (cvar === "sv_portal_placement_never_fail" && files[i].endsWith("_ppnf.dem.xz")) {
           continue;
         }
@@ -471,6 +526,7 @@ async function summarizeDemoEvents (context) {
 
     }
 
+    // Calculate the average timescale for the demo
     if (fileNoExtension in timescales) {
       const unscaledTicks = mdp.demos[0].ticks - timescales[fileNoExtension].array.length;
       timescales[fileNoExtension].average += unscaledTicks;
@@ -479,6 +535,7 @@ async function summarizeDemoEvents (context) {
 
   }
 
+  // Sort the summary
   const sortedSummary = [];
   for (const cvar in summary) {
     summary[cvar].cvar = cvar;
@@ -489,6 +546,7 @@ async function summarizeDemoEvents (context) {
     return a.count - b.count;
   });
 
+  // Sort the timescales
   const sortedTimescales = [];
   for (const demo in timescales) {
     timescales[demo].demo = demo;
@@ -506,10 +564,17 @@ async function summarizeDemoEvents (context) {
 
 }
 
+/**
+ * Routine to rebuild all user profiles
+ *
+ * @param {unknown} context The context on which to execute the call
+ * @returns {string} The result of the routine
+ */
 async function rebuildProfiles (context) {
 
   const userList = await users(["list"], context);
 
+  // Rebuild all user profiles
   for (const steamid in userList) {
     await profiledata(["forceadd", steamid], context);
     await users(["apiupdate", steamid], context);
@@ -522,6 +587,7 @@ async function rebuildProfiles (context) {
 
 }
 
+// Export the routines
 module.exports = {
   releaseMap,
   rebuildMap,
