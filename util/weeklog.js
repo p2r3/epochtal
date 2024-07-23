@@ -9,9 +9,9 @@ const users = require("./users.js");
 /**
  * Parses a weeklog buffer into an array of objects
  *
- * @param {Array} buffer Buffer containing weeklog data
+ * @param {Uint8Array} buffer Buffer containing weeklog data
  * @param {string[]} categoryList  List of categories
- * @returns Array of objects representing weeklog entries
+ * @returns {object[]} Array of objects representing weeklog entries
  */
 function parseLog (buffer, categoryList) {
 
@@ -76,7 +76,7 @@ function parseLog (buffer, categoryList) {
  *
  * @param {object} entry Weeklog entry object
  * @param {string[]} categoryList List of categories
- * @returns {Uint8Array} buffer containing the encoded entry
+ * @returns {Uint8Array} Buffer containing the encoded entry
  */
 function encodeLogEntry (entry, categoryList) {
 
