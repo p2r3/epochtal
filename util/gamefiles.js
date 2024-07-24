@@ -4,7 +4,6 @@ const fs = require("node:fs");
 const crc = require("crc");
 const { $ } = require("bun");
 
-const keys = require("../../keys.js");
 const tmppath = require("./tmppath.js");
 const workshopper = require("./workshopper.js");
 const coopifier = require("./coopifier.js");
@@ -37,19 +36,8 @@ async function getChecksum (path) {
  */
 async function getSAR () {
 
-  // Request latest release from GitHub
-  const headers = {
-    "Accept": "application/vnd.github+json",
-    "Authorization": "Bearer " + keys.github,
-    "User-Agent": "p2r3",
-    "X-GitHub-Api-Version": "2022-11-28"
-  };
-
-  const request = await fetch("https://api.github.com/repos/p2sr/SourceAutoRecord/releases", { headers: headers });
-  if (request.status !== 200) throw "ERR_GITHUBAPI";
-
   // Parse returned assets for linux and windows
-  const latest = (await request.json())[0];
+  const latest = (await (await fetch("https://api.github.com/repos/p2sr/SourceAutoRecord/releases")).json())[0];
   const output = [];
 
   for (let i = 0; i < latest.assets.length; i ++) {
@@ -58,7 +46,7 @@ async function getSAR () {
     const asset = latest.assets[i];
     if (asset.name !== "sar.dll" && asset.name !== "sar.so") continue;
 
-    const request = await fetch(asset.browser_download_url, { headers: headers });
+    const request = await fetch(asset.browser_download_url);
     if (request.status !== 200) throw "ERR_GITHUBAPI";
 
     const currPath = await tmppath();
