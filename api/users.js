@@ -3,6 +3,7 @@ const jwt = require("jsonwebtoken");
 const keys = require(`${secretsdir}/keys.js`);
 const users = require("../util/users.js");
 const profiledata = require("../util/profiledata.js");
+const profilelog = require("../util/profilelog.js");
 
 /**
  * Decrypt the user token cookie from the request headers.
@@ -50,6 +51,7 @@ const serverUser = {
  * - `whoami`: Get the current user.
  * - `get`: Get all users.
  * - `profile`: Get a user's profile data.
+ * - `profilelog`: Get a user's profile log.
  *
  * @param {string[]} args The arguments for the api request
  * @param {HttpRequest} request The http request object
@@ -90,6 +92,14 @@ module.exports = async function (args, request) {
       // Get the profile data for the specified user
       const steamid = args[1];
       return await profiledata(["get", steamid]);
+
+    }
+
+    case "profilelog": {
+
+      // Get the profile log for the specified user
+      const steamid = args[1];
+      return Response.json(await profilelog(["read", steamid]));
 
     }
 
