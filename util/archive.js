@@ -30,7 +30,7 @@ async function getArchiveContext (name) {
   if (!isValidName(name)) return "ERR_NAME";
 
   // Get the full path of the archive
-  const path = `${datadir}/archives/${name}`;
+  const path = `${gconfig.datadir}/archives/${name}`;
   if (!fs.existsSync(path)) return "ERR_NAME";
 
   const context = { file: {}, data: {} };
@@ -103,7 +103,7 @@ module.exports = async function (args, context = epochtal) {
       };
 
       // List and sort archive names
-      const list = fs.readdirSync(`${datadir}/archives`);
+      const list = fs.readdirSync(`${gconfig.datadir}/archives`);
       list.sort(function (a, b) {
         return getWeekNumber(b) - getWeekNumber(a);
       });
@@ -151,7 +151,7 @@ module.exports = async function (args, context = epochtal) {
       if (name && !isValidName(name)) throw new UtilError("ERR_NAME", args, context);
 
       // Get the path of the archive to create
-      let archivePath = `${datadir}/archives/${name || ("week" + context.data.week.number)}`;
+      let archivePath = `${gconfig.datadir}/archives/${name || ("week" + context.data.week.number)}`;
 
       /**
        * Whether to force the archive creation. If this is `true` and the filesystem path of the archive

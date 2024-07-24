@@ -1,6 +1,6 @@
 const UtilError = require("./error.js");
 
-const keys = require(`${secretsdir}/keys.js`);
+const keys = require(`${gconfig.secretsdir}/keys.js`);
 
 /**
  * Handles the `discord` utility call. This utility is used to interact with the discord server.

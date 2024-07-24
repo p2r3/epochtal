@@ -1,14 +1,30 @@
-// Import dependencies for filesystem usage
 const fs = require("node:fs");
 const path = require("node:path");
 
-// Prepare the epochtal file structure
-global.datadir = `${__dirname}/data`;
-global.secretsdir = `${__dirname}/secrets`;
-global.bindir = `${__dirname}/bin`;
-global.domain = "localhost:8080";
-global.tls = true;
-if (!fs.existsSync(datadir)) fs.mkdirSync(datadir);
+// Ensure main config exists
+const gconfigpath = `${__dirname}/config.json`;
+if (!fs.existsSync(gconfigpath)) {
+  console.log("No global config file found. Deploying default config...");
+  await Bun.write(gconfigpath, JSON.stringify({
+    domain: "localhost:8080",
+    tls: false,
+    secretsdir: `${__dirname}/secrets`,
+    datadir: `${__dirname}/data`,
+    bindir: `${__dirname}/bin`
+  }));
+}
+
+// Load the global config
+var gconfig = await Bun.file(gconfigpath).json();
+global.isFirstLaunch = !fs.existsSync(`${gconfig.datadir}`);
+global.gconfig = gconfig;
+
+// Validate the global config
+const validation = require(`${__dirname}/validate.js`);
+if (!validation.validate()) {
+  console.log("Validation failed. Exiting...");
+  process.exit(1);
+}
 
 /**
  * The global `epochtal` object makes all context data for epochtal globally available. This is to skip
@@ -28,19 +44,21 @@ global.epochtal = { file: {}, data: {}, name: "epochtal" };
 
 // Load files into the global context
 epochtal.file = {
-  leaderboard: Bun.file(`${datadir}/week/leaderboard.json`),
-  users: Bun.file(`${datadir}/users.json`),
-  profiles: `${datadir}/profiles`,
-  week: Bun.file(`${datadir}/week/config.json`),
-  log: `${datadir}/week/week.log`,
-  mapvmf: `${datadir}/week/map.vmf.xz`,
+  leaderboard: Bun.file(`${gconfig.datadir}/week/leaderboard.json`),
+  users: Bun.file(`${gconfig.datadir}/users.json`),
+  profiles: `${gconfig.datadir}/profiles`,
+  week: Bun.file(`${gconfig.datadir}/week/config.json`),
+  log: `${gconfig.datadir}/week/week.log`,
+  mapvmf: `${gconfig.datadir}/week/map.vmf.xz`,
   portal2: `${__dirname}/defaults/portal2`,
-  demos: `${datadir}/week/proof`,
+  demos: `${gconfig.datadir}/week/proof`,
   spplice: {
-    repository: `${datadir}/spplice`,
-    index: Bun.file(`${datadir}/spplice/index.json`)
+    repository: `${gconfig.datadir}/spplice`,
+    index: Bun.file(`${gconfig.datadir}/spplice/index.json`)
   }
 };
+
+const keys = require(`${gconfig.secretsdir}/keys.js`);
 
 // Parse data from files and load it into the global context
 epochtal.data = {
@@ -49,12 +67,12 @@ epochtal.data = {
   profiles: {},
   week: await epochtal.file.week.json(),
   discord: {
-    announce: "1265412515550990356",
-    report: "1265412574497865738",
-    update: "1265412586384654468"
+    announce: keys.announcech,
+    report: keys.reportch,
+    update: keys.updatech
   },
   spplice: {
-    address: `${tls ? "https" : "http"}://${domain}`,
+    address: `${gconfig.tls ? "https" : "http"}://${gconfig.domain}`,
     index: await epochtal.file.spplice.index.json()
   },
   // Epochtal Live
@@ -64,7 +82,6 @@ epochtal.data = {
 
 // Import dependencies for Discord integration
 const Discord = require("discord.js");
-const keys = require(`${secretsdir}/keys.js`);
 
 /**
  * A globally available instance of the Discord client. Letting this be global makes it more easily accessible without
@@ -296,17 +313,17 @@ var servercfg = {
   }
 };
 
-if (tls) {
+if (gconfig.tls) {
   servercfg.tls = {
-    key: Bun.file(`${secretsdir}/privkey.pem`),
-    cert: Bun.file(`${secretsdir}/fullchain.pem`)
+    key: Bun.file(`${gconfig.secretsdir}/privkey.pem`),
+    cert: Bun.file(`${gconfig.secretsdir}/fullchain.pem`)
   };
 }
 
 const server = Bun.serve(servercfg);
 epochtal.data.events.server = server;
 
-console.log(`Listening on ${tls ? "https" : "http"}://localhost:${server.port}...`);
+console.log(`Listening on ${gconfig.tls ? "https" : "http"}://localhost:${server.port}...`);
 
 // Schedule routines
 utils.routine(["schedule", "epochtal", "concludeWeek", "0 0 15 * * 7"]);
@@ -315,3 +332,11 @@ utils.routine(["schedule", "epochtal", "releaseMap", "0 0 12 * * 1"]);
 // Register events
 utils.events(["create", "utilError", steamid => epochtal.data.users[steamid].admin]);
 utils.events(["create", "utilPrint", steamid => epochtal.data.users[steamid].admin]);
+
+// Prepare first launch
+if (isFirstLaunch) {
+  console.log(`> Looks like this is the first time you're running epochtal. We'll need to set up some things first.
+> First things first, head to the epochtal page and log in with steam. You will automatically be
+> made an admin and epochtal will run two routines to set up the first week. Do note, that this will
+> take quite a bit, as it will run the curation algorithm in its entirety!`);
+}

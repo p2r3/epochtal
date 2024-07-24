@@ -1,8 +1,9 @@
 const jwt = require("jsonwebtoken");
 const SteamAuth = require("../steamauth.js");
 
-const keys = require(`${secretsdir}/keys.js`);
+const keys = require(`${gconfig.secretsdir}/keys.js`);
 const users = require("../util/users.js");
+const validation = require("../validate.js");
 
 /**
  * Steam authentication instance.
@@ -12,8 +13,8 @@ const users = require("../util/users.js");
  * @type {SteamAuth}
  */
 const steam = new SteamAuth({
-  realm: `${tls ? "https" : "http"}://${domain}`, // Site name displayed to users on logon
-  returnUrl: `${tls ? "https" : "http"}://${domain}/api/auth/return`, // Return route after authentication
+  realm: `${gconfig.tls ? "https" : "http"}://${gconfig.domain}`, // Site name displayed to users on logon
+  returnUrl: `${gconfig.tls ? "https" : "http"}://${gconfig.domain}/api/auth/return`, // Return route after authentication
   apiKey: keys.steam // Steam API key
 });
 
@@ -44,6 +45,14 @@ module.exports = async function (args, request) {
       // Create or update the user in the epochtal database
       if (!user) {
         await users(["add", authuser.steamid, authuser.username, authuser.avatarmedium]);
+
+        // Setup the first user as an admin and run the first launch script
+        if (isFirstLaunch) {
+          await users(["edit", authuser.steamid, "admin", true]);
+          isFirstLaunch = false;
+          validation.setup();
+        }
+
       } else {
         await users(["authupdate", authuser.steamid, authuser]);
       }

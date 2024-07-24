@@ -15,7 +15,7 @@ module.exports = async function (args, request) {
   const [command, mapid] = args;
 
   // Fetch the list of suggestions
-  const file = Bun.file(`${datadir}/suggestions.json`);
+  const file = Bun.file(`${gconfig.datadir}/suggestions.json`);
   const maps = await file.json();
 
   // Get the active user and throw ERR_LOGIN if not logged in
