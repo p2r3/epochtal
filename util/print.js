@@ -17,7 +17,7 @@ module.exports = function UtilPrint (message, context = epochtal) {
   const str = `[${(new Date()).toUTCString()}]\n${message}\n`;
 
   console.log(str);
-  appendFileSync(`${datadir}/util.print`, str);
+  appendFileSync(`${gconfig.datadir}/util.print`, str);
   events(["send", "utilPrint", str]);
 
 };

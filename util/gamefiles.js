@@ -180,12 +180,12 @@ async function buildFiles (context) {
 
   // Write additional checksums to MDP whitelist
   const filesum = await Bun.file(`./defaults/filesum_whitelist.txt`).text();
-  await Bun.write(`${bindir}/mdp-json/filesum_whitelist.txt`, filesum + checksums);
+  await Bun.write(`${gconfig.bindir}/mdp-json/filesum_whitelist.txt`, filesum + checksums);
 
   // Write SAR checksums to MDP whitelist
   let sarsums = "";
   for (let i = 0; i < sar.length; i ++) sarsums += sar[i].crc32 + "\n";
-  await Bun.write(`${bindir}/mdp-json/sar_whitelist.txt`, sarsums);
+  await Bun.write(`${gconfig.bindir}/mdp-json/sar_whitelist.txt`, sarsums);
 
   // Prepare map(s) BSP for simulated co-op
   for (let i = 0; i < mapPaths.length; i ++) {
@@ -214,7 +214,7 @@ async function getVMF (path, compress = false) {
 
   // Decompile map
   const flags = "--no_cubemaps --no_areaportals --no_occluders --no_ladders --no_visgroups --no_cams";
-  await $`${bindir}/bspsrc/bspsrc.sh ${flags} ${path}.bsp`.quiet();
+  await $`${gconfig.bindir}/bspsrc/bspsrc.sh ${flags} ${path}.bsp`.quiet();
 
   // Compress decompiled VMF
   if (compress) {
