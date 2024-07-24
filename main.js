@@ -7,6 +7,7 @@ if (!fs.existsSync(gconfigpath)) {
   console.log("No global config file found. Deploying default config...");
   await Bun.write(gconfigpath, JSON.stringify({
     domain: "localhost:8080",
+    port: 8080,
     tls: false,
     secretsdir: `${__dirname}/secrets`,
     datadir: `${__dirname}/data`,
@@ -304,7 +305,7 @@ const fetchHandler = async function (req) {
 
 // Start a Bun web server with fetchHandler() as the function to handle requests
 var servercfg = {
-  port: 8080,
+  port: gconfig.port,
   fetch: fetchHandler,
   websocket: {
     open: await utils.events(["wshandler", "open"]),
