@@ -3,6 +3,7 @@ exec joystick.cfg
 // Load packaged sar and alias other plugin loads
 plugin_load epochtal_sar
 alias plugin_load
+alias sar_update
 
 // Enable fast load preset
 sar_fast_load_preset full
