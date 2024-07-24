@@ -1,12 +1,12 @@
 const UtilError = require("./error.js");
 
 const fs = require("node:fs");
-const { $ } = require("bun");
+const { $ } = require("bun"); // FIXME: Unused variable
 
-const keys = require("../../keys.js");
+const keys = require("../../keys.js"); // FIXME: Unused variable
 const archive = require("./archive.js");
 const weeklog = require("./weeklog.js");
-const points = require("./points.js");
+const points = require("./points.js"); // FIXME: Unused variable
 const profiledata = require("./profiledata.js");
 
 /**

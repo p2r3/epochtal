@@ -9,7 +9,7 @@
  */
 module.exports = async function (args, request) {
 
-  const [command, category] = args;
+  const [command, category] = args; // FIXME: Unused variable category
 
   const week = epochtal.data.week;
 

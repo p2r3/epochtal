@@ -1,9 +1,9 @@
 const UtilError = require("./error.js");
 const UtilPrint = require("./print.js");
 
-const fs = require("node:fs");
+const fs = require("node:fs"); // FIXME: Unused variable
 const keys = require("../../keys.js");
-const avatar = require("./avatar.js");
+const avatar = require("./avatar.js"); // FIXME: Unused variable
 const profiledata = require("./profiledata.js");
 
 /**
@@ -31,7 +31,7 @@ module.exports = async function (args, context = epochtal) {
 
   const file = context.file.users;
   const users = context.data.users;
-  const profiles = context.file.profiles;
+  const profiles = context.file.profiles; // FIXME: Unused variable
 
   switch (command) {
 

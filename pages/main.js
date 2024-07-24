@@ -166,7 +166,7 @@ var homepageInit = async function () {
     }
 
     let output = "", placement = 1;
-    const suffixes = ["st", "nd", "rd"];
+    const suffixes = ["st", "nd", "rd"]; // FIXME: Unused variable
 
     // Place each run in the leaderboard
     for (let i = 0; i < leaderboardData.length; i ++) {

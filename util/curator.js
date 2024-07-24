@@ -372,7 +372,7 @@ module.exports = async function (args, context = epochtal) {
 
       // Additional points for Portal 2 and Authoring Tools playtime
       // This tends to get rate-limited, so we try a maximum of 10 times with a linearly increasing delay
-      let gamesList, failedTries = 0;
+      let gamesList, failedTries = 0; // FIXME: Unused variable failedTries
       for (let tries = 0; tries <= 10; tries ++) {
 
         const response = await fetch(`${STEAM_API}/IPlayerService/GetOwnedGames/v1/?key=${keys.steam}&steamid=${data.creator}`);
@@ -451,7 +451,7 @@ module.exports = async function (args, context = epochtal) {
 
       for (const ent in density) {
 
-        let currScore = 0;
+        let currScore = 0; // FIXME: Unused variable currScore
 
         if (!(ent in graphs)) continue;
         const { scores, bounds } = graphs[ent];

@@ -3,7 +3,7 @@ const UtilError = require("./error.js");
 const { $ } = require("bun");
 const fs = require("node:fs");
 const tmppath = require("./tmppath.js");
-const discord = require("./discord.js");
+const discord = require("./discord.js"); // FIXME: Unused variable
 const testcvar = require("./testcvar.js");
 
 /**
@@ -207,7 +207,7 @@ module.exports = async function (args, context = epochtal) {
       }
 
       let ppnf = false, sv_cheats = false;
-      let timescale = [], timescaleTotal = 0;
+      let timescale = [], timescaleTotal = 0; // FIXME: Unused variables
 
       for (const event of mdp.demos[0].events) {
 

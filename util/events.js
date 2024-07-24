@@ -111,7 +111,7 @@ module.exports = async function (args, context = epochtal) {
           // - PancakeTAS
 
           // Grab event of websocket
-          const name = ws.data.event;
+          const name = ws.data.event; // FIXME: Unused variable
           const event = context.data.events[ws.data.event];
           if (!event) return;
 
@@ -128,7 +128,7 @@ module.exports = async function (args, context = epochtal) {
         case "message": return function (ws, message) {
 
           // Grab event of websocket
-          const name = ws.data.event;
+          const name = ws.data.event; // FIXME: Unused variable
           const event = context.data.events[ws.data.event];
           if (!event) return;
 

@@ -75,7 +75,7 @@ async function updateLobbyMap () {
 
 }
 
-var eventHandlerConnected = false;
+var eventHandlerConnected = false; // FIXME: Unused variable
 
 /**
  * Handle incoming WebSocket events

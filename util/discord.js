@@ -1,6 +1,6 @@
 const UtilError = require("./error.js");
 
-const keys = require("../../keys.js");
+const keys = require("../../keys.js"); // FIXME: Unused variable
 
 /**
  * Handles the `discord` utility call. This utility is used to interact with the discord server.

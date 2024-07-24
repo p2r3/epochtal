@@ -1,5 +1,5 @@
 const UtilError = require("./error.js");
-const UtilPrint = require("./print.js");
+const UtilPrint = require("./print.js"); // FIXME: Unused variable
 
 /**
  * Handles the `profiledata` utility call. This is used to get or modify a user's profile data.

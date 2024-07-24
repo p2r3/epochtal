@@ -13,8 +13,8 @@ class SteamAuth {
       );
 
     // These two attributes seem to never be used. Should they be removed?
-    this.realm = realm;
-    this.returnUrl = returnUrl;
+    this.realm = realm; // FIXME: Unused variable
+    this.returnUrl = returnUrl; // FIXME: Unused variable
 
     this.apiKey = apiKey;
     this.relyingParty = new openid.RelyingParty(

@@ -1,12 +1,12 @@
 const UtilError = require("./error.js");
-const UtilPrint = require("./print.js");
+const UtilPrint = require("./print.js"); // FIXME: Unused variable
 
-const fs = require("node:fs");
+const fs = require("node:fs"); // FIXME: Unused variable
 
 const leaderboard = require("./leaderboard.js");
 const categories = require("./categories.js");
 const archive = require("./archive.js");
-const profilelog = require("./profilelog.js");
+const profilelog = require("./profilelog.js"); // FIXME: Unused variable
 const profiledata = require("./profiledata.js");
 
 const [ WIN, LOSS, DRAW ] = [1, -1, 0];
@@ -148,7 +148,7 @@ async function pointsFromSteamID (steamid, context = epochtal) {
  */
 async function calculatePointsDelta (context = epochtal) {
 
-  const users = context.data.users;
+  const users = context.data.users; // FIXME: Unused variable
   const boards = await leaderboard(["list"], context);
   const catlist = await categories(["list"], context);
   const partners = context.data.week.partners;

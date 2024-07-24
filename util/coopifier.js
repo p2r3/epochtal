@@ -1,5 +1,5 @@
 const UtilError = require("./error.js");
-const fs = require("fs");
+const fs = require("fs"); // FIXME: Unused variable
 
 // The strings below are encoded into Uint8Arrays
 const encoder = new TextEncoder();
