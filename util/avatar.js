@@ -1,6 +1,6 @@
 const UtilError = require("./error.js");
 
-const keys = require("../../keys.js");
+const keys = require(`${secretsdir}/keys.js`);
 const profiledata = require("./profiledata.js");
 
 /**

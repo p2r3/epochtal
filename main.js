@@ -1,3 +1,14 @@
+// Import dependencies for filesystem usage
+const fs = require("node:fs");
+const path = require("node:path");
+
+// Prepare the epochtal file structure
+global.datadir = `${__dirname}/data`;
+global.secretsdir = `${__dirname}/secrets`;
+global.bindir = `${__dirname}/bin`;
+global.domain = "localhost:8080";
+if (!fs.existsSync(datadir)) fs.mkdirSync(datadir);
+
 /**
  * The global `epochtal` object makes all context data for epochtal globally available. This is to skip
  * waiting for file I/O everywhere else later on.
@@ -16,16 +27,17 @@ global.epochtal = { file: {}, data: {}, name: "epochtal" };
 
 // Load files into the global context
 epochtal.file = {
-  leaderboard: Bun.file(`${__dirname}/pages/leaderboard.json`),
-  users: Bun.file(`${__dirname}/pages/users.json`),
-  profiles: `${__dirname}/pages/profiles`,
-  week: Bun.file(`${__dirname}/week.json`),
-  log: `${__dirname}/pages/week.log`,
+  leaderboard: Bun.file(`${datadir}/week/leaderboard.json`),
+  users: Bun.file(`${datadir}/users.json`),
+  profiles: `${datadir}/profiles`,
+  week: Bun.file(`${datadir}/week/config.json`),
+  log: `${datadir}/week/week.log`,
+  mapvmf: `${datadir}/week/map.vmf.xz`,
   portal2: `${__dirname}/defaults/portal2`,
-  demos: `${__dirname}/demos`,
+  demos: `${datadir}/week/proof`,
   spplice: {
-    repository: `${__dirname}/pages/spplice`,
-    index: Bun.file(`${__dirname}/pages/spplice/index.json`)
+    repository: `${datadir}/spplice`,
+    index: Bun.file(`${datadir}/spplice/index.json`)
   }
 };
 
@@ -36,12 +48,12 @@ epochtal.data = {
   profiles: {},
   week: await epochtal.file.week.json(),
   discord: {
-    announce: "1262178097684418593",
-    report: "1260606647450079283",
-    update: "1260597527133163610"
+    announce: "1265412515550990356",
+    report: "1265412574497865738",
+    update: "1265412586384654468"
   },
   spplice: {
-    address: "https://epochtal.p2r3.com/spplice",
+    address: `https://${domain}/spplice`,
     index: await epochtal.file.spplice.index.json()
   },
   // Epochtal Live
@@ -51,7 +63,7 @@ epochtal.data = {
 
 // Import dependencies for Discord integration
 const Discord = require("discord.js");
-const keys = require("../keys.js");
+const keys = require(`${secretsdir}/keys.js`);
 
 /**
  * A globally available instance of the Discord client. Letting this be global makes it more easily accessible without
@@ -69,10 +81,6 @@ discordClient.login(keys.discord);
 discordClient.once("ready", function () {
   discordClient.user.setActivity("Portal 2", { type: 5 });
 });
-
-// Import dependencies for filesystem usage
-const fs = require("node:fs");
-const path = require("node:path");
 
 const utilsdir = fs.readdirSync("./util");
 
@@ -279,13 +287,13 @@ const server = Bun.serve({
     close: await utils.events(["wshandler", "close"])
   },
   tls: {
-    key: Bun.file("/etc/letsencrypt/live/p2r3.com/privkey.pem"),
-    cert: Bun.file("/etc/letsencrypt/live/p2r3.com/fullchain.pem")
+    key: Bun.file(`${secretsdir}/privkey.pem`),
+    cert: Bun.file(`${secretsdir}/fullchain.pem`)
   }
 });
 epochtal.data.events.server = server;
 
-console.log(`Listening on http://localhost:${server.port}...`);
+console.log(`Listening on https://localhost:${server.port}...`);
 
 // Schedule routines
 utils.routine(["schedule", "epochtal", "concludeWeek", "0 0 15 * * 7"]);

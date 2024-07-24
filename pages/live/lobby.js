@@ -186,6 +186,7 @@ async function lobbyInit () {
 
   // Connect to the WebSocket
   if (lobbySocket) lobbySocket.close();
+  // FIXME: grab domain from window.location
   lobbySocket = new WebSocket("wss://epochtal.p2r3.com:8080/ws/lobby_" + encodedName);
   lobbySocket.addEventListener("message", lobbyEventHandler);
 

@@ -15,7 +15,7 @@ const testcvar = require("./testcvar.js");
  */
 function extendFilePath (file) {
   if (!fs.existsSync(file)) {
-    return `${__dirname}/../demos/${file}`;
+    return `${datadir}/proof/${file}`;
   }
   return file;
 }
@@ -49,7 +49,7 @@ async function parseDump (file) {
   const outputPath = await tmppath();
   fs.mkdirSync(outputPath);
 
-  await $`${`${__dirname}/../bin/UntitledParser`} -o ${outputPath} -D ${file}`.quiet();
+  await $`${`${bindir}/UntitledParser`} -o ${outputPath} -D ${file}`.quiet();
   const outputFile = (fs.readdirSync(outputPath))[0];
   const dump = await Bun.file(`${outputPath}/${outputFile}`).text();
 
@@ -97,7 +97,7 @@ async function parseMDP (file) {
   if (file.endsWith(".dem.xz")) file = await decompressXZ(file);
 
   // Parse the demo into json
-  const text = (await $`cd ${`${__dirname}/../bin/mdp-json`} && ./mdp ${file}`.text()).replaceAll("\\", "\\\\");
+  const text = (await $`cd ${`${bindir}/mdp-json`} && ./mdp ${file}`.text()).replaceAll("\\", "\\\\");
   const output = JSON.parse(text);
   if (originalFile !== file) fs.unlinkSync(file);
 

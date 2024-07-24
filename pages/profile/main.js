@@ -109,6 +109,7 @@ var profilePageInit = async function () {
   async function fetchProfileLog () {
 
     // Fetch the actual profile log
+    // FIXME: API
     const request = await fetch(`/profiles/${profileSteamID}/profile.log`);
     if (request.status === 200) {
       const buffer = new Uint8Array(await request.arrayBuffer());

@@ -3,7 +3,7 @@ const UtilError = require("./error.js");
 const fs = require("node:fs");
 const { $ } = require("bun");
 
-const keys = require("../../keys.js");
+const keys = require(`${secretsdir}/keys.js`);
 const archive = require("./archive.js");
 const weeklog = require("./weeklog.js");
 const points = require("./points.js");
