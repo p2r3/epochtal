@@ -221,7 +221,8 @@
 
       });
 
-      const utilPrintSocket = new WebSocket(`wss://${window.location.host}/ws/utilPrint`);
+      const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+      const utilPrintSocket = new WebSocket(`${protocol}://${window.location.host}/ws/utilPrint`);
 
       utilPrintSocket.addEventListener("message", function (event) {
 

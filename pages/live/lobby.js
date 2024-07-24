@@ -186,7 +186,8 @@ async function lobbyInit () {
 
   // Connect to the WebSocket
   if (lobbySocket) lobbySocket.close();
-  lobbySocket = new WebSocket(`wss://${window.location.host}/ws/lobby_${encodedName}`);
+  const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+  lobbySocket = new WebSocket(`${protocol}://${window.location.host}/ws/lobby_${encodedName}`);
   lobbySocket.addEventListener("message", lobbyEventHandler);
 
   // Handle the lobby rename button
