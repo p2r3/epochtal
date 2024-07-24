@@ -260,7 +260,7 @@ var homepageInit = async function () {
       return;
     }
     removeRunConfirm = null;
-
+    hideTooltip();
     try {
 
       // Fetch api to remove run
