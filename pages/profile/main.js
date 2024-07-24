@@ -108,10 +108,11 @@ var profilePageInit = async function () {
    */
   async function fetchProfileLog () {
 
-    // Fetch the decoded profile log
+    // Fetch the actual profile log
     const request = await fetch(`/api/users/profilelog/"${profileSteamID}"`);
     if (request.status === 200) {
-      profileLog = await request.json();
+      const buffer = new Uint8Array(await request.arrayBuffer());
+      profileLog = decodeLog(buffer, profileUserData.categories);
     } else if (request.status === 404) {
       profileLog = [];
     } else {

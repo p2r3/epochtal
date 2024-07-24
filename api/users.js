@@ -1,4 +1,5 @@
 const jwt = require("jsonwebtoken");
+const fs = require("node:fs");
 
 const keys = require(`${gconfig.secretsdir}/keys.js`);
 const users = require("../util/users.js");
@@ -99,7 +100,10 @@ module.exports = async function (args, request) {
 
       // Get the profile log for the specified user
       const steamid = args[1];
-      return Response.json(await profilelog(["read", steamid]));
+      const logPath = `${epochtal.file.profiles}/${steamid}/profile.log`;
+      if (!fs.existsSync(logPath)) return "ERR_NOTFOUND";
+
+      return Response(Bun.file(logPath));
 
     }
 
