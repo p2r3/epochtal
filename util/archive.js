@@ -184,7 +184,7 @@ module.exports = async function (args, context = epochtal) {
       await Bun.write(`${archivePath}/leaderboard.json`, context.file.leaderboard);
       await Bun.write(`${archivePath}/config.json`, context.file.week);
       await Bun.write(`${archivePath}/week.log`, Bun.file(context.file.log));
-      await Bun.write(`${archivePath}/map.vmf.xz`, context.file.mapvmf);
+      await Bun.write(`${archivePath}/map.vmf.xz`, Bun.file(context.file.mapvmf));
 
       const mapmodPath = `${context.file.portal2}/scripts/vscripts/epochtalmapmod.nut`;
       if (fs.existsSync(mapmodPath)) {
