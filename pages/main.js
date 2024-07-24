@@ -866,6 +866,7 @@ const homepageInitAttemptsMax = 5;
 var tryHomepageInit = async function () {
   try {
     await homepageInit();
+    scrollAnimation();
   } catch (e) {
 
     console.log("Caught error during homepage initialization:");
@@ -882,3 +883,41 @@ var tryHomepageInit = async function () {
   }
 }
 tryHomepageInit();
+
+/**
+ * Handles the scroll animations
+ */
+function scrollAnimation() {
+  // Select all elements you want to check for visibility
+  const elements = document.querySelectorAll('.section *');
+  elements.forEach(element => {
+    if (element.classList.contains('nofade')) return;
+
+    // Calculate the visibility percentage of each element
+    const visibilityPercentage = inViewportPercent(element, 0, 100, 150, 30);
+
+    // Adjust the element's visibility based on its visibility percentage
+    percent = visibilityPercentage/100;
+    element.style.opacity = percent;
+
+    // Extract the current transform value, excluding any scale transformation
+    const currentTransform = window.getComputedStyle(element).transform
+    if (!currentTransform) return;
+
+    const scaleMod = 0.98;
+    const scaleModifier = (pc) => pc * (1-scaleMod) + scaleMod;
+
+    if (currentTransform.startsWith('matrix(')) {
+      let matrixValues = currentTransform.slice(7, -1).split(', ').map(Number);
+      matrixValues[0] = scaleModifier(percent); // scaleX
+      matrixValues[3] = scaleModifier(percent); // scaleY
+      element.style.transform = `matrix(${matrixValues.join(', ')})`;
+    }
+    else {
+      // If there is no scale transformation, apply a new one
+      element.style.transform = `scale(${scaleModifier(percent)})`;
+    }
+  });
+}
+
+document.querySelector("#page-content").onscroll = scrollAnimation;
