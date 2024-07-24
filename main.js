@@ -53,7 +53,7 @@ epochtal.data = {
     update: "1265412586384654468"
   },
   spplice: {
-    address: `https://${domain}/spplice`,
+    address: `https://${domain}`,
     index: await epochtal.file.spplice.index.json()
   },
   // Epochtal Live
@@ -138,8 +138,15 @@ const fetchHandler = async function (req) {
   const urlPath = url.pathname.split("/").slice(1);
   const userAgent = req.headers.get("User-Agent");
 
-  if (userAgent && userAgent.includes("spplice/2") && !urlPath[0]) {
-    return Response.json(await utils.spplice(["get"]));
+  // Handle Spplice calls
+  if (!userAgent || userAgent.includes("spplice/2")) {
+
+    const path = `${epochtal.file.spplice.repository}/${urlPath[0]}`;
+    if (!fs.existsSync(path) || !urlPath[0])
+      return Response.json(await utils.spplice(["get"]));
+
+    return Response(Bun.file(path));
+
   }
 
   // Handle WebSocket connections
