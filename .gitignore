@@ -175,35 +175,13 @@ dist
 .DS_Store
 
 # Epochtal databases
-pages/leaderboard.json
-pages/users.json
-pages/week.log
-pages/spplice
-pages/archive/*
-pages/profiles/*
-week.json
-lobbies.json
-
+data/
+secrets/
+bin/
 .tmp
-
-demos/*
-vmfs/*
-
-# Spplice packages
-pages/epochtal-voting.sppkg
-pages/epochtal.tar.xz
 
 # Bun lockfile
 bun.lockb
 
 # External software
 bin
-
-# State secrets (shhh)
-maps.json
-entgraphs.json
-suggestions.json
-
-# Utility logs
-util.error
-util.print

@@ -36,7 +36,7 @@ module.exports = class UtilError extends Error {
 
     // Log the error to the console, a file and publish it to the user
     console.error(str);
-    appendFileSync(__dirname + "/../util.error", str);
+    appendFileSync(`${datadir}/util.error`, str);
     epochtal.data.events.server.publish("utilError", JSON.stringify(str));
 
   }

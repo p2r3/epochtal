@@ -30,7 +30,7 @@ async function getArchiveContext (name) {
   if (!isValidName(name)) return "ERR_NAME";
 
   // Get the full path of the archive
-  const path = `${__dirname}/../pages/archive/${name}`;
+  const path = `${datadir}/archives/${name}`;
   if (!fs.existsSync(path)) return "ERR_NAME";
 
   const context = { file: {}, data: {} };
@@ -40,9 +40,10 @@ async function getArchiveContext (name) {
     leaderboard: Bun.file(`${path}/leaderboard.json`),
     users: epochtal.file.users,
     profiles: epochtal.file.profiles,
-    week: Bun.file(`${path}/week.json`),
+    week: Bun.file(`${path}/config.json`),
     log: `${path}/week.log`,
-    demos: `${path}/demos`
+    mapvmf: `${path}/map.vmf.xz`,
+    demos: `${path}/proof`
   };
 
   // Parse file data into the context data
@@ -102,7 +103,7 @@ module.exports = async function (args, context = epochtal) {
       };
 
       // List and sort archive names
-      const list = fs.readdirSync(`${__dirname}/../pages/archive`);
+      const list = fs.readdirSync(`${datadir}/archives`);
       list.sort(function (a, b) {
         return getWeekNumber(b) - getWeekNumber(a);
       });
@@ -150,7 +151,7 @@ module.exports = async function (args, context = epochtal) {
       if (name && !isValidName(name)) throw new UtilError("ERR_NAME", args, context);
 
       // Get the path of the archive to create
-      let archivePath = `${__dirname}/../pages/archive/${name || ("week" + context.data.week.number)}`;
+      let archivePath = `${datadir}/archives/${name || ("week" + context.data.week.number)}`;
 
       /**
        * Whether to force the archive creation. If this is `true` and the filesystem path of the archive
@@ -181,20 +182,21 @@ module.exports = async function (args, context = epochtal) {
       // Copy context files to the archive
       fs.mkdirSync(archivePath);
       await Bun.write(`${archivePath}/leaderboard.json`, context.file.leaderboard);
-      await Bun.write(`${archivePath}/week.json`, context.file.week);
+      await Bun.write(`${archivePath}/config.json`, context.file.week);
       await Bun.write(`${archivePath}/week.log`, Bun.file(context.file.log));
+      await Bun.write(`${archivePath}/map.vmf.xz`, context.file.mapvmf);
 
       const mapmodPath = `${context.file.portal2}/scripts/vscripts/epochtalmapmod.nut`;
       if (fs.existsSync(mapmodPath)) {
         await Bun.write(`${archivePath}/epochtalmapmod.nut`, Bun.file(mapmodPath));
       }
 
-      fs.mkdirSync(`${archivePath}/demos`);
+      fs.mkdirSync(`${archivePath}/proof`);
 
       // Move context demo files to archive
       const files = fs.readdirSync(context.file.demos);
       for (let i = 0; i < files.length; i ++) {
-        fs.renameSync(`${context.file.demos}/${files[i]}`, `${archivePath}/demos/${files[i]}`);
+        fs.renameSync(`${context.file.demos}/${files[i]}`, `${archivePath}/proof/${files[i]}`);
       }
 
       return "SUCCESS";

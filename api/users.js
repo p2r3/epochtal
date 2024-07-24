@@ -1,6 +1,6 @@
 const jwt = require("jsonwebtoken");
 
-const keys = require("../../keys.js");
+const keys = require(`${secretsdir}/keys.js`);
 const users = require("../util/users.js");
 const profiledata = require("../util/profiledata.js");
 

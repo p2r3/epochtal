@@ -1,7 +1,7 @@
 const jwt = require("jsonwebtoken");
 const SteamAuth = require("../steamauth.js");
 
-const keys = require("../../keys.js");
+const keys = require(`${secretsdir}/keys.js`);
 const users = require("../util/users.js");
 
 /**
@@ -12,8 +12,8 @@ const users = require("../util/users.js");
  * @type {SteamAuth}
  */
 const steam = new SteamAuth({
-  realm: "https://epochtal.p2r3.com", // Site name displayed to users on logon
-  returnUrl: "https://epochtal.p2r3.com/api/auth/return", // Return route after authentication
+  realm: `https://${domain}`, // Site name displayed to users on logon
+  returnUrl: `https://${domain}/api/auth/return`, // Return route after authentication
   apiKey: keys.steam // Steam API key
 });
 

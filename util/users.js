@@ -2,7 +2,7 @@ const UtilError = require("./error.js");
 const UtilPrint = require("./print.js");
 
 const fs = require("node:fs");
-const keys = require("../../keys.js");
+const keys = require(`${secretsdir}/keys.js`);
 const avatar = require("./avatar.js");
 const profiledata = require("./profiledata.js");
 

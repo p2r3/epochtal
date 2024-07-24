@@ -75,7 +75,7 @@ async function concludeWeek (context) {
   await Bun.write(context.file.week, JSON.stringify(week));
 
   // Parse suggested maps (remove those which have been picked)
-  const suggestions = await Bun.file(`${__dirname}/../suggestions.json`).json();
+  const suggestions = await Bun.file(`${datadir}/suggestions.json`).json();
   for (let i = 0; i < suggestions.length; i ++) {
     if (!("v1" in suggestions[i] && "v2" in suggestions[i])) {
       suggestions.splice(i, 1);
@@ -89,7 +89,7 @@ async function concludeWeek (context) {
 
   UtilPrint("epochtal(concludeWeek): Curating workshop maps...");
   const allmaps = await workshopper(["curateweek", suggestions], context);
-  await Bun.write(`${__dirname}/../maps.json`, JSON.stringify(allmaps));
+  await Bun.write(`${datadir}/maps.json`, JSON.stringify(allmaps));
 
   return "SUCCESS";
 
@@ -114,7 +114,7 @@ async function releaseMap (context) {
   }
 
   // Load the curated workshop map set, pick 5 for voting
-  const allmaps = await Bun.file(`${__dirname}/../maps.json`).json();
+  const allmaps = await Bun.file(`${datadir}/maps.json`).json();
   const VOTING_MAPS_COUNT = 5;
 
   UtilPrint("epochtal(releaseMap): Building voting map list...");
@@ -263,7 +263,7 @@ async function releaseMap (context) {
       fs.rmSync(portal2.output, { recursive: true });
     }
 
-    fs.renameSync(vmf, `${__dirname}/../vmfs/${context.data.week.map.id}.vmf.xz`);
+    fs.renameSync(vmf, context.file.mapvmf);
 
     context.data.week.map.file = portal2.map[0];
 
@@ -316,7 +316,7 @@ async function releaseMap (context) {
   // Update the suggestions file
   try {
 
-    const suggestionsFile = Bun.file(`${__dirname}/../suggestions.json`);
+    const suggestionsFile = Bun.file(`${datadir}/suggestions.json`);
     const suggestions = await suggestionsFile.json();
 
     // Remove the suggestions that were voted on

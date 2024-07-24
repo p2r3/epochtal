@@ -221,6 +221,7 @@
 
       });
 
+      // FIXME: grab domain from window.location
       const utilPrintSocket = new WebSocket("wss://epochtal.p2r3.com:8080/ws/utilPrint");
 
       utilPrintSocket.addEventListener("message", function (event) {
