@@ -235,3 +235,28 @@ if (tooltip) {
   });
 
 }
+
+/**
+ * Calculates the visibility percentage of an element within the viewport, considering specified offsets and margins.
+ * 
+ * @param {HTMLElement} element The element to check for visibility.
+ * @param {number} offsetbottom The offset to apply to the bottom of the viewport, effectively raising the bottom edge.
+ * @param {number} marginbottom The bottom margin to consider for visibility calculation, applied after offset adjustments.
+ * @param {number} margintop The top margin to consider for visibility calculation, applied after offset adjustments.
+ * @param {number} offsettop The offset to apply to the top of the viewport, effectively lowering the top edge.
+ * @returns {number} The visibility percentage of the element, constrained between 0 and 100.
+ */
+function inViewportPercent(element, offsetbottom = 0, marginbottom = 0, margintop = 0, offsettop = 0) {
+  const rect = element.getBoundingClientRect();
+  // Adjust window height by offsettop and offsetbottom
+  const windowHeight = (window.innerHeight || document.documentElement.clientHeight);
+
+  let top = windowHeight - rect.top;
+  let bottom = rect.bottom;
+
+  let topPercent = ((bottom - offsettop) * 100) / (margintop - offsettop);
+  let bottomPercent = ((top - offsetbottom) * 100) / (marginbottom - offsetbottom);
+  topPercent = Math.min(100, Math.max(0, topPercent));
+  bottomPercent = Math.min(100, Math.max(0, bottomPercent));
+  return Math.min(topPercent, bottomPercent);
+}
