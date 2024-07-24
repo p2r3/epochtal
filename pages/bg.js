@@ -106,8 +106,8 @@ function init () {
   }
 }
 
+const fpsCap = 30
 function animate () {
-
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   dots.forEach((dot) => {
@@ -115,9 +115,9 @@ function animate () {
     dot.update();
     dot.connect(dots.filter((otherDot) => dot !== otherDot));
   });
-
-  requestAnimationFrame(animate);
-
+  
+  setTimeout(() => requestAnimationFrame(animate), 1000/fpsCap)
+  
 }
 
 init();
