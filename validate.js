@@ -116,7 +116,6 @@ function validate() {
   ensureDir(`${gconfig.datadir}/week`);
   ensureDir(`${gconfig.datadir}/week/proof`);
 
-
   ensureFile(`${gconfig.datadir}/users.json`, "{}"); // TODO: make first user admin
   ensureFile(`${gconfig.datadir}/entgraphs.json`, "{}");
   ensureFile(`${gconfig.datadir}/suggestions.json`, "[]");
@@ -137,10 +136,19 @@ function validate() {
 async function setup() {
 
   const routines = require('./util/routine.js');
+  const categories = require('./util/categories.js');
 
   // Get epochtal up and running
   await routines(["run", "epochtal", "concludeWeek"]);
   await routines(["run", "epochtal", "releaseMap"]);
+
+  // Create traditional categories
+  await categories(["add", "main", "Inbounds CM", false, false, false, "demo", true]);
+  await categories(["add", "lp", "Least Portals", true, false, false, "any", true]);
+  await categories(["add", "ppnf", "Portal Placement Never Fail", false, false, false, "demo", false]);
+  await categories(["add", "tas", "Tool Assisted Speedrun", false, false, false, "any", false]);
+  await categories(["add", "meme", "Meme", false, false, false, "any", false]);
+  await categories(["add", "coop", "Co-op Mode", false, true, false, "demo", true]);
 
   // Delete first archive
   fs.rmSync(`${gconfig.datadir}/archives/week0`, { recursive: true, force: true });
