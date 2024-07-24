@@ -21,8 +21,8 @@ global.isFirstLaunch = !fs.existsSync(`${gconfig.datadir}`);
 global.gconfig = gconfig;
 
 // Validate the global config
-const validation = require(`${__dirname}/validate.js`);
-if (!validation.validate()) {
+const validate = require(`${__dirname}/validate.js`);
+if (!await validate.validate()) {
   console.log("Validation failed. Exiting...");
   process.exit(1);
 }
@@ -50,7 +50,7 @@ epochtal.file = {
   profiles: `${gconfig.datadir}/profiles`,
   week: Bun.file(`${gconfig.datadir}/week/config.json`),
   log: `${gconfig.datadir}/week/week.log`,
-  mapvmf: `${gconfig.datadir}/week/map.vmf.xz`,
+  vmfs: `${gconfig.datadir}/week/maps`,
   portal2: `${__dirname}/defaults/portal2`,
   demos: `${gconfig.datadir}/week/proof`,
   spplice: {
@@ -161,8 +161,9 @@ const fetchHandler = async function (req) {
   if (!userAgent || userAgent.includes("spplice/2")) {
 
     const path = `${epochtal.file.spplice.repository}/${urlPath[0]}`;
-    if (!fs.existsSync(path) || !urlPath[0])
+    if (!fs.existsSync(path) || !urlPath[0]) {
       return Response.json(await utils.spplice(["get"]));
+    }
 
     return Response(Bun.file(path));
 
@@ -304,7 +305,7 @@ const fetchHandler = async function (req) {
 };
 
 // Start a Bun web server with fetchHandler() as the function to handle requests
-var servercfg = {
+const servercfg = {
   port: gconfig.port,
   fetch: fetchHandler,
   websocket: {
@@ -336,8 +337,8 @@ utils.events(["create", "utilPrint", steamid => epochtal.data.users[steamid].adm
 
 // Prepare first launch
 if (isFirstLaunch) {
-  console.log(`> Looks like this is the first time you're running epochtal. We'll need to set up some things first.
-> First things first, head to the epochtal page and log in with steam. You will automatically be
-> made an admin and epochtal will run two routines to set up the first week. Do note, that this will
+  console.log(`> Looks like this is the first time you're running Epochtal. We'll need to set up some things first.
+> First things first, head to the Epochtal page and log in with Steam. You will automatically be
+> made an admin and Epochtal will run two routines to set up the first week. Do note, that this will
 > take quite a bit, as it will run the curation algorithm in its entirety!`);
 }

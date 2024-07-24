@@ -42,7 +42,7 @@ async function getArchiveContext (name) {
     profiles: epochtal.file.profiles,
     week: Bun.file(`${path}/config.json`),
     log: `${path}/week.log`,
-    mapvmf: `${path}/map.vmf.xz`,
+    vmfs: `${path}/maps`,
     demos: `${path}/proof`
   };
 
@@ -184,7 +184,6 @@ module.exports = async function (args, context = epochtal) {
       await Bun.write(`${archivePath}/leaderboard.json`, context.file.leaderboard);
       await Bun.write(`${archivePath}/config.json`, context.file.week);
       await Bun.write(`${archivePath}/week.log`, Bun.file(context.file.log));
-      await Bun.write(`${archivePath}/map.vmf.xz`, Bun.file(context.file.mapvmf));
 
       const mapmodPath = `${context.file.portal2}/scripts/vscripts/epochtalmapmod.nut`;
       if (fs.existsSync(mapmodPath)) {
@@ -192,11 +191,18 @@ module.exports = async function (args, context = epochtal) {
       }
 
       fs.mkdirSync(`${archivePath}/proof`);
+      fs.mkdirSync(`${archivePath}/maps`);
 
       // Move context demo files to archive
       const files = fs.readdirSync(context.file.demos);
       for (let i = 0; i < files.length; i ++) {
         fs.renameSync(`${context.file.demos}/${files[i]}`, `${archivePath}/proof/${files[i]}`);
+      }
+
+      // Move vmf files to archive
+      const vmfs = fs.readdirSync(context.file.vmfs);
+      for (let i = 0; i < vmfs.length; i ++) {
+        fs.renameSync(`${context.file.vmfs}/${vmfs[i]}`, `${archivePath}/maps/${vmfs[i]}`);
       }
 
       return "SUCCESS";

@@ -263,7 +263,7 @@ async function releaseMap (context) {
       fs.rmSync(portal2.output, { recursive: true });
     }
 
-    fs.renameSync(vmf, context.file.mapvmf);
+    fs.renameSync(vmf, `${context.file.vmfs}/${context.data.week.map.id}.vmf`);
 
     context.data.week.map.file = portal2.map[0];
 

@@ -3,7 +3,7 @@ const SteamAuth = require("../steamauth.js");
 
 const keys = require(`${gconfig.secretsdir}/keys.js`);
 const users = require("../util/users.js");
-const validation = require("../validate.js");
+const validate = require("../validate.js");
 
 /**
  * Steam authentication instance.
@@ -50,7 +50,7 @@ module.exports = async function (args, request) {
         if (isFirstLaunch) {
           await users(["edit", authuser.steamid, "admin", true]);
           isFirstLaunch = false;
-          validation.setup();
+          validate.setup();
         }
 
       } else {
