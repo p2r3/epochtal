@@ -7,6 +7,7 @@ global.datadir = `${__dirname}/data`;
 global.secretsdir = `${__dirname}/secrets`;
 global.bindir = `${__dirname}/bin`;
 global.domain = "localhost:8080";
+global.tls = true;
 if (!fs.existsSync(datadir)) fs.mkdirSync(datadir);
 
 /**
@@ -53,7 +54,7 @@ epochtal.data = {
     update: "1265412586384654468"
   },
   spplice: {
-    address: `https://${domain}`,
+    address: `${tls ? "https" : "http"}://${domain}`,
     index: await epochtal.file.spplice.index.json()
   },
   // Epochtal Live
@@ -285,22 +286,27 @@ const fetchHandler = async function (req) {
 };
 
 // Start a Bun web server with fetchHandler() as the function to handle requests
-const server = Bun.serve({
+var servercfg = {
   port: 8080,
   fetch: fetchHandler,
   websocket: {
     open: await utils.events(["wshandler", "open"]),
     message: await utils.events(["wshandler", "message"]),
     close: await utils.events(["wshandler", "close"])
-  },
-  tls: {
+  }
+};
+
+if (tls) {
+  servercfg.tls = {
     key: Bun.file(`${secretsdir}/privkey.pem`),
     cert: Bun.file(`${secretsdir}/fullchain.pem`)
-  }
-});
+  };
+}
+
+const server = Bun.serve(servercfg);
 epochtal.data.events.server = server;
 
-console.log(`Listening on https://localhost:${server.port}...`);
+console.log(`Listening on ${tls ? "https" : "http"}://localhost:${server.port}...`);
 
 // Schedule routines
 utils.routine(["schedule", "epochtal", "concludeWeek", "0 0 15 * * 7"]);

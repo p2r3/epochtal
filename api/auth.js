@@ -12,8 +12,8 @@ const users = require("../util/users.js");
  * @type {SteamAuth}
  */
 const steam = new SteamAuth({
-  realm: `https://${domain}`, // Site name displayed to users on logon
-  returnUrl: `https://${domain}/api/auth/return`, // Return route after authentication
+  realm: `${tls ? "https" : "http"}://${domain}`, // Site name displayed to users on logon
+  returnUrl: `${tls ? "https" : "http"}://${domain}/api/auth/return`, // Return route after authentication
   apiKey: keys.steam // Steam API key
 });
 
