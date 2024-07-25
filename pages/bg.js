@@ -9,7 +9,7 @@ const canvas = document.getElementById("bg-anim");
 const ctx = canvas.getContext("2d");
 
 // Downscaling because this silly animation is actually stupidly computationally expensive
-const gscale = 0.5;
+const gscale = 0.4;
 
 canvas.width = window.innerWidth * gscale;
 canvas.height = window.innerHeight * gscale;
@@ -21,11 +21,11 @@ window.onresize = function () {
 
 const dots = [];
 const minDistance = 200 * gscale;
-const maxSpeed = 0.75 * gscale;
+const minDistanceSqrt = Math.pow(minDistance, 2);
+const maxSpeed = 1.5 * gscale;
 
 var dotCount = 50;
 
-var avoidCenterRadius = 0;
 var collideWithEdges = true;
 
 class Dot {
@@ -51,21 +51,6 @@ class Dot {
 
   update () {
 
-    if (avoidCenterRadius !== 0) {
-
-      const nextX = this.x + this.speedX;
-      const nextY = this.y + this.speedY;
-
-      const nextDistance = Math.sqrt(Math.pow(nextX - canvas.width / 2, 2) + Math.pow(nextY - canvas.height / 2, 2));
-      const currDistance = Math.sqrt(Math.pow(this.x - canvas.width / 2, 2) + Math.pow(this.y - canvas.height / 2, 2));
-
-      if (nextDistance < avoidCenterRadius && currDistance >= avoidCenterRadius) {
-        this.speedX = -this.speedX;
-        this.speedY = -this.speedY;
-      }
-
-    }
-
     this.x += this.speedX;
     this.y += this.speedY;
 
@@ -83,13 +68,13 @@ class Dot {
 
   connect (dots) {
     dots.forEach((dot) => {
-      const distance = Math.sqrt(Math.pow(this.x - dot.x, 2) + Math.pow(this.y - dot.y, 2));
+      const distanceRoot = Math.pow(this.x - dot.x, 2) + Math.pow(this.y - dot.y, 2);
 
-      if (distance < minDistance) {
+      if (distanceRoot < minDistanceSqrt) {
         ctx.beginPath();
         ctx.moveTo(this.x, this.y);
         ctx.lineTo(dot.x, dot.y);
-        ctx.strokeStyle = `rgba(255, 255, 255, ${1 - distance / minDistance})`;
+        ctx.strokeStyle = `rgba(255, 255, 255, ${1 - Math.sqrt(distanceRoot) / minDistance})`;
         ctx.lineWidth = 1;
         ctx.stroke();
       }
@@ -106,15 +91,24 @@ function init () {
   }
 }
 
-function animate () {
+let lastFrameTime = 0;
+const fpsInterval = 1000 / 30;
 
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+function animate(timestamp) {
 
-  dots.forEach((dot) => {
-    dot.draw();
-    dot.update();
-    dot.connect(dots.filter((otherDot) => dot !== otherDot));
-  });
+  const timeSinceLastFrame = timestamp - lastFrameTime;
+
+  if (timeSinceLastFrame >= fpsInterval) {
+    lastFrameTime = timestamp;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    dots.forEach((dot) => {
+      dot.draw();
+      dot.update();
+      dot.connect(dots.filter((otherDot) => dot !== otherDot));
+    });
+  }
 
   requestAnimationFrame(animate);
 
