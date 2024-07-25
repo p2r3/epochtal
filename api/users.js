@@ -4,7 +4,6 @@ const fs = require("node:fs");
 const keys = require(`${gconfig.secretsdir}/keys.js`);
 const users = require("../util/users.js");
 const profiledata = require("../util/profiledata.js");
-const profilelog = require("../util/profilelog.js");
 
 /**
  * Decrypt the user token cookie from the request headers.
