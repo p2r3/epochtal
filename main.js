@@ -158,7 +158,7 @@ const fetchHandler = async function (req) {
   const userAgent = req.headers.get("User-Agent");
 
   // Handle Spplice calls
-  if (!userAgent || userAgent.includes("spplice/2")) {
+  if (userAgent.startsWith("Bun/") || userAgent.includes("spplice/2")) {
 
     const path = `${epochtal.file.spplice.repository}/${urlPath[0]}`;
     if (!fs.existsSync(path) || !urlPath[0]) {
