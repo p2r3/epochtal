@@ -866,7 +866,7 @@ const homepageInitAttemptsMax = 5;
 var tryHomepageInit = async function () {
   try {
     await homepageInit();
-    scrollAnimation();
+    //scrollAnimation();
   } catch (e) {
 
     console.log("Caught error during homepage initialization:");
@@ -920,4 +920,4 @@ function scrollAnimation() {
   });
 }
 
-document.querySelector("#page-content").onscroll = scrollAnimation;
+//document.querySelector("#page-content").onscroll = scrollAnimation;
