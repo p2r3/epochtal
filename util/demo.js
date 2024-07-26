@@ -112,6 +112,8 @@ async function parseMDP (file) {
  * VERDICT_UNSURE: No certain verdict
  */
 const [VERDICT_SAFE, VERDICT_UNSURE, VERDICT_ILLEGAL] = [0, 1, 2];
+// Demo expiry time in milliseconds
+const EXPIRY_TIME = 1000 * 60 * 60;
 
 /**
  * Handles the `demo` utility call. This utility is used to parse and verify demo files.
@@ -207,14 +209,15 @@ module.exports = async function (args, context = epochtal) {
       }
 
       let ppnf = false, sv_cheats = false;
+      let lastTimestamp = null;
       let timescale = [], timescaleTotal = 0;
 
       for (const event of mdp.demos[0].events) {
 
-        // Ensure demo is submitted within 1 hour
+        // Ensure demo is submitted within the expiry time
         if (event.type === "timestamp") {
-          if (Date.now() - Date.parse(event.value) > 1000 * 60 * 60) {
-            return `Demo was recorded more than 1h ago.`;
+          if (Date.now() - Date.parse(event.value) > EXPIRY_TIME) {
+            return `Demo was recorded more than 1h ago, according to system clock.`;
           }
           continue;
         }
@@ -239,27 +242,33 @@ module.exports = async function (args, context = epochtal) {
           return `Demo checksum mismatch.`;
         }
 
-        // Ensure the demo is on the correct map
-        if (event.type === "cvar") {
-          if (event.val.cvar === "host_map") {
-            const expected = context.data.week.map.file + ".bsp";
-            if (event.val.val !== expected) {
-              return `Host map path incorrect. Expected \`${expected}\`, got \`${event.val.val}\`.`;
-            }
-          }
-        }
-
-        // Ensure the demo is not using illegal commands
+        // Handle console commands and cvars
         if (event.type === "cvar" || event.type === "cmd") {
 
           const cvar = (event.type === "cvar" ? event.val.cvar : event.value.split(" ")[0]).trim().toLowerCase();
           const value = event.type === "cvar" ? event.val.val : event.value.split(" ").slice(1).join(" ");
 
+          // Ensure the demo is on the correct map
+          if (cvar === "host_map") {
+            const expected = context.data.week.map.file + ".bsp";
+            if (value !== expected) {
+              return `Host map path incorrect. Expected \`${expected}\`, got \`${event.val.val}\`.`;
+            }
+          }
+
+          // Check for server clock timestamps
+          if (cvar === "-alt1" && value.startsWith("ServerTimestamp")) {
+            const timestamp = parseInt(value.slice(16));
+            if (timestamp) lastTimestamp = timestamp;
+          }
+
+          // Keep track of the value of sv_cheats
           if (cvar === "sv_cheats") {
             if (!value || value == "0") sv_cheats = false;
             else sv_cheats = true;
           }
 
+          // Ensure the demo is not using illegal commands
           const verdict = await testcvar([cvar, value, sv_cheats], context);
 
           if (verdict === VERDICT_ILLEGAL) {
@@ -272,6 +281,15 @@ module.exports = async function (args, context = epochtal) {
 
         }
 
+      }
+
+      if (lastTimestamp === null) return "Server timestamp not found.";
+
+      if (Date.now() - lastTimestamp > EXPIRY_TIME) {
+        return `Demo was recorded more than 1h ago, according to server clock.`;
+      }
+      if (lastTimestamp > Date.now()) {
+        return `Demo was recorded in the future, server timestamp is \`${timestamp}\`.`;
       }
 
       if (ppnf) return "PPNF";
