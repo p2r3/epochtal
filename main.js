@@ -157,18 +157,6 @@ const fetchHandler = async function (req) {
   const urlPath = url.pathname.split("/").slice(1);
   const userAgent = req.headers.get("User-Agent");
 
-  // Handle Spplice calls
-  if (!userAgent || userAgent.startsWith("Bun/") || userAgent.includes("spplice/2")) {
-
-    const path = `${epochtal.file.spplice.repository}/${urlPath[0]}`;
-    if (!fs.existsSync(path) || !urlPath[0]) {
-      return Response.json(await utils.spplice(["get"]));
-    }
-
-    return Response(Bun.file(path));
-
-  }
-
   // Handle WebSocket connections
   if (urlPath[0] === "ws") {
 
@@ -267,6 +255,18 @@ const fetchHandler = async function (req) {
     }
 
     return Response.json(result);
+
+  }
+
+  // Handle Spplice calls
+  if (!userAgent || userAgent.startsWith("Bun/") || userAgent.includes("spplice/2")) {
+
+    const path = `${epochtal.file.spplice.repository}/${urlPath[0]}`;
+    if (!fs.existsSync(path) || !urlPath[0]) {
+      return Response.json(await utils.spplice(["get"]));
+    }
+
+    return Response(Bun.file(path));
 
   }
 
