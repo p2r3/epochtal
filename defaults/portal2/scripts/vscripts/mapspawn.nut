@@ -357,8 +357,38 @@ ppmod.onauto(async(function () {
       EntFire(nextSplit.name, "Trigger");
       nextSplit.name = null;
 
+      // Request timestamp on split for additional verification opportunities
+      printl("[RequestTimestamp]");
+
     });
+
+    // Request a timestamp from the server at the start of each run
+    printl("[RequestTimestamp]");
 
   }, 0.2);
 
 }));
+
+::serverUnreachable <- function () {
+
+  local title = ppmod.text("Server Unreachable", -1, 0.4);
+  local text = ppmod.text(
+    "Failed to request data from the Epochtal API.\n" +
+    "Please make sure you're connected to the internet and restart the run.\n" +
+    "Runs performed offline are not verifiable and will be rejected.",
+    -1, 0.5
+  );
+
+  title.SetSize(5);
+  text.SetSize(0);
+  title.SetColor("255 100 100");
+  text.SetColor("255 100 100");
+
+  ppmod.interval(function ():(title, text) {
+    title.Display();
+    text.Display();
+  });
+
+  SendToConsole("fadeout 0.5 30 0 0 0");
+
+};

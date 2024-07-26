@@ -158,6 +158,8 @@ async function buildFiles (context) {
   await Bun.write(`${portal2}/scripts/vscripts/epochtal_map.nut`, `::epochtal_map <- ["${mapPaths.join('", "')}"]`);
   // Write current week number to epochtal_week.cfg as an svar
   await Bun.write(`${portal2}/cfg/epochtal_week.cfg`, `svar_set epochtal_week ${week.number}`);
+  // Write the server's address to allow for API access from Spplice JS interface
+  await Bun.write(`${portal2}/address.txt`, `${gconfig.tls ? "https" : "http"}://${gconfig.domain}`);
 
   // Create checksums for all created files
   let checksums = "\n// Epochtal files";
