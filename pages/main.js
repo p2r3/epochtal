@@ -633,7 +633,7 @@ var homepageInit = async function () {
 
     votesOutput += `
       <div class="votes-entry">
-        <a href="https://steamcommunity.com/sharedfiles/filedetails/?id=${map.id}" target="_blank">
+        <a href="https://steamcommunity.com/sharedfiles/filedetails/?id=${map.id}" target="_blank" class="nofade">
           <img class="votes-image" alt="thumbnail" src="${thumbnail}">
           <p class="votes-text">
             ${map.title.trim()}<br>
@@ -824,6 +824,29 @@ var homepageInit = async function () {
     }
   };
 
+  const scrollRemovingSwitch = document.querySelector("#scroll-removing");
+
+  if (localStorage.getItem("scrollRemoving") === "on") {
+    scrollRemovingSwitch.checked = true;
+  } else {
+    scrollRemovingSwitch.checked = false;
+  }
+
+  // Handle scroll toggle
+  scrollRemovingSwitch.onchange = function () {
+    if (scrollRemovingSwitch.checked) {
+      localStorage.setItem("scrollRemoving", "on");
+      const allElements = document.querySelectorAll('.section *');
+      allElements.forEach(element => {
+        element.style.opacity = 1;
+        element.style.transform = "scale(1)";
+      });
+    } else {
+      localStorage.setItem("scrollRemoving", "off");
+      scrollAnimation();
+    }
+  };
+
   // Handle 404 redirect
   if (window.location.href.endsWith("#404")) {
     showPopup("Not found", "The page you were trying to access does not exist. You've been brought back to the homepage.", POPUP_ERROR);
@@ -866,7 +889,7 @@ const homepageInitAttemptsMax = 5;
 var tryHomepageInit = async function () {
   try {
     await homepageInit();
-    //scrollAnimation();
+    scrollAnimation();
   } catch (e) {
 
     console.log("Caught error during homepage initialization:");
@@ -888,10 +911,25 @@ tryHomepageInit();
  * Handles the scroll animations
  */
 function scrollAnimation() {
+
+  /**
+   * 
+   * @param {HTMLElement} element 
+   * @returns {boolean}
+   */
+  function elementFilter(element){
+    let ret = true;
+    ret = ret && element
+    ret = ret && !element.classList.contains('nofade');
+    return ret;
+  }
+
+  if (localStorage.getItem("scrollRemoving") === "on") return;
+
   // Select all elements you want to check for visibility
-  const elements = document.querySelectorAll('.section *');
+  const allElements = document.querySelectorAll('.section *');
+  const elements = Array.from(allElements).filter(elementFilter);
   elements.forEach(element => {
-    if (element.classList.contains('nofade')) return;
 
     // Calculate the visibility percentage of each element
     const visibilityPercentage = inViewportPercent(element, 0, 100, 150, 30);
@@ -920,4 +958,9 @@ function scrollAnimation() {
   });
 }
 
-//document.querySelector("#page-content").onscroll = scrollAnimation;
+const scrollElements = document.querySelectorAll('.scroll-enabled');
+scrollElements.forEach(element => {
+  element.onscroll = scrollAnimation;
+});
+const pageContentElement = document.querySelector('#page-content');
+pageContentElement.onscroll = scrollAnimation;
