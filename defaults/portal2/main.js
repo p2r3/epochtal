@@ -1,13 +1,16 @@
 /*
  * Due to valve's decision to break most coop commands on orange, a few workarounds are needed to make coop possible again.
  * This main.js file is loaded by spplice and feeds off the console output to relay commands to the game.
+ * Additionally, this file is responisble for communicating the server's state to the game client.
  */
+
+const SERVER_ADDRESS = fs.read("address.txt");
 
 let input = "";
 let pongIgnore = 0;
 
 // Handle console output
-onConsoleOutput(function (data) {
+onConsoleOutput(async function (data) {
 
   // Append new data to the input buffer
   input += data.toString().replaceAll("\r", "");
@@ -50,6 +53,25 @@ onConsoleOutput(function (data) {
       SendToConsole("script ::coopUpdatePortals()");
 
       continue;
+    }
+
+    // Respond to request for server timestamp
+    if (lines[i].includes("[RequestTimestamp]")) {
+      try {
+
+        // Request server timestamp from API
+        const request = await fetch(`${SERVER_ADDRESS}/api/timestamp/get`);
+        const timestamp = await request.json();
+
+        // Send a no-op command to log the timestamp in the demo file
+        SendToConsole(`-alt1 ServerTimestamp ${timestamp}`);
+
+      } catch (e) {
+
+        // If the request fails, run a script that informs the player
+        SendToConsole("script ::serverUnreachable()");
+
+      }
     }
 
   }
