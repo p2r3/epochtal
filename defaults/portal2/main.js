@@ -56,7 +56,7 @@ onConsoleOutput(async function (data) {
     }
 
     // Respond to request for server timestamp
-    if (lines[i].includes("[RequestTimestamp]")) {
+    if (lines[i].includes("[RequestTimestamp]") || (lines[i].startsWith("Recording to ") && lines[i].endsWith("..."))) {
       try {
 
         // Request server timestamp from API

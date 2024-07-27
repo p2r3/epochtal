@@ -362,9 +362,6 @@ ppmod.onauto(async(function () {
 
     });
 
-    // Request a timestamp from the server at the start of each run
-    printl("[RequestTimestamp]");
-
   }, 0.2);
 
 }));
