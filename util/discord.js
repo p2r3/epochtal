@@ -98,168 +98,188 @@ module.exports = async function (args, context = epochtal) {
 };
 
 /**
+ * Draw a rounded box on the canvas
+ *
+ * @author PancakeTAS
+ * @param {CanvasKit} CK CanvasKit
+ * @param {Canvas} canvas CanvasKit canvas
+ * @param {Paint} paint Paint object
+ * @param {Number} x X
+ * @param {Number} y Y
+ * @param {Number} width Width
+ * @param {Number} height Height
+ * @param {Number} radius Radius of the corners
+ * @param {Number} stroke Border stroke width
+ * @param {Number} fill Box fill color
+ * @param {Number} border Border color
+ */
+function drawRoundedBox(CK, canvas, paint, x, y, width, height, radius, stroke, fill, border) {
+
+  // Fill the box
+  paint.setStyle(CK.PaintStyle.Fill);
+  paint.setColor(fill);
+
+  canvas.drawRRect(CK.RRectXY(CK.XYWHRect(x, y, width, height), radius, radius), paint);
+
+  // Draw the border
+  paint.setStyle(CK.PaintStyle.Stroke);
+  paint.setStrokeWidth(stroke);
+  paint.setColor(border);
+
+  canvas.drawRRect(CK.RRectXY(CK.XYWHRect(x, y, width, height), radius, radius), paint);
+
+}
+
+/**
+ * Draw an image with rounded corners on the canvas
+ *
+ * @author PancakeTAS
+ * @param {CanvasKit} CK CanvasKit
+ * @param {Canvas} canvas CanvasKit canvas
+ * @param {Paint} paint Paint object
+ * @param {Image} image Image to draw
+ * @param {Number} x X
+ * @param {Number} y Y
+ * @param {Number} width Width
+ * @param {Number} height Height
+ * @param {Number} radius Radius of the corners
+ */
+function drawRoundedImage(CK, canvas, paint, image, x, y, width, height, radius) {
+
+  paint.setStyle(CK.PaintStyle.Fill);
+
+  // Mask the image with a rounded rectangle
+  const path = new CK.Path();
+  path.addRRect(CK.RRectXY(CK.XYWHRect(x, y, width, height), radius, radius));
+
+  canvas.save(); // push canvas state
+  canvas.clipPath(path, CK.ClipOp.Intersect, true);
+
+  // Draw the image
+  canvas.drawImageRectOptions(
+    image,
+    CK.XYWHRect(0, 0, image.width(), image.height()),
+    CK.XYWHRect(x, y, width, height),
+    CK.FilterMode.Linear, CK.MipmapMode.Linear,
+    paint
+  );
+
+  canvas.restore(); // pop canvas state
+
+}
+
+/**
  * Render the map release canvas into a buffer
  *
  * @author PancakeTAS
- * @param {Array} thumbnail Byte array of the map thumbnail
+ * @param {Array} thumbnailData Byte array of the map thumbnail
  * @param {string} title Title of the map
  * @param {string} author Author of the map
  * @param {number} upvotes The number of upvotes
  * @param {number} downvotes The number of downvotes
  * @returns {string} Base64 encoded png image
  */
-async function render(thumbnail, title, author, upvotes, downvotes) {
+async function render(thumbnailData, title, author, upvotes, downvotes) {
 
-  const CanvasKit = await CanvasKitFuture;
+  const CK = await CanvasKitFuture;
 
   // Create the canvas
-  const rcanvas = {
-    width: 922 * 2,
-    height: 150 * 2,
-    padding: 3840 * 0.5 / 100
-  };
+  const CANVAS_WIDTH = 922 * 2;
+  const CANVAS_HEIGHT = 150 * 2;
+  const CANVAS_PADDING = 3840 * 0.5 / 100;
 
-  const surface = CanvasKit.MakeSurface(rcanvas.width, rcanvas.height);
+  const INNER_WIDTH = CANVAS_WIDTH - CANVAS_PADDING * 2;
+  const INNER_HEIGHT = CANVAS_HEIGHT - CANVAS_PADDING * 2;
+
+  const surface = CK.MakeSurface(CANVAS_WIDTH, CANVAS_HEIGHT);
   const canvas = surface.getCanvas();
 
-  // Prepare the paint object
-  const paint = new CanvasKit.Paint();
+  const thumbnail = CK.MakeImageFromEncoded(thumbnailData);
+
+  const paint = new CK.Paint();
   paint.setAntiAlias(true);
 
-  // Draw dark background and border
-  const rinner = {
-    width: rcanvas.width - rcanvas.padding * 2,
-    height: rcanvas.height - rcanvas.padding * 2
-  };
+  // Draw background
+  const BG_BORDER_STROKE = 4;
+  const BG_RADIUS = 20;
+  const BG_BORDER_COLOR = CK.Color(0xFF, 0xFF, 0xFF, 0xFF);
+  const BG_FILL_COLOR = CK.Color(0x04, 0x04, 0x04, 0xFF);
+  const BG_X = BG_BORDER_STROKE;
+  const BG_Y = BG_BORDER_STROKE;
+  const BG_WIDTH = CANVAS_WIDTH - BG_BORDER_STROKE * 2;
+  const BG_HEIGHT = CANVAS_HEIGHT - BG_BORDER_STROKE * 2;
 
-  const rborder = {
-    stroke: 4,
-    radius: 20,
-    color: CanvasKit.Color(0xFF, 0xFF, 0xFF, 0xFF),
-    fillcolor: CanvasKit.Color(0x04, 0x04, 0x04, 0xFF),
-    x: 4,
-    y: 4,
-    width: rcanvas.width - 4*2,
-    height: rcanvas.height - 4*2
-  };
-
-  paint.setStyle(CanvasKit.PaintStyle.Fill);
-  paint.setColor(rborder.fillcolor);
-
-  canvas.drawRRect(
-    CanvasKit.RRectXY(
-      CanvasKit.XYWHRect(rborder.x, rborder.y, rborder.width, rborder.height),
-      rborder.radius, rborder.radius
-    ),
-    paint
-  );
-
-  paint.setStyle(CanvasKit.PaintStyle.Stroke);
-  paint.setStrokeWidth(rborder.stroke);
-  paint.setColor(rborder.color);
-
-  canvas.drawRRect(
-    CanvasKit.RRectXY(
-      CanvasKit.XYWHRect(rborder.x, rborder.y, rborder.width, rborder.height),
-      rborder.radius, rborder.radius
-    ),
-    paint
+  drawRoundedBox(
+    CK, canvas, paint,
+    BG_X, BG_Y, BG_WIDTH, BG_HEIGHT,
+    BG_RADIUS,
+    BG_BORDER_STROKE,
+    BG_FILL_COLOR, BG_BORDER_COLOR
   );
 
   // Draw map thumbnail
-  const map = CanvasKit.MakeImageFromEncoded(thumbnail);
-  const rthumbnail = {
-    radius: 20,
-    x: rcanvas.padding,
-    y: rcanvas.padding + (rinner.height - (rinner.width * 0.25 / 16 * 9)) / 2,
-    width: rinner.width * 0.25,
-    height: rinner.width * 0.25 / 16 * 9
-  };
+  const TH_RADIUS = 20;
+  const TH_WIDTH = INNER_WIDTH * 0.25;
+  const TH_HEIGHT = TH_WIDTH / 16 * 9;
+  const TH_X = CANVAS_PADDING;
+  const TH_Y = CANVAS_PADDING + (INNER_HEIGHT - TH_HEIGHT) / 2;
 
-  paint.setStyle(CanvasKit.PaintStyle.Fill);
-
-  const path = new CanvasKit.Path();
-  path.addRRect(
-    CanvasKit.XYWHRect(rthumbnail.x, rthumbnail.y, rthumbnail.width, rthumbnail.height),
-    rthumbnail.radius,
-    rthumbnail.radius
+  drawRoundedImage(
+    CK, canvas, paint,
+    thumbnail,
+    TH_X, TH_Y, TH_WIDTH, TH_HEIGHT,
+    TH_RADIUS
   );
-
-  canvas.save();
-  canvas.clipPath(path, CanvasKit.ClipOp.Intersect, true);
-
-  canvas.drawImageRectOptions(
-    map,
-    CanvasKit.XYWHRect(0, 0, map.width(), map.height()),
-    CanvasKit.XYWHRect(rthumbnail.x, rthumbnail.y, rthumbnail.width, rthumbnail.height),
-    CanvasKit.FilterMode.Linear,
-    CanvasKit.MipmapMode.Linear,
-    paint
-  );
-
-  canvas.restore();
 
   // Draw map info
-  const rinfo = {
-    x: rthumbnail.x + rthumbnail.width + (rinner.width * 0.02),
-    y: rcanvas.padding + 18,
-    color: CanvasKit.Color(0xFF, 0xFF, 0xFF, 0xFF)
-  };
-
-  paint.setStyle(CanvasKit.PaintStyle.Fill);
-  paint.setColor(rinfo.color);
-  paint.setBlendMode(CanvasKit.BlendMode.SrcOver);
-
-  const titleStyle = new CanvasKit.ParagraphStyle({ // $ExpectType ParagraphStyle
-    textStyle: {
-        color: CanvasKit.WHITE,
-        fontFamilies: ['Quicksand'],
-        fontSize: 61,
-        fontStyle: {
-          weight: 400,
-          width: CanvasKit.FontWidth.Bold,
-          slant: CanvasKit.FontSlant.Normal
-        }
-    },
-    textAlign: CanvasKit.TextAlign.Left,
-    maxLines: 2,
-    disableHinting: true
+  const IF_X = TH_X + TH_WIDTH + (INNER_WIDTH * 0.02);
+  const IF_Y = CANVAS_PADDING + 18;
+  const IF_FONTSIZE = 61;
+  const IF_COLOR = CK.WHITE;
+  const IF_UPVOTES_COLOR = CK.Color(23, 192, 233, 0xFF);
+  const IF_DOWNVOTES_COLOR = CK.Color(232, 63, 22, 0xFF);
+  const IF_TITLESTYLE = new CK.TextStyle({
+    color: IF_COLOR,
+    fontFamilies: ['Quicksand'],
+    fontSize: IF_FONTSIZE,
+    fontStyle: { weight: 400, width: CK.FontWidth.Bold, slant: CK.FontSlant.Normal }
   });
-  const authorStyle = new CanvasKit.TextStyle({
-    color: CanvasKit.WHITE,
+  const IF_AUTHORSTYLE = new CK.TextStyle({
+    color: IF_COLOR,
     fontFamilies: ['Quicksand', 'Font Awesome 6 Free'],
-    fontSize: 61,
-    fontStyle: {
-      weight: 300,
-      width: CanvasKit.FontWidth.Normal,
-      slant: CanvasKit.FontSlant.Italic
-    }
+    fontSize: IF_FONTSIZE,
+    fontStyle: { weight: 300, width: CK.FontWidth.Normal, slant: CK.FontSlant.Italic }
   });
-  const votesStyle = new CanvasKit.TextStyle({
+  const IF_VOTESSTYLE = new CK.TextStyle({
     fontFamilies: ['Quicksand', 'Font Awesome 6 Free'],
-    fontSize: 61
+    fontSize: IF_FONTSIZE
   });
-  const infoBuilder = new CanvasKit.ParagraphBuilder.Make(titleStyle, CanvasKit.FontMgr.FromData(fontData, emojisData));
+  const IF_STYLE = new CK.ParagraphStyle({
+    textStyle: IF_TITLESTYLE,
+    color: IF_COLOR,
+    textAlign: CK.TextAlign.Left,
+    maxLines: 2
+  });
+  const infoBuilder = new CK.ParagraphBuilder.Make(IF_STYLE, CK.FontMgr.FromData(fontData, emojisData));
 
   infoBuilder.addText(title + "\n");
-
-  infoBuilder.pushStyle(authorStyle);
+  infoBuilder.pushStyle(IF_AUTHORSTYLE);
   infoBuilder.addText(author);
   infoBuilder.pop();
   infoBuilder.addText("  ");
-  votesStyle.color = CanvasKit.Color(23, 192, 233, 0xFF);
-  infoBuilder.pushStyle(votesStyle);
-  infoBuilder.addText(upvotes + " 👍");
+  IF_VOTESSTYLE.color = IF_UPVOTES_COLOR;
+  infoBuilder.pushStyle(IF_VOTESSTYLE);
+  infoBuilder.addText(upvotes + " 👍")
   infoBuilder.pop();
   infoBuilder.addText("  ");
-  votesStyle.color = CanvasKit.Color(232, 63, 22, 0xFF);
-  infoBuilder.pushStyle(votesStyle);
+  IF_VOTESSTYLE.color = IF_DOWNVOTES_COLOR;
+  infoBuilder.pushStyle(IF_VOTESSTYLE);
   infoBuilder.addText(downvotes + " 👎");
   infoBuilder.pop();
 
   const infoParagraph = infoBuilder.build();
-  infoParagraph.layout(rinner.width * 0.7);
-  canvas.drawParagraph(infoParagraph, rinfo.x, rinfo.y);
+  infoParagraph.layout(INNER_WIDTH * 0.7);
+  canvas.drawParagraph(infoParagraph, IF_X, IF_Y);
 
   // Save the canvas to a buffer
   return surface.makeImageSnapshot().encodeToBytes();
