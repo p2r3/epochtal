@@ -48,7 +48,7 @@ module.exports = async function (args, context = epochtal) {
       // Here, "steamid" is the search query
       for (const curr in users) {
         if (users[curr].name.toLowerCase().includes(steamid.toLowerCase())) {
-          output[users[curr].name] = curr;
+          output[curr] = users[curr].name;
         }
       }
 
