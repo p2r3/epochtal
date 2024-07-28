@@ -3,7 +3,10 @@
   "module": "main.js",
   "type": "module",
   "devDependencies": {
-    "@types/bun": "latest"
+    "@eslint/js": "^9.8.0",
+    "@types/bun": "latest",
+    "eslint": "9.x",
+    "globals": "^15.8.0"
   },
   "peerDependencies": {
     "typescript": "^5.0.0"
