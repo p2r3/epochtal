@@ -86,7 +86,7 @@ module.exports = async function (args, context = epochtal) {
 
       if (profilesPath) {
         const dataPath = `${profilesPath}/${steamid}/data.json`;
-        if (fs.existsSync(dataPath)) await Bun.delete(dataPath);
+        if (fs.existsSync(dataPath)) await fs.unlinkSync(dataPath);
       }
 
       return "SUCCESS";
