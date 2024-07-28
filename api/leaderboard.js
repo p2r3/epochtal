@@ -19,13 +19,11 @@ const api_users = require("./users.js");
  */
 function ticksToString (t) {
 
-  // FIXME: comma missing??
-
   // Convert ticks to hours, minutes, and seconds
-  let output = "",
-      hrs = Math.floor(t / 216000)
-      min = Math.floor(t / 3600),
-      sec = t % 3600 / 60;
+  let output = "";
+  const hrs = Math.floor(t / 216000),
+    min = Math.floor(t / 3600),
+    sec = t % 3600 / 60;
 
   // Format the time string
   if (hrs !== 0) output += `${hrs}:${min % 60 < 10 ? "0" : ""}${min % 60}:`;

@@ -22,16 +22,14 @@ const STEAM_API = "https://api.steampowered.com";
  */
 async function getWorkshopData (mapid) {
 
-  // FIXME: args, context is not defined anywhere
-
   // Fetch the workshop data for the map
   const detailsRequest = await fetch(`${STEAM_API}/IPublishedFileService/GetDetails/v1/?key=${keys.steam}&publishedfileids[0]=${mapid}&includeadditionalpreviews=true`);
-  if (detailsRequest.status !== 200) throw new UtilError("ERR_STEAMAPI", args, context);
+  if (detailsRequest.status !== 200) return "ERR_STEAMAPI";
 
   // Parse the response, throwing an error if the data is invalid
   const detailsData = await detailsRequest.json();
   if (!("response" in detailsData && "publishedfiledetails" in detailsData.response)) {
-    throw new UtilError("ERR_STEAMAPI", args, context);
+    return "ERR_STEAMAPI";
   }
   const data = detailsData.response.publishedfiledetails[0];
 
@@ -58,11 +56,9 @@ async function downloadEntityLump (mapid) {
   if (data.file_url === undefined) return "";
   if (data.consumer_appid !== 620) return "";
 
-  // FIXME: args, context is not defined anywhere
-
   // Fetch the BSP file for the map
   const request = await fetch(data.file_url);
-  if (request.status !== 200) throw new UtilError("ERR_STEAMAPI", args, context);
+  if (request.status !== 200) return "ERR_STEAMAPI";
 
   // Read the entity lump from the BSP file
   return await (new Promise(function (resolve, _reject) {
