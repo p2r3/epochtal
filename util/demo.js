@@ -3,7 +3,6 @@ const UtilError = require("./error.js");
 const { $ } = require("bun");
 const fs = require("node:fs");
 const tmppath = require("./tmppath.js");
-const discord = require("./discord.js");
 const testcvar = require("./testcvar.js");
 
 /**
@@ -212,7 +211,6 @@ module.exports = async function (args, context = epochtal) {
 
       let ppnf = false, sv_cheats = false;
       let lastTimestamp = null, speedrunTimer = null;
-      let timescale = [], timescaleTotal = 0;
 
       for (const event of mdp.demos[0].events) {
         switch (event.type) {

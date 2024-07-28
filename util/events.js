@@ -35,10 +35,10 @@ module.exports = async function (args, context = epochtal) {
 
       // Create the event
       events[name] = {
-        auth: auth || (x => true),
-        message: message || (x => undefined),
-        connect: connect || (x => undefined),
-        disconnect: disconnect || (x => undefined)
+        auth: auth || (() => true),
+        message: message || (() => undefined),
+        connect: connect || (() => undefined),
+        disconnect: disconnect || (() => undefined)
       };
 
       return "SUCCESS";
@@ -111,7 +111,6 @@ module.exports = async function (args, context = epochtal) {
           // - PancakeTAS
 
           // Grab event of websocket
-          const name = ws.data.event;
           const event = context.data.events[ws.data.event];
           if (!event) return;
 
@@ -119,7 +118,7 @@ module.exports = async function (args, context = epochtal) {
           try {
             ws.subscribe(ws.data.event);
             event.connect(ws.data.steamid);
-          } catch (err) {
+          } catch {
             throw new UtilError("ERR_HANDLER", args, context);
           }
 
@@ -128,14 +127,13 @@ module.exports = async function (args, context = epochtal) {
         case "message": return function (ws, message) {
 
           // Grab event of websocket
-          const name = ws.data.event;
           const event = context.data.events[ws.data.event];
           if (!event) return;
 
           // Send message to the event
           try {
             context.data.events[ws.data.event].message(message);
-          } catch (err) {
+          } catch {
             throw new UtilError("ERR_HANDLER", args, context);
           }
 
@@ -147,7 +145,7 @@ module.exports = async function (args, context = epochtal) {
           try {
             ws.unsubscribe(ws.data.event);
             context.data.events[ws.data.event].disconnect(ws.data.steamid);
-          } catch (err) {
+          } catch {
             throw new UtilError("ERR_HANDLER", args, context);
           }
 

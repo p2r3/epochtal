@@ -76,7 +76,7 @@ async function curateWorkshop (maps = []) {
   while (startDate - lastDate < weekSeconds) {
 
     // Fetch page of workshop data
-    const request = await fetch(`${requestData}&page=${page}`);
+    await fetch(`${requestData}&page=${page}`); // > Is this necessary? - PancakeTAS
     const response = (await (await fetch(`${requestData}&page=${page++}`)).json()).response;
     const results = response.publishedfiledetails;
 

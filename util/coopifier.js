@@ -1,5 +1,4 @@
 const UtilError = require("./error.js");
-const fs = require("fs");
 
 // The strings below are encoded into Uint8Arrays
 const encoder = new TextEncoder();
@@ -123,4 +122,4 @@ module.exports = async function (args, context = epochtal) {
 
   throw new UtilError("ERR_COMMAND", args, context);
 
-}
+};

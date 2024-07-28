@@ -1,12 +1,9 @@
 const UtilError = require("./error.js");
 
 const fs = require("node:fs");
-const { $ } = require("bun");
 
-const keys = require(`${gconfig.secretsdir}/keys.js`);
 const archive = require("./archive.js");
 const weeklog = require("./weeklog.js");
-const points = require("./points.js");
 const profiledata = require("./profiledata.js");
 
 /**

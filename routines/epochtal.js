@@ -559,7 +559,7 @@ async function summarizeDemoEvents (context) {
   return {
     summary: sortedSummary,
     timescales: sortedTimescales
-  }
+  };
 
 }
 

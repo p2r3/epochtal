@@ -47,7 +47,7 @@ module.exports = async function (args, context = epochtal) {
 
     case "get": {
 
-      let output = [];
+      const output = [];
 
       if (lb === undefined) throw new UtilError("ERR_CATEGORY", args, context);
 
@@ -203,8 +203,9 @@ module.exports = async function (args, context = epochtal) {
 
     }
 
-    throw new UtilError("ERR_COMMAND", args, context);
 
   }
+
+  throw new UtilError("ERR_COMMAND", args, context);
 
 };

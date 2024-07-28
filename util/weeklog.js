@@ -3,8 +3,6 @@ const UtilError = require("./error.js");
 const { appendFileSync } = require("node:fs");
 const categories = require("./categories.js");
 const config = require("./config.js");
-const archive = require("./archive.js");
-const users = require("./users.js");
 
 /**
  * Parses a weeklog buffer into an array of objects

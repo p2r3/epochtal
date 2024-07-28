@@ -1,12 +1,7 @@
 const UtilError = require("./error.js");
-const UtilPrint = require("./print.js");
-
-const fs = require("node:fs");
-
 const leaderboard = require("./leaderboard.js");
 const categories = require("./categories.js");
 const archive = require("./archive.js");
-const profilelog = require("./profilelog.js");
 const profiledata = require("./profiledata.js");
 
 const [ WIN, LOSS, DRAW ] = [1, -1, 0];
@@ -148,7 +143,6 @@ async function pointsFromSteamID (steamid, context = epochtal) {
  */
 async function calculatePointsDelta (context = epochtal) {
 
-  const users = context.data.users;
   const boards = await leaderboard(["list"], context);
   const catlist = await categories(["list"], context);
   const partners = context.data.week.partners;

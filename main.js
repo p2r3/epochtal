@@ -16,7 +16,7 @@ if (!fs.existsSync(gconfigpath)) {
 }
 
 // Load the global config
-var gconfig = await Bun.file(gconfigpath).json();
+const gconfig = await Bun.file(gconfigpath).json();
 global.isFirstLaunch = !fs.existsSync(gconfig.datadir);
 global.gconfig = gconfig;
 
@@ -191,7 +191,7 @@ const fetchHandler = async function (req) {
     for (let i = 0; i < args.length; i ++) {
       try {
         args[i] = JSON.parse(args[i]);
-      } catch (e) { } // Leave it as a string
+      } catch { } // Leave it as a string
     }
 
     // Try to call the previously defined API with the parsed arguments, catching any errors if it fails
@@ -239,7 +239,7 @@ const fetchHandler = async function (req) {
     for (let i = 0; i < args.length; i ++) {
       try {
         args[i] = JSON.parse(args[i]);
-      } catch (e) { } // Leave it as a string
+      } catch { } // Leave it as a string
     }
 
     // Try to call the utility with the provided arguments

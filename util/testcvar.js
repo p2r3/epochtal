@@ -1,8 +1,9 @@
+/* eslint-disable no-unused-vars */
 const UtilError = require("./error.js");
 
 const [VERDICT_SAFE, VERDICT_UNSURE, VERDICT_ILLEGAL] = [0, 1, 2];
 
-var cvarTestSafe = {
+const cvarTestSafe = {
   "_autosave": (val) => true, // cmd autosave
   "_autosavedangerous": (val) => true, // cmd autosavedangerous
   "_bugreporter_restart": (val) => false, // cmd restarts bug reporter .dll
@@ -3676,7 +3677,6 @@ var cvarTestSafe = {
   "sar_fast_load_preset": (val) => true, // 	non-functional 	-
   "sar_fix_reloaded_cheats": (val) => true, // 	non-functional 	-
   "sar_font_": (val) => true, // 	non-functional 	-
-  "sar_force_fov": (val) => true, // 	functional 	-
   "sar_groundframes_": (val) => true, // 	non-functional 	-
   "sar_hud_velocity_precision": (val) => val >= 0 && val <= 2, // 	functional 	0 .. 2
   "sar_hud_precision": (val) => val >= 0 && val <= 6, // 	functional 	0 .. 6
@@ -3794,7 +3794,6 @@ var cvarTestSafe = {
   "sar_stats_velocity": (val) => true,
   "sar_stats_velocity_peak_xy": (val) => true,
   "sar_stats_velocity_reset": (val) => true,
-  "sar_stop": (val) => true, // 	non-functional 	-
   "sar_strafe_quality_width": (val) => true, // 	non-functional 	-
   "sar_strafe_quality_height": (val) => true, // 	non-functional 	-
   "sar_strafe_quality_ticks": (val) => true, // 	non-functional 	-
@@ -3809,7 +3808,6 @@ var cvarTestSafe = {
   "sar_sum_result": (val) => true, // 	non-functional 	-
   "sar_sum_stop": (val) => true, // 	non-functional 	-
   "sar_teleport_setpos": (val) => true, // 	non-functional 	-
-  "sar_stats_auto_reset": (val) => true,
   "sar_timer_always_running": (val) => true,
   "sar_timer_result": (val) => true,
   "sar_timer_start": (val) => true,
@@ -3819,7 +3817,6 @@ var cvarTestSafe = {
   "sar_toast_anchor": (val) => true,
   "sar_toast_background": (val) => true,
   "sar_toast_compact": (val) => true,
-  "sar_toast_create": (val) => true,
   "sar_toast_disable": (val) => true,
   "sar_toast_dismiss_all": (val) => true,
   "sar_toast_font": (val) => true,
@@ -3916,9 +3913,6 @@ const cvarTestIllegal = {
   "buddha": (val, cheats) => cheats,
   "sv_portal_placement_never_fail": (val) => val != 0,
   "sar_aircontrol": (val) => true,
-  "sar_autojump": (val) => true,
-  "sar_duckjump": (val) => true,
-  "sar_aircontrol": (val) => true,
   "sar_autojump": (val, cheats) => cheats,
   "sar_duckjump": (val) => true,
   "cl_ent_absbox": (val) => true,
@@ -3944,7 +3938,6 @@ const cvarTestIllegal = {
   "ent_create_portal_weighted_sphere": (val) => true,
   "ent_debugkeys": (val) => true,
   "ent_dump": (val) => true,
-  "ent_fire": (val) => true,
   "ent_info": (val) => true,
   "ent_keyvalue": (val) => true,
   "ent_messages": (val) => true,
@@ -3974,7 +3967,6 @@ const cvarTestIllegal = {
   "getpos_exact": (val) => true,
   "hurtme": (val) => true,
   "impulse": (val) => true,
-  "notarget": (val) => true,
   "npc_bipass": (val) => true,
   "npc_combat": (val) => true,
   "npc_conditions": (val) => true,

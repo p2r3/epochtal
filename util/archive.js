@@ -98,7 +98,7 @@ module.exports = async function (args, context = epochtal) {
        * @returns {number|null} The week number. Returns `null` if the archive name contains no numbers
        */
       const getWeekNumber = function (str) {
-        let match = str.match(/\d+/);
+        const match = str.match(/\d+/);
         return match ? parseInt(match[0], 10) : null;
       };
 

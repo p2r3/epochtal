@@ -1,9 +1,7 @@
 const UtilError = require("./error.js");
 const UtilPrint = require("./print.js");
 
-const fs = require("node:fs");
 const keys = require(`${gconfig.secretsdir}/keys.js`);
-const avatar = require("./avatar.js");
 const profiledata = require("./profiledata.js");
 
 /**
@@ -31,7 +29,6 @@ module.exports = async function (args, context = epochtal) {
 
   const file = context.file.users;
   const users = context.data.users;
-  const profiles = context.file.profiles;
 
   switch (command) {
 
