@@ -1,0 +1,15 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "bun",
+            "internalConsoleOptions": "openOnSessionStart",
+            "request": "launch",
+            "name": "Run Epochtal",
+            "program": "${workspaceFolder}/main.js",
+            "cwd": "${workspaceFolder}",
+            "stopOnEntry": false,
+            "watchMode": false
+        }
+    ]
+}
