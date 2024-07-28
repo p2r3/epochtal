@@ -211,7 +211,7 @@ module.exports = async function (args, context = epochtal) {
 
       let ppnf = false, sv_cheats = false;
       let lastTimestamp = null, speedrunTimer = null;
-      const serverTimestamp = Date.now();
+      const timestampNow = Date.now();
 
       for (const event of mdp.demos[0].events) {
         switch (event.type) {
@@ -219,7 +219,7 @@ module.exports = async function (args, context = epochtal) {
           // Ensure demo is submitted within the expiry time
           case "timestamp": {
 
-            if (serverTimestamp - Date.parse(event.value) > EXPIRY_TIME) {
+            if (timestampNow - Date.parse(event.value) > EXPIRY_TIME) {
               return `Demo was recorded more than 1h ago, according to system clock.`;
             }
             break;
@@ -298,10 +298,10 @@ module.exports = async function (args, context = epochtal) {
       if (lastTimestamp === null) return "Server timestamp not found.";
       if (speedrunTimer === null) return "Speedrun timer not stopped.";
 
-      if (serverTimestamp - lastTimestamp > EXPIRY_TIME) {
+      if (timestampNow - lastTimestamp > EXPIRY_TIME) {
         return `Demo was recorded more than 1h ago, according to server clock.`;
       }
-      if (lastTimestamp > serverTimestamp) {
+      if (lastTimestamp > timestampNow) {
         return `Demo was recorded in the future, server timestamp is \`${lastTimestamp}\`.`;
       }
 
