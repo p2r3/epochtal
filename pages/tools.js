@@ -213,10 +213,8 @@ if (tooltip) {
 
   /**
    * Hides the tooltip from the user
-   *
-   * @param {string} text FIXME: Unused parameter
    */
-  var hideTooltip = function (text) {
+  var hideTooltip = function () {
 
     tooltipVisible = false;
 
