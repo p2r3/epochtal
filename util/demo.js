@@ -169,7 +169,8 @@ module.exports = async function (args, context = epochtal) {
       // Extract the time and portal count from the demo
       const output = {
         ...dump,
-        time: null,
+        time: mdp.demos[0].ticks,
+        timer: false,
         portals: 0
       };
 
@@ -178,6 +179,7 @@ module.exports = async function (args, context = epochtal) {
 
         if (event.type === "speedrun") {
           output.time = event.value.total.ticks;
+          output.timer = true;
           continue;
         }
 
