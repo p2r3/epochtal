@@ -133,7 +133,7 @@ async function downloadEntityLump (mapid) {
         }
       });
 
-      // if the response ended and we have no entities lump, resolve with empty string
+      // if the response ended and we have no entities lump, resolve with ERR_BADMAP
       response.on("end", function () {
         setTimeout(function () {
           resolve("ERR_BADMAP");
