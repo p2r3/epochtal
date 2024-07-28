@@ -53,8 +53,8 @@ async function downloadEntityLump (mapid) {
   if (typeof data === "string") return data;
 
   // Ensure the map is a Portal 2 map
-  if (data.file_url === undefined) return "";
-  if (data.consumer_appid !== 620) return "";
+  if (data.file_url === undefined) return "ERR_BADMAP";
+  if (data.consumer_appid !== 620) return "ERR_BADMAP";
 
   // Fetch the BSP file for the map
   const request = await fetch(data.file_url);
@@ -136,7 +136,7 @@ async function downloadEntityLump (mapid) {
       // if the response ended and we have no entities lump, resolve with empty string
       response.on("end", function () {
         setTimeout(function () {
-          resolve("");
+          resolve("ERR_BADMAP");
         }, 1000);
       });
 
@@ -437,7 +437,7 @@ module.exports = async function (args, context = epochtal) {
 
       // Convert entity lump to an object density graph
       const entityLump = await downloadEntityLump(mapid);
-      if (entityLump === "") throw new UtilError("ERR_MAPID", args, context);
+      if (entityLump.startsWith("ERR_")) throw new UtilError(entityLump, args, context);
 
       const entities = parseLump(entityLump);
       const density = calculateDensities(entities);
@@ -554,7 +554,7 @@ module.exports = async function (args, context = epochtal) {
         } else {
           // If a cache was not found, try to download the BSP and calculate graphs
           const entityLump = await downloadEntityLump(archiveContext.data.week.map.id);
-          if (entityLump === "") continue;
+          if (entityLump.startsWith("ERR_")) throw new UtilError(entityLump, args, context);
 
           const entities = parseLump(entityLump);
           mapDensity = calculateDensities(entities);

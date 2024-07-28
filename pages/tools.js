@@ -7,10 +7,10 @@
 function ticksToString (t) {
 
   // Split the ticks into hours, minutes, and seconds
-  let output = "",
-      hrs = Math.floor(t / 216000)
-      min = Math.floor(t / 3600),
-      sec = t % 3600 / 60;
+  let output = "";
+  const hrs = Math.floor(t / 216000),
+    min = Math.floor(t / 3600),
+    sec = t % 3600 / 60;
 
   // Format the output string
   if (hrs !== 0) output += `${hrs}:${min % 60 < 10 ? "0" : ""}${min % 60}:`;
@@ -238,7 +238,7 @@ if (tooltip) {
 
 /**
  * Calculates the visibility percentage of an element within the viewport, considering specified offsets and margins.
- * 
+ *
  * @param {HTMLElement} element The element to check for visibility.
  * @param {number} offsetbottom The offset to apply to the bottom of the viewport, effectively raising the bottom edge.
  * @param {number} marginbottom The bottom margin to consider for visibility calculation, applied after offset adjustments.
