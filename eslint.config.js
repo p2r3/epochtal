@@ -93,6 +93,12 @@ export default [
       }],
     }
   }, { // HTML files (TODO)
-
+    files: ["**/pages/*.js", "**/pages/admin/*.js", "**/pages/live/*.js", "**/pages/profile/*.js"],
+    languageOptions: {
+      sourceType: "script",
+      globals: {
+        ...globals.browser
+      }
+    }
   }
 ];
