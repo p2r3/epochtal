@@ -291,7 +291,7 @@ module.exports = async function (args, context = epochtal) {
         return `Demo was recorded more than 1h ago, according to server clock.`;
       }
       if (lastTimestamp > Date.now()) {
-        return `Demo was recorded in the future, server timestamp is \`${timestamp}\`.`;
+        return `Demo was recorded in the future, server timestamp is \`${lastTimestamp}\`.`;
       }
 
       if (ppnf) return "PPNF";
