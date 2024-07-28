@@ -211,81 +211,93 @@ module.exports = async function (args, context = epochtal) {
       }
 
       let ppnf = false, sv_cheats = false;
-      let lastTimestamp = null;
+      let lastTimestamp = null, speedrunTimer = null;
       let timescale = [], timescaleTotal = 0;
 
       for (const event of mdp.demos[0].events) {
+        switch (event.type) {
 
-        // Ensure demo is submitted within the expiry time
-        if (event.type === "timestamp") {
-          if (Date.now() - Date.parse(event.value) > EXPIRY_TIME) {
-            return `Demo was recorded more than 1h ago, according to system clock.`;
-          }
-          continue;
-        }
+          // Ensure demo is submitted within the expiry time
+          case "timestamp": {
 
-        // Ensure all significant files passed the validation check
-        if (event.type === "file") {
-          const path = event.value.path.toLowerCase();
-          if (
-            path.includes("/common/portal 2/portal2_tempcontent/") ||
-            path.includes("/common/portal 2/update/")
-          ) {
-            return `Significant file \`${event.value.path}\` has mismatched checksum \`${event.value.sum}\`.`;
-          }
-          continue;
-        }
-
-        // Ensure no sar or demo mismatches are present
-        if (event.type === "sarsum") {
-          return `SAR checksum mismatch, got \`${event.value}\`.`;
-        }
-        if (event.type === "demosum") {
-          return `Demo checksum mismatch.`;
-        }
-
-        // Handle console commands and cvars
-        if (event.type === "cvar" || event.type === "cmd") {
-
-          const cvar = (event.type === "cvar" ? event.val.cvar : event.value.split(" ")[0]).trim().toLowerCase();
-          const value = event.type === "cvar" ? event.val.val : event.value.split(" ").slice(1).join(" ");
-
-          // Ensure the demo is on the correct map
-          if (cvar === "host_map") {
-            const expected = context.data.week.map.file + ".bsp";
-            if (value !== expected) {
-              return `Host map path incorrect. Expected \`${expected}\`, got \`${event.val.val}\`.`;
+            if (Date.now() - Date.parse(event.value) > EXPIRY_TIME) {
+              return `Demo was recorded more than 1h ago, according to system clock.`;
             }
+            break;
+
           }
 
-          // Check for server clock timestamps
-          if (cvar === "-alt1" && value.startsWith("ServerTimestamp")) {
-            const timestamp = parseInt(value.slice(16));
-            if (timestamp) lastTimestamp = timestamp;
-          }
+          // Ensure all significant files passed the validation check
+          case "file": {
 
-          // Keep track of the value of sv_cheats
-          if (cvar === "sv_cheats") {
-            if (!value || value == "0") sv_cheats = false;
-            else sv_cheats = true;
-          }
-
-          // Ensure the demo is not using illegal commands
-          const verdict = await testcvar([cvar, value, sv_cheats], context);
-
-          if (verdict === VERDICT_ILLEGAL) {
-            if (cvar.trim().toLowerCase() === "sv_portal_placement_never_fail") {
-              ppnf = true;
-              continue;
+            const path = event.value.path.toLowerCase();
+            if (
+              path.includes("/common/portal 2/portal2_tempcontent/") ||
+              path.includes("/common/portal 2/update/")
+            ) {
+              return `Significant file \`${event.value.path}\` has mismatched checksum \`${event.value.sum}\`.`;
             }
-            return `Illegal command: \`${cvar}${value !== "" ? " " + value : ""}\``;
+            break;
+
+          }
+
+          // Ensure no sar or demo mismatches are present
+          case "sarsum": return `SAR checksum mismatch, got \`${event.value}\`.`;
+          case "demosum": return `Demo checksum mismatch.`;
+
+          // Handle console commands and cvars
+          case "cvar":
+          case "cmd": {
+
+            const cvar = (event.type === "cvar" ? event.val.cvar : event.value.split(" ")[0]).trim().toLowerCase();
+            const value = event.type === "cvar" ? event.val.val : event.value.split(" ").slice(1).join(" ");
+
+            // Ensure the demo is on the correct map
+            if (cvar === "host_map") {
+              const expected = context.data.week.map.file + ".bsp";
+              if (value !== expected) {
+                return `Host map path incorrect. Expected \`${expected}\`, got \`${event.val.val}\`.`;
+              }
+            }
+
+            // Check for server clock timestamps
+            if (cvar === "-alt1" && value.startsWith("ServerTimestamp")) {
+              const timestamp = parseInt(value.slice(16));
+              if (timestamp) lastTimestamp = timestamp;
+            }
+
+            // Keep track of the value of sv_cheats
+            if (cvar === "sv_cheats") {
+              if (!value || value == "0") sv_cheats = false;
+              else sv_cheats = true;
+            }
+
+            // Ensure the demo is not using illegal commands
+            const verdict = await testcvar([cvar, value, sv_cheats], context);
+
+            if (verdict === VERDICT_ILLEGAL) {
+              if (cvar.trim().toLowerCase() === "sv_portal_placement_never_fail") {
+                ppnf = true;
+                break;
+              }
+              return `Illegal command: \`${cvar}${value !== "" ? " " + value : ""}\``;
+            }
+
+            break;
+
+          }
+
+          // Look for speedrun timer output
+          case "speedrun": {
+            speedrunTimer = event.value.total.ticks;
+            break;
           }
 
         }
-
       }
 
       if (lastTimestamp === null) return "Server timestamp not found.";
+      if (speedrunTimer === null) return "Speedrun timer not stopped.";
 
       if (Date.now() - lastTimestamp > EXPIRY_TIME) {
         return `Demo was recorded more than 1h ago, according to server clock.`;
