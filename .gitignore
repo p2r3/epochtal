@@ -186,3 +186,7 @@ bun.lockb
 
 # External software
 bin
+
+# Visual Studio Code
+.vscode/*
+!.vscode/launch.json
