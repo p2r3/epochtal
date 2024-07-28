@@ -1,7 +1,5 @@
 const UtilError = require("./error.js");
 
-const fs = require("node:fs");
-
 /**
  * Handles the `flush` utility call. This utility is used to synchronize the application memory and the filesystem.
  *

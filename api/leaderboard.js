@@ -19,6 +19,8 @@ const api_users = require("./users.js");
  */
 function ticksToString (t) {
 
+  // FIXME: comma missing??
+
   // Convert ticks to hours, minutes, and seconds
   let output = "",
       hrs = Math.floor(t / 216000)

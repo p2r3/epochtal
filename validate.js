@@ -140,7 +140,7 @@ async function setup() {
 module.exports = {
   validate,
   setup
-}
+};
 
 // default weights
 const WEIGHTS = {

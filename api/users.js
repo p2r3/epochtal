@@ -23,7 +23,7 @@ function getUserToken (request) {
     if (!data) return null;
     return data;
 
-  } catch (err) {
+  } catch {
 
     return null;
 

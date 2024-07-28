@@ -253,7 +253,7 @@ Commands:
 
   // List all available utilities if no valid utility name is provided
   const files = readdirSync(__dirname);
-  let list = [];
+  const list = [];
 
   for (let i = 0; i < files.length; i ++) {
     if (!files[i].endsWith(".js")) continue;

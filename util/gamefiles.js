@@ -120,7 +120,7 @@ async function buildFiles (context) {
   fs.mkdirSync(`${portal2}/maps/workshop`);
 
   // Download workshop map(s)
-  let mapPaths = [];
+  const mapPaths = [];
   if (!Array.isArray(week.map)) {
 
     const map = await getMap(week.map.id);
