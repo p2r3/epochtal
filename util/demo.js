@@ -15,7 +15,7 @@ const testcvar = require("./testcvar.js");
  */
 function extendFilePath (file) {
   if (!fs.existsSync(file)) {
-    return `${gconfig.datadir}/proof/${file}`;
+    return `${gconfig.datadir}/week/proof/${file}`;
   }
   return file;
 }
