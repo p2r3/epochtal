@@ -141,9 +141,6 @@ var profilePageInit = async function () {
       }
     }
 
-    // > I have no idea if I documented this correctly
-    // - PancakeTAS
-
   }
   await fetchProfileLog();
 

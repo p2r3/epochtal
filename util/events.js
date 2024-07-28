@@ -106,10 +106,6 @@ module.exports = async function (args, context = epochtal) {
 
         case "open": return function (ws) {
 
-          // > I may be a little bit confused here,
-          // > but isn't the declaration of `name` completely useless and redundant?
-          // - PancakeTAS
-
           // Grab event of websocket
           const event = context.data.events[ws.data.event];
           if (!event) return;
