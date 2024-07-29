@@ -65,16 +65,7 @@ If you don't want to use Docker, ~~use docker~~ you can run epochtal locally on 
    wget https://github.com/UncraftedName/UntitledParser/releases/download/jul-9-2023/UntitledParser-linux -O UntitledParser
    chmod +x UntitledParser
    ```
-4. Set environment variables
-   ```shell
-   export STEAM_API_KEY=
-   export DISCORD_API_KEY=
-   export JWT_SECRET=
-   export INTERNAL_SECRET=
-   export DISCORD_CHANNEL_ANNOUNCE=
-   export DISCORD_CHANNEL_REPORT=
-   export DISCORD_CHANNEL_UPDATE=
-   ```
+4. Copy `.env.example` to `.env` and populate the necessary fields
 5. Install bun packages and run epochtal!
    ```shell
    bun install --production

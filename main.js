@@ -1,6 +1,9 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
+// Get environment variables from .env file
+require('dotenv').config();
+
 // Ensure main config exists
 const gconfigpath = `${__dirname}/config.json`;
 if (!fs.existsSync(gconfigpath)) {
