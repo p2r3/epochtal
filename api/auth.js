@@ -1,7 +1,6 @@
 const jwt = require("jsonwebtoken");
 const SteamAuth = require("../steamauth.js");
 
-const keys = require(`${gconfig.secretsdir}/keys.js`);
 const users = require("../util/users.js");
 const validate = require("../validate.js");
 
@@ -15,7 +14,7 @@ const validate = require("../validate.js");
 const steam = new SteamAuth({
   realm: `${gconfig.tls ? "https" : "http"}://${gconfig.domain}`, // Site name displayed to users on logon
   returnUrl: `${gconfig.tls ? "https" : "http"}://${gconfig.domain}/api/auth/return`, // Return route after authentication
-  apiKey: keys.steam // Steam API key
+  apiKey: process.env.STEAM_API_KEY // Steam API key
 });
 
 /**
@@ -59,7 +58,7 @@ module.exports = async function (args, request) {
 
       // Sign the user data and set a session cookie
       // and redirect the user to the home page
-      const token = jwt.sign(authuser, keys.jwt);
+      const token = jwt.sign(authuser, process.env.JWT_SECRET);
       const headers = new Headers({
         "Set-Cookie": `steam_token=${token};path=/;max-age=604800;HttpOnly;`,
         "Location": "/"

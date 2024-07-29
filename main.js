@@ -59,8 +59,6 @@ epochtal.file = {
   }
 };
 
-const keys = require(`${gconfig.secretsdir}/keys.js`);
-
 // Parse data from files and load it into the global context
 epochtal.data = {
   leaderboard: await epochtal.file.leaderboard.json(),
@@ -68,9 +66,9 @@ epochtal.data = {
   profiles: {},
   week: await epochtal.file.week.json(),
   discord: {
-    announce: keys.announcech,
-    report: keys.reportch,
-    update: keys.updatech
+    announce: process.env.DISCORD_CHANNEL_ANNOUNCE,
+    report: process.env.DISCORD_CHANNEL_REPORT,
+    update: process.env.DISCORD_CHANNEL_UPDATE
   },
   spplice: {
     address: `${gconfig.tls ? "https" : "http"}://${gconfig.domain}`,
@@ -96,7 +94,7 @@ global.discordClient = new Discord.Client({
 });
 
 // Log in to the Discord client and set its state
-discordClient.login(keys.discord);
+discordClient.login(process.env.DISCORD_API_KEY);
 discordClient.once("ready", function () {
   discordClient.user.setActivity("Portal 2", { type: 5 });
 });
