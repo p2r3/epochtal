@@ -1,7 +1,6 @@
 const UtilError = require("./error.js");
 const UtilPrint = require("./print.js");
 
-const keys = require(`${gconfig.secretsdir}/keys.js`);
 const profiledata = require("./profiledata.js");
 
 /**
@@ -155,7 +154,7 @@ module.exports = async function (args, context = epochtal) {
       if (!(steamid in users)) throw new UtilError("ERR_STEAMID", args, context);
 
       // Get data from Steam API
-      const apiRequest = await fetch(`https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2?key=${keys.steam}&steamids=${steamid}`);
+      const apiRequest = await fetch(`https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2?key=${process.env.STEAM_API_KEY}&steamids=${steamid}`);
       if (apiRequest.status !== 200) throw new UtilError("ERR_STEAMAPI", args, context);
 
       // Try to get player data from the response

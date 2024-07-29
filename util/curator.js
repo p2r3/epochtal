@@ -3,7 +3,6 @@ const UtilPrint = require("./print.js");
 
 const https = require("http");
 const fs = require("node:fs");
-const keys = require(`${gconfig.secretsdir}/keys.js`);
 const weights = require(`${gconfig.secretsdir}/weights.js`);
 
 const weeklog = require("./weeklog.js");
@@ -23,7 +22,7 @@ const STEAM_API = "https://api.steampowered.com";
 async function getWorkshopData (mapid) {
 
   // Fetch the workshop data for the map
-  const detailsRequest = await fetch(`${STEAM_API}/IPublishedFileService/GetDetails/v1/?key=${keys.steam}&publishedfileids[0]=${mapid}&includeadditionalpreviews=true`);
+  const detailsRequest = await fetch(`${STEAM_API}/IPublishedFileService/GetDetails/v1/?key=${process.env.STEAM_API_KEY}&publishedfileids[0]=${mapid}&includeadditionalpreviews=true`);
   if (detailsRequest.status !== 200) return "ERR_STEAMAPI";
 
   // Parse the response, throwing an error if the data is invalid
@@ -375,7 +374,7 @@ module.exports = async function (args, context = epochtal) {
       let gamesList = 0;
       for (let tries = 0; tries <= 10; tries ++) {
 
-        const response = await fetch(`${STEAM_API}/IPlayerService/GetOwnedGames/v1/?key=${keys.steam}&steamid=${data.creator}`);
+        const response = await fetch(`${STEAM_API}/IPlayerService/GetOwnedGames/v1/?key=${process.env.STEAM_API_KEY}&steamid=${data.creator}`);
 
         if (response.status === 200) {
           gamesList = (await response.json()).response.games;
@@ -407,7 +406,7 @@ module.exports = async function (args, context = epochtal) {
       let userMaps;
       for (let tries = 0; tries <= 10; tries ++) {
 
-        const response = await fetch(`${STEAM_API}/IPublishedFileService/GetUserFileCount/v1/?key=${keys.steam}&steamid=${data.creator}&appid=620&totalonly=true`);
+        const response = await fetch(`${STEAM_API}/IPublishedFileService/GetUserFileCount/v1/?key=${process.env.STEAM_API_KEY}&steamid=${data.creator}&appid=620&totalonly=true`);
 
         if (response.status === 200) {
           userMaps = (await response.json()).response.total;

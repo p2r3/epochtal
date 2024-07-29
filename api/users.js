@@ -1,7 +1,6 @@
 const jwt = require("jsonwebtoken");
 const fs = require("node:fs");
 
-const keys = require(`${gconfig.secretsdir}/keys.js`);
 const users = require("../util/users.js");
 const profiledata = require("../util/profiledata.js");
 
@@ -18,7 +17,7 @@ function getUserToken (request) {
     // Get the token from the request headers
     const token = request.headers.get("Cookie").split("steam_token=")[1].split(";")[0];
     // Verify the token and return the data
-    const data = jwt.verify(token, keys.jwt);
+    const data = jwt.verify(token, process.env.JWT_SECRET);
 
     if (!data) return null;
     return data;
@@ -66,7 +65,7 @@ module.exports = async function (args, request) {
     case "whoami": {
 
       // Check if the request is internal and return the server user
-      if (request.headers.get("Authentication") === keys.internal) {
+      if (request.headers.get("Authentication") === process.env.INTERNAL_SECRET) {
         return serverUser;
       }
 
