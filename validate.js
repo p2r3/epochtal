@@ -69,17 +69,6 @@ async function validate() {
     return false;
   }
 
-  if (!fs.existsSync(`${gconfig.secretsdir}/keys.js`)) {
-    console.log("keys.js is missing from secretsdir. [discord, internal, jwt, steam, announcech, updatech, reportch]");
-    return false;
-  } else {
-    const keys = require(`${gconfig.secretsdir}/keys.js`);
-    if (!keys.discord || !keys.internal || !keys.jwt || !keys.steam || !keys.announcech || !keys.updatech || !keys.reportch) {
-      console.log("keys.js is missing required fields: [discord, internal, jwt, steam, announcech, updatech, reportch]");
-      return false;
-    }
-  }
-
   if (!fs.existsSync(`${gconfig.secretsdir}/weights.js`)) {
     console.log("weights.js is missing from secretsdir. Dumping default weights...");
     await Bun.write(`${gconfig.secretsdir}/weights.js`, `module.exports = ${JSON.stringify(WEIGHTS, null, 2)};`);
@@ -106,6 +95,18 @@ async function validate() {
   await ensureFile(`${gconfig.datadir}/week/config.json`, `{"categories":[],"votingmaps":[{"id":"140534764"}],"votes":{},"number":0}`);
   await ensureFile(`${gconfig.datadir}/week/leaderboard.json`, "{}");
   await ensureFile(`${gconfig.datadir}/week/week.log`, "");
+
+  // Validate process environment
+  if (!process.env.STEAM_API_KEY
+      || !process.env.DISCORD_API_KEY
+      || !process.env.JWT_SECRET
+      || !process.env.INTERNAL_SECRET
+      || !process.env.DISCORD_CHANNEL_ANNOUNCE
+      || !process.env.DISCORD_CHANNEL_REPORT
+      || !process.env.DISCORD_CHANNEL_UPDATE) {
+    console.error("One or more environment variables are missing. Epochtal cannot run unless all necessary variables are present.");
+    return false;
+  }
 
   return true;
 }
