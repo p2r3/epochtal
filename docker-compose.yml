@@ -1,0 +1,15 @@
+services:
+  epochtal:
+    image: ghcr.io/p2r3/epochtal:latest
+    ports:
+      - 8080:8080/tcp
+    environment:
+      STEAM_API_KEY: # Get this from https://steamcommunity.com/dev/apikey
+      DISCORD_API_KEY: # Create an application at https://discord.com/developers/applications
+      JWT_SECRET: # This can be anything, used for signing JWT data
+      INTERNAL_SECRET: # This can be anything, used for internal request authentication
+      DISCORD_CHANNEL_ANNOUNCE: # The channel ID of the Discord announcement channel
+      DISCORD_CHANNEL_REPORT: # The channel ID of the Discord report channel
+      DISCORD_CHANNEL_UPDATE: # The channel ID of the Discord update channel
+    volumes:
+      # - <host-path>:/app/data # you can optionally bind the data dir of epochtal to your host (recommended).
