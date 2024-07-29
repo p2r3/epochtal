@@ -14,7 +14,10 @@ services:
     #  DISCORD_CHANNEL_ANNOUNCE:
     #  DISCORD_CHANNEL_REPORT:
     #  DISCORD_CHANNEL_UPDATE:
-    # You can bind the data directory of epochtal to your host (recommended).
-    # Comment out the following section if you don't want that.
+    #  WEB_URL: # This is optional
     volumes:
-      - <host-path>:/app/data
+      # You can bind the data directory of epochtal to your host (recommended).
+      # Comment out the following line if you don't want that.
+      - ./data:/app/data
+      # You can also bind the 'secrets' directory to your host. This contains SSL certificates (if used) and curation weights
+      #- ./secrets:/app/secrets
