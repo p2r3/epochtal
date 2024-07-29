@@ -97,13 +97,15 @@ async function validate() {
   await ensureFile(`${gconfig.datadir}/week/week.log`, "");
 
   // Validate process environment
-  if (!process.env.STEAM_API_KEY
+  if (
+      !process.env.STEAM_API_KEY
       || !process.env.DISCORD_API_KEY
       || !process.env.JWT_SECRET
       || !process.env.INTERNAL_SECRET
       || !process.env.DISCORD_CHANNEL_ANNOUNCE
       || !process.env.DISCORD_CHANNEL_REPORT
-      || !process.env.DISCORD_CHANNEL_UPDATE) {
+      || !process.env.DISCORD_CHANNEL_UPDATE
+  ) {
     console.error("One or more environment variables are missing. Epochtal cannot run unless all necessary variables are present.");
     return false;
   }
