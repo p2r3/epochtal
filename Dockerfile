@@ -1,8 +1,7 @@
 FROM debian AS build
 WORKDIR /build
 # Install build dependencies
-RUN apt update
-RUN apt install wget git unzip -y
+RUN apt update && apt install wget git unzip -y
 # Install bspsrc
 RUN wget https://github.com/ata4/bspsrc/releases/download/v1.4.5/bspsrc-linux.zip
 RUN unzip bspsrc-linux.zip -d bspsrc
@@ -18,8 +17,7 @@ FROM oven/bun:latest
 LABEL authors="Soni"
 WORKDIR /app
 # Install runtime dependencies
-RUN apt update
-RUN apt install xz-utils -y
+RUN apt update && apt install xz-utils -y
 # Get binaries from build step
 RUN mkdir bin
 COPY --from=build /build bin/
