@@ -6,7 +6,7 @@ const gconfigpath = `${__dirname}/config.json`;
 if (!fs.existsSync(gconfigpath)) {
   console.log("No global config file found. Deploying default config...");
   await Bun.write(gconfigpath, JSON.stringify({
-    domain: "localhost:8080",
+    domain: process.env.WEB_URL ?? "localhost:8080",
     port: 8080,
     tls: false,
     secretsdir: `${__dirname}/secrets`,
