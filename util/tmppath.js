@@ -34,7 +34,7 @@ module.exports = async function (len = 8, context = null) {
 
   let output;
   do {
-    output = path.join(__dirname, "../.tmp/" + randomString(len));
+    output = path.join(`${gconfig.datadir}/.tmp/${randomString(len)}`);
   } while (existsSync(output));
 
   return output;
