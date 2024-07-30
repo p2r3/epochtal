@@ -179,7 +179,6 @@ data/
 secrets/
 bin/
 config.json
-.tmp
 
 # Bun lockfile
 bun.lockb

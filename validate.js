@@ -77,8 +77,8 @@ async function validate() {
 
   // Validate basic datadir structure
 
-  ensureDir(`${__dirname}/.tmp`);
   ensureDir(`${gconfig.datadir}`);
+  ensureDir(`${gconfig.datadir}/.tmp`);
   ensureDir(`${gconfig.datadir}/archives`);
   ensureDir(`${gconfig.datadir}/profiles`);
   ensureDir(`${gconfig.datadir}/spplice`);
