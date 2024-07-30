@@ -20,7 +20,7 @@ if (!fs.existsSync(gconfigpath)) {
 
 // Load the global config
 const gconfig = await Bun.file(gconfigpath).json();
-global.isFirstLaunch = !fs.existsSync(gconfig.datadir);
+global.isFirstLaunch = !fs.existsSync(`${gconfig.datadir}/.first-run`);
 global.gconfig = gconfig;
 
 // Validate the global config
