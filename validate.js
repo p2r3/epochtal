@@ -118,7 +118,7 @@ async function validate() {
  *
  * @author PancakeTAS
  */
-async function setup() {
+async function setup () {
 
   const routines = require("./util/routine.js");
   const categories = require("./util/categories.js");
@@ -138,6 +138,8 @@ async function setup() {
   // Delete first archive
   fs.rmSync(`${gconfig.datadir}/archives/week0`, { recursive: true, force: true });
 
+  // Create first run file
+  await Bun.write(`${gconfig.datadir}/.first-run`, "");
 }
 
 module.exports = {
