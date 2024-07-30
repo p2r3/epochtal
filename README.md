@@ -6,11 +6,27 @@ Reaching for the ambitious goal of bringing Portal 2 as close to a competitive e
 a solid technical foundation. Originally developed for use in [epochtal.p2r3.com](https://epochtal.p2r3.com/), designed
 for adaptability in any Portal 2 tournament context.
 
-## Setup
+## Contributing to Epochtal
+
+Epochtal is an open source project, and encourages contributions. If you want to contribute to the project, or create
+your own derivative, here's a quick start guide:
+
+```shell
+git clone https://github.com/p2r3/epochtal
+cd epochtal
+bun install
+```
+
+Make sure you have the required dependencies `tar`, `xz` and `wget` when running epochtal with `bun run main.js`.
+
+You're also going to make your life a lot easier by reading [the contribution guidelines](CONTRIBUTING.md) before making
+any changes.
+
+## Deploying Epochtal
 
 This project is written for the [Bun runtime](https://bun.sh/), and will not work on other runtimes such as Node or Deno.
 
-There are several ways you can set up epochtal for your own tournament:
+There are two primary ways in which you can deploy epochtal for your own tournament:
 
 ### Using Docker (recommended)
 
@@ -29,6 +45,7 @@ Then, you can start the container:
 ```shell
 docker run -d \
 -v epochtal-data:/app/data \
+-v /some/host/path/changeme:/app/secrets \
 -p 8080:8080 \
 -e STEAM_API_KEY=changeme \
 -e DISCORD_API_KEY=changeme \
@@ -39,6 +56,8 @@ docker run -d \
 -e DISCORD_CHANNEL_UPDATE=changeme \
 ghcr.io/p2r3/epochtal
 ```
+
+The `/app/secrets` bind is optional, and not recommended unless you need to edit SSL certificates or curation weights.
 
 ### Manual installation
 

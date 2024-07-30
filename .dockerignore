@@ -188,5 +188,4 @@ bun.lockb
 bin
 
 # Visual Studio Code
-.vscode/*
-!.vscode/launch.json
+.vscode
