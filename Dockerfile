@@ -21,7 +21,7 @@ RUN apt update && apt install xz-utils wget -y
 # Get binaries from build step
 RUN mkdir bin
 COPY --from=build /build bin/
-#Install application
+# Install application
 COPY . .
 RUN bun install --production
 
