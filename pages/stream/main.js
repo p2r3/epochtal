@@ -1,4 +1,4 @@
-var initializeUI = async function () {
+const initializeUI = async function () {
 
   // Fetch data required for rendering the leaderboard
   const leaderboard = await (await fetch("/api/leaderboard/get")).json();
@@ -182,7 +182,7 @@ var initializeUI = async function () {
       runSeparatorElement.style.transform = "scaleX(1)";
     }, 800);
 
-  }
+  };
 
   /**
    * Plays back a run on-stream
@@ -256,7 +256,7 @@ var initializeUI = async function () {
     // Re-enable interaction with UI elements
     contentContainer.style.pointerEvents = "auto";
 
-  }
+  };
 
   /**
    * Handles messages sent from the stream UI controller

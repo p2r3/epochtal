@@ -16,7 +16,7 @@ window.musicStartPlayer = async function () {
   /**
    * Exposes toggling player to global scope
    */
-  window.musicTogglePause = function () { scWidget.toggle() };
+  window.musicTogglePause = function () { scWidget.toggle(); };
 
   /**
    * Defines what happens when a track ends or gets skipped
