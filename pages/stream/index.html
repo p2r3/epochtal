@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <title>Epochtal Tournament System</title>
+    <link rel="icon" href="/icons/favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="/stream/stream.css">
+    <script src="https://w.soundcloud.com/player/api.js"></script>
+    <script src="https://kit.fontawesome.com/fc2642e2d1.js" crossorigin="anonymous"></script>
+  </head>
+  <body>
+
+    <iframe id="soundcloud" scrolling="no" frameborder="no" src="https://w.soundcloud.com/player/?url=https%3A//soundcloud.com/user-791186860/sets/epochtal-weekly-tournaments&auto_play=false"></iframe>
+    <iframe id="youtube" width="1920" height="1080" frameborder="0" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+
+    <div id="bg-anim-container">
+      <div id="bg-anim-bg"></div>
+      <canvas id="bg-anim"></canvas>
+      <div id="bg-anim-blur"></div>
+      <script src="/bg.js"></script>
+    </div>
+
+    <div id="content">
+
+      <div id="title">
+
+        <div id="lines">
+          <div id="line1"></div>
+          <div id="line2"></div>
+        </div>
+
+        <h1>
+          Epochtal Weekly Tournaments
+          <br><span id="week"></span>
+        </h1>
+
+      </div>
+
+      <div id="leaderboard">
+
+        <!-- automagical content -->
+
+      </div>
+
+      <div id="info">
+        <div class="info-block">
+          <h2 class="info-title">map</h2>
+          <h2 class="info-description"></h2>
+        </div>
+        <div class="info-block">
+          <h2 class="info-title">votes</h2>
+          <h2 class="info-description"></h2>
+        </div>
+        <div class="info-block">
+          <h2 class="info-title">times</h2>
+          <h2 class="info-description"></h2>
+        </div>
+        <div class="info-block">
+          <h2 class="info-title">variation</h2>
+          <h2 class="info-description"></h2>
+        </div>
+      </div>
+
+      <div id="runinfo">
+        <h1 id="runinfo-name"></h1>
+        <div id="runinfo-seperator"></div>
+        <h2 id="runinfo-details"></h2>
+      </div>
+
+      <p id="runinfo-comment"></p>
+
+      <div id="musicplayer-container">
+        <p id="musicplayer-title">Now Playing</p>
+        <p id="musicplayer-track-icon"><i class="fa-brands fa-soundcloud"></i></p>
+        <p id="musicplayer-track">
+          <span id="musicplayer-track-name">Dreams</span>
+          by <span id="musicplayer-track-author">dustyhobo</span>
+        </p>
+      </div>
+
+    </div>
+
+    <div id="intro-anim">
+
+      <p id="intro-anim-text-bg"></p>
+      <p id="intro-anim-text"></p>
+
+    </div>
+
+    <div id="standby-container">
+
+      <img id="standby-bg" src="">
+
+      <h2>Epochtal</h2>
+      <h1>Weekly Tournaments</h1>
+
+      <div id="standby-line1"></div>
+      <div id="standby-line2"></div>
+
+      <h3 id="standby-info">
+
+      </h3>
+
+      <canvas id="standby-canvas"></canvas>
+      <h4>Music by dustyhob0 on Soundcloud</h4>
+
+    </div>
+
+    <script src="/tools.js"></script>
+    <script src="/stream/music.js"></script>
+    <script src="/stream/anim.js"></script>
+    <script src="/stream/main.js"></script>
+
+  </body>
+</html>
