@@ -1,0 +1,455 @@
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@300;500&display=swap');
+
+* {
+  user-select: none;
+}
+
+body {
+  margin: 0;
+  background-color: rgba(0, 0, 0, 0);
+}
+
+h1, h2, p {
+  font-family: Quicksand;
+  font-weight: 500;
+  color: white;
+}
+
+h1 {
+  font-size: 2.5rem;
+}
+h2 {
+  font-size: 2.25rem;
+}
+
+.podium1 { border: 2px solid #f3d635; }
+.podium2 { border: 2px solid #95cbe1; }
+.podium3 { border: 2px solid #c88971; }
+
+#bg-anim-container {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1;
+  opacity: 1;
+  pointer-events: none;
+  will-change: opacity;
+  transition: opacity 0.5s;
+}
+
+#bg-anim-container * {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+}
+
+#bg-anim-bg {
+  background-color: rgb(12, 12, 12);
+}
+
+#bg-anim {
+  opacity: 0.25;
+  filter: blur(2px);
+}
+
+#bg-anim-blur {
+  -webkit-mask: radial-gradient(circle, #0000 25vw, rgba(0, 0, 0, 0.9) 50vw);
+  mask: radial-gradient(circle, #0000 25vw, rgba(0, 0, 0, 0.9) 50vw);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+#youtube {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 100vw;
+  height: calc(100vw / (16 / 9));
+  z-index: 1;
+}
+
+#content {
+  position: fixed;
+  width: 95%;
+  height: 95%;
+  left: 2.5%;
+  top: 2.5%;
+  z-index: 3;
+}
+
+#title {
+  position: relative;
+  top: 0;
+  z-index: 1;
+  will-change: transform;
+  transition: transform 1s;
+}
+
+#title h1 {
+  margin-top: 0;
+  margin-left: 1%;
+  line-height: 1.1;
+}
+
+#week {
+  font-weight: 300;
+  letter-spacing: 0.3rem;
+  color: white;
+  opacity: 0;
+  will-change: opacity;
+  transition: opacity 0.5s;
+}
+
+#lines {
+  margin-bottom: 1.5%;
+}
+#lines:after {
+  content: "";
+  clear: both;
+  display: table;
+}
+#lines div {
+  position: absolute;
+  top: 0;
+  height: 0;
+  border: 2px solid white;
+  border-radius: 2px;
+  float: left;
+}
+#line1 {
+  left: 0;
+  width: 4vw;
+}
+#line2 {
+  left: 5vw;
+  width: 9vw;
+}
+
+#leaderboard {
+  position: absolute;
+  left: 5%;
+  top: 20%;
+  width: 40%;
+  height: 80%;
+  will-change: transform;
+  transition: transform 1s;
+}
+
+#lb-title {
+  margin: 0;
+  width: 100%;
+  text-align: center;
+  letter-spacing: 0.2rem;
+  color: white;
+  pointer-events: none;
+  opacity: 0;
+  will-change: opacity;
+  transition: opacity 0.5s;
+}
+
+.lb-entry {
+  position: relative;
+  background: rgb(44, 44, 44);
+  background: linear-gradient(120deg, rgba(44, 44, 44, 1) 20%, rgba(55, 55, 55, 1) 80%);
+  width: 100%;
+  height: 4vw; /* yes i know what im doing stfu */
+  border-radius: 10px;
+  box-sizing: border-box;
+  margin-top: 4%;
+  opacity: 0;
+  will-change: opacity, transform;
+  transition: opacity 0.5s, transform 0.5s;
+}
+
+.lb-entry-coop {
+  background: linear-gradient(120deg, rgba(44, 44, 44, 1) 50%, rgba(55, 55, 55, 1) 50%);
+}
+
+.lb-entry-compact {
+  width: 48%;
+  float: left;
+  margin: 3% 1% 0 1%;
+}
+
+.lb-entry h1 {
+  position: absolute;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 90%;
+  padding: 0 5%;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.solo {
+  left: 0;
+  width: 100%;
+  text-align: center;
+}
+.p1 {
+  left: 5%;
+}
+.p2 {
+  left: 55%;
+}
+
+#info {
+  position: absolute;
+  right: 0;
+  top: 2.5%;
+  width: 20%;
+  padding: 0 1.5%;
+  background-color: rgba(44, 44, 44, 0.5);
+  border-radius: 10px;
+  opacity: 0;
+  transform: translateX(calc(100% + 2.5vw));
+  will-change: opacity, transform;
+  transition: opacity 1s, transform 1s;
+  backdrop-filter: blur(20px);
+}
+
+.info-block {
+  margin-top: 5%;
+  margin-bottom: 20%;
+}
+
+.info-title {
+  margin: 0;
+  line-height: 1;
+  font-weight: 300;
+  font-style: italic;
+}
+
+.info-description {
+  margin: 1% 0 0 3%;
+  line-height: 1;
+  font-style: italic;
+  transition: color 0.5s;
+}
+
+#runinfo {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  will-change: transform;
+  transition: transform 1s;
+}
+
+#runinfo-name {
+  margin: 0 0 2% 0;
+  font-size: 4rem;
+  text-align: center;
+  text-shadow: 3px 3px black;
+  opacity: 0;
+  will-change: opacity;
+  transition: opacity 0.5s;
+}
+
+#runinfo-details {
+  margin: 0;
+  text-align: center;
+  font-weight: 300;
+  font-size: 2.5rem;
+  opacity: 0;
+  will-change: opacity;
+  transition: opacity 0.5s;
+}
+
+#runinfo-seperator {
+  width: 70%;
+  margin: 2% 0 0 0;
+  border: 1px solid white;
+  margin-left: 15%;
+  transform: scaleX(0);
+  will-change: transform;
+  transition: transform 1s;
+}
+
+#runinfo-comment {
+  position: absolute;
+  left: 0;
+  bottom: 5%;
+  max-width: 50vw;
+  transform: translateX(calc(47.5vw - 50%));
+  text-align: center;
+  font-size: 2em;
+  font-style: italic;
+  font-weight: 300;
+  color: rgba(255, 255, 255, 0.75);
+  background-color: rgba(0, 0, 0, 0.6);
+  padding: 10px;
+  border-bottom: 1px solid white;
+  border-radius: 10px;
+  opacity: 0;
+  will-change: opacity;
+  transition: opacity 0.5s;
+}
+
+#intro-anim {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: black;
+  z-index: 5;
+  transform: scaleY(1);
+  will-change: transform;
+  transition: transform 0.7s;
+  transition-timing-function: cubic-bezier(.07, 1.12, .9, .98);
+}
+
+#intro-anim-text, #intro-anim-text-bg {
+  position: absolute;
+  left: 0;
+  top: 0;
+  margin: 15px;
+  font-family: monospace;
+  color: white;
+  /* We need to ensure the animation takes up the entire viewport height
+  This seems like the simplest (not necessarily best) way to do that */
+  font-size: 1.3vh;
+}
+#intro-anim-text-bg {
+  filter: blur(5px);
+}
+
+#standby-container {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 100vw;
+  height: 100vh;
+  opacity: 1;
+  transition: opacity 0.5s;
+  z-index: 10;
+}
+
+#standby-bg {
+  position: absolute;
+  top: -2vh;
+  left: -2vw;
+  width: 104vw;
+  filter: blur(10px);
+}
+
+#standby-container h1, #standby-container h2, #standby-container h3, #standby-container h4 {
+  position: absolute;
+  left: 13vw;
+  font-family: Quicksand;
+  color: white;
+  text-shadow: 0.3rem 0.3rem black;
+}
+
+#standby-container h2 {
+  font-weight: 300;
+  font-size: 5rem;
+  top: 20vh;
+}
+
+#standby-container h1 {
+  font-weight: 500;
+  font-size: 7rem;
+  top: 26vh;
+}
+
+#standby-container h3 {
+  font-weight: 300;
+  line-height: 100%;
+  font-size: 4.5rem;
+  top: 40vh;
+}
+
+#standby-container h4 {
+  font-weight: 500;
+  font-size: 2.5rem;
+  left: calc(1vw - 10px);
+  bottom: 1vw;
+  margin: 0;
+  display: inline-block;
+  background-color: rgba(0, 0, 0, 0.6);
+  text-shadow: 0.2rem 0.2rem black;
+  border-radius: 5px;
+  padding: 0 10px;
+}
+
+#standby-container div {
+  position: absolute;
+  border: 4px solid white;
+  border-radius: 4px;
+  top: 45.5vh;
+  left: 13vw;
+  box-shadow: 0.3rem 0.3rem black;
+}
+
+#standby-line1 {
+  width: 4vw;
+  height: 0;
+}
+
+#standby-line2 {
+  margin-left: 5vw;
+  width: 9vw;
+  height: 0;
+}
+
+#standby-canvas {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 36.5vw;
+  height: 20vh;
+}
+
+#musicplayer-container {
+  position: fixed;
+  top: 2vw;
+  right: 2vw;
+  width: 280px;
+  height: 70px;
+  border: 2px solid white;
+  border-radius: 10px;
+  background-color: rgba(0, 0, 0, 0.6);
+  opacity: 0;
+  transform: translateY(-100%);
+  transition: opacity 0.75s, transform 0.75s;
+}
+
+#musicplayer-title {
+  position: absolute;
+  margin: 0;
+  left: 10px;
+  top: 4px;
+  font-size: 1.5em;
+}
+
+#musicplayer-track {
+  position: absolute;
+  margin: 0;
+  left: 10px;
+  bottom: 8px;
+  width: 260px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 1.2em;
+  font-weight: 300;
+}
+
+#musicplayer-track-icon {
+  position: absolute;
+  margin: 0;
+  top: 2px;
+  right: 10px;
+  font-size: 2em;
+  font-family: sans-serif;
+}
+
+#musicplayer-track-name {
+  font-weight: 500;
+}

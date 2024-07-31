@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+
+  <head>
+    <meta charset="utf-8">
+    <title>Stream UI Controller</title>
+    <link rel="icon" href="/icons/favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="/style.css">
+    <script src="https://kit.fontawesome.com/fc2642e2d1.js" crossorigin="anonymous"></script>
+  </head>
+
+  <body>
+
+    <h1 class="center marginy">Stream UI Controller</h1>
+
+    <div class="center">
+
+      <p class="marginb_small">Select category</p>
+      <select name="category" id="controller-categories" class="marginb"></select>
+
+      <p class="marginb_small">Switch state</p>
+      <button onclick="returnToLeaderboard()">Return to Leaderboard</button>
+      <button onclick="playSelectedRun()">Play Selected Run</button>
+
+      <p>Selected leaderboard</p>
+      <p id="controller-leaderboard" class="marginy"></p>
+
+      <p class="marginb_small" id="controller-music-nowplaying">Now playing: <b>Dreams</b></p>
+      <h2 class="margin0">
+        <i class="fa-solid fa-pause" style="cursor: pointer" id="controller-music-playpause"></i>&nbsp;&nbsp;
+        <i class="fa-solid fa-forward" style="cursor: pointer" id="controller-music-skip"></i>
+      </h2>
+
+    </div>
+
+    <div id="global-popup">
+      <h2 id="global-popup-title">ERR_STYLE</h2>
+      <p id="global-popup-text">You should not be seeing this.</p>
+      <div style="font-size:0;">
+        <button id="global-popup-cancel" onclick="popupOnCancel()">Cancel</button>
+        <button id="global-popup-ok" onclick="popupOnOkay()">OK</button>
+      </div>
+    </div>
+
+    <div id="global-tooltip"></div>
+
+    <footer class="marginy"></footer>
+
+    <script src="/tools.js"></script>
+    <script src="/stream/controller.js"></script>
+
+  </body>
+
+</html>
