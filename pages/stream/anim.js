@@ -6,7 +6,8 @@
  */
 const countRunners = function (leaderboard) {
 
-  let playerList = [], runners = 0, categories = 0, tas = 0;
+  const playerList = [];
+  let runners = 0, categories = 0, tas = 0;
   for (const category in leaderboard) {
 
     if (leaderboard[category].length === 0) continue;
@@ -34,7 +35,7 @@ const countRunners = function (leaderboard) {
  * @param {object} config The week configuration (config.json)
  * @param {object} leaderboard The full leaderboard (leaderboard.json)
  */
-async function standbyAnimation (config, leaderboard) {
+window.standbyAnimation = async function (config, leaderboard) {
 
   const { runners, categories } = countRunners(leaderboard);
 
@@ -155,12 +156,12 @@ async function standbyAnimation (config, leaderboard) {
       document.removeEventListener("keypress", emergencyStart);
 
       finishStandby();
-    }
+    };
     document.addEventListener("keypress", emergencyStart);
 
   });
 
-}
+};
 
 /**
  * Creates the animation that plays shortly before the leaderboard is displayed
@@ -168,7 +169,7 @@ async function standbyAnimation (config, leaderboard) {
  * @param {object} config The week configuration (config.json)
  * @param {object} leaderboard The full leaderboard (leaderboard.json)
  */
-async function introAnimation (config, leaderboard) {
+window.introAnimation = async function (config, leaderboard) {
 
   const { runners, tas } = countRunners(leaderboard);
 
@@ -278,4 +279,4 @@ Setting opening scene to tournament/main`).split("\n");
 
   });
 
-}
+};

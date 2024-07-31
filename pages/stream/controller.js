@@ -1,4 +1,4 @@
-var controllerInit = async function () {
+const controllerInit = async function () {
 
   // Pre-fetch required resources
   const whoami = await (await fetch("/api/users/whoami")).json();
@@ -173,5 +173,5 @@ var controllerInit = async function () {
     }
   });
 
-}
+};
 controllerInit();
