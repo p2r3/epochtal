@@ -115,7 +115,7 @@ module.exports = async function (args, context = epochtal) {
             ws.subscribe(ws.data.event);
             event.connect(ws.data.steamid);
           } catch {
-            throw new UtilError("ERR_HANDLER", args, context);
+            new UtilError("ERR_HANDLER", args, context);
           }
 
         };
@@ -128,21 +128,25 @@ module.exports = async function (args, context = epochtal) {
 
           // Send message to the event
           try {
-            context.data.events[ws.data.event].message(message);
+            event.message(message);
           } catch {
-            throw new UtilError("ERR_HANDLER", args, context);
+            new UtilError("ERR_HANDLER", args, context);
           }
 
         };
 
         case "close": return function (ws) {
 
+          // Grab event of websocket
+          const event = context.data.events[ws.data.event];
+          if (!event) return;
+
           // Unsubscribe the websocket
           try {
             ws.unsubscribe(ws.data.event);
-            context.data.events[ws.data.event].disconnect(ws.data.steamid);
+            event.disconnect(ws.data.steamid);
           } catch {
-            throw new UtilError("ERR_HANDLER", args, context);
+            new UtilError("ERR_HANDLER", args, context);
           }
 
         };
