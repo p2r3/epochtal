@@ -4,6 +4,24 @@ const categories = require("./categories.js");
 const weeklog = require("./weeklog.js");
 
 /**
+ * Adds a placement index to each run.
+ * @param {object[]} lb An array of runs representing the leaderboard
+ */
+function calculatePlacement (lb) {
+
+  let placement = 1;
+  for (let i = 0; i < lb.length; i ++) {
+
+    if (i !== 0 && lb[i].time !== lb[i-1].time) {
+      placement ++;
+    }
+    lb[i].placement = placement;
+
+  }
+
+};
+
+/**
  * Handles the `leaderboard` utility call. Manages the leaderboard for a given category.
  *
  * The following subcommands are available:
@@ -47,24 +65,8 @@ module.exports = async function (args, context = epochtal) {
 
     case "get": {
 
-      const output = [];
-
       if (lb === undefined) throw new UtilError("ERR_CATEGORY", args, context);
-
-      // Add placement to each run
-      let placement = 1;
-      for (let i = 0; i < lb.length; i ++) {
-
-        if (i !== 0 && lb[i].time !== lb[i-1].time) {
-          placement ++;
-        }
-        lb[i].placement = placement;
-
-        output.push(lb[i]);
-
-      }
-
-      return output;
+      return lb;
 
     }
 
@@ -79,8 +81,13 @@ module.exports = async function (args, context = epochtal) {
 
       if (idx === -1) throw new UtilError("ERR_NOTFOUND", args, context);
 
-      // Remove the run from the leaderboard and write the changes
-      data[category].splice(idx, 1);
+      // Remove the run from the leaderboard
+      lb.splice(idx, 1);
+
+      // Recalculate placement indices
+      calculatePlacement(lb);
+
+      // Write the changes to file
       if (file) Bun.write(file, JSON.stringify(data));
 
       // Log the removal
@@ -171,6 +178,9 @@ module.exports = async function (args, context = epochtal) {
       }
 
       if (!inserted) lb.push(newRun);
+
+      // Recalculate placement indices
+      calculatePlacement(lb);
 
       // Write the changes to the leaderboard
       if (file) Bun.write(file, JSON.stringify(data));
