@@ -20,6 +20,8 @@ and pull requests.
 
 Epochtal is set up to use [eslint](https://eslint.org/),
 which will automatically complain if you do something really wrong.
+If you don't know how to set up eslint,
+read [this comment](https://github.com/p2r3/epochtal/pull/69#issuecomment-2254560934).
 However, you should still keep the following in mind while coding:
 
 - Curly brackets (`{}`) MUST NOT be omitted unless the associated statement is only a single line.
