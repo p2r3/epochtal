@@ -9,6 +9,54 @@ const SERVER_ADDRESS = fs.read("address.txt");
 let input = "";
 let pongIgnore = 0;
 
+let onReadSteamID = null;
+let ws = null;
+
+// Generates a random 4 digit code
+function generateAuthCode () {
+  let code = Math.floor(Math.random() * 10000).toString();
+  while (code.length < 4) code = "0" + code;
+  return code;
+}
+
+// Handles received WebSocket events
+function wsMessageHandler (event) {
+
+  const data = JSON.parse(event.data);
+
+  switch (data.type) {
+    case "cmd": return SendToConsole(data.value);
+    case "ping": return ws.send(JSON.stringify({ type: "pong" }));
+  }
+
+}
+
+// Authenticates and sets up a WebSocket connection
+function wsSetup () {
+
+  // Trying to load a save file prints the user's SteamID to console as a path
+  SendToConsole("load .");
+
+  // Wait for the SteamID to get read from the console
+  onReadSteamID = function (steamid) {
+
+    const protocol = SERVER_ADDRESS.startsWith("https:") ? "wss" : "ws";
+    const hostname = SERVER_ADDRESS.split("://")[1].split("/")[0];
+    const authcode = generateAuthCode();
+
+    SendToConsole("hideconsole");
+    SendToConsole(`disconnect "Go to epochtal.p2r3.com and enter the code ${authcode} when prompted."`);
+
+    ws = new WebSocket(`${protocol}://${hostname}/api/gameauth/connect/${authcode}/"${steamid}"`);
+    ws.addEventListener("message", wsMessageHandler);
+
+    ws.addEventListener("open", () => SendToConsole("echo WebSocket connection established."));
+    ws.addEventListener("close", () => SendToConsole("echo WebSocket connection closed."));
+
+  };
+
+}
+
 // Handle console output
 onConsoleOutput(async function (data) {
 
@@ -72,6 +120,20 @@ onConsoleOutput(async function (data) {
         SendToConsole("script ::serverUnreachable()");
 
       }
+      continue;
+    }
+
+    // Respond to request for WebSocket connection
+    if (lines[i] === "Usage:  connect <server>") {
+      wsSetup();
+      continue;
+    }
+
+    // Retrieve SteamID from save file load attempt
+    if (lines[i].startsWith("Loading game from SAVE/")) {
+      const steamid = lines[i].split("Loading game from SAVE/")[1].split("/....")[0];
+      onReadSteamID(steamid);
+      continue;
     }
 
   }

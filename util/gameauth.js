@@ -8,10 +8,11 @@ const UtilError = require("./error.js");
  * The following subcommands are available:
  * - `set`: Binds the provided code to the user's SteamID
  * - `verify`: Runs the callback function if the provided code matches the one bound to the user's SteamID
+ * - `get`: Returns the authcode bound to the user's SteamID
  *
- * @param {[string, string, number, function]} args The arguments for the call, in order: command name, user's SteamID, one-time code, callback function
+ * @param {[string, string, string, function]} args The arguments for the call, in order: command name, user's SteamID, one-time code, callback function
  * @param {unknown} [context=epochtal] The context on which to execute the call
- * @returns {Promise<string>} The output of the call
+ * @returns {Promise<string|null>} The output of the call
  */
 module.exports = async function (args, context = epochtal) {
 
@@ -25,10 +26,17 @@ module.exports = async function (args, context = epochtal) {
 
     case "set": {
 
-      if (typeof authcode !== "number") throw new UtilError("ERR_CODETYPE", args, context);
+      if (isNaN(authcode)) throw new UtilError("ERR_CODEFORMAT", args, context);
       gameauth[steamid] = { authcode, callback };
 
       return "SUCCESS";
+
+    }
+
+    case "get": {
+
+      if (steamid in gameauth) return gameauth[steamid].authcode;
+      return null;
 
     }
 

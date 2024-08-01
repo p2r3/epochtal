@@ -15,7 +15,7 @@ const controllerInit = async function () {
   window.sendToGame = async function (type, value) {
 
     const data = { type, value };
-    await fetch(`/util/events/send/"game_${whoami.steamid}"/${JSON.stringify(data)}`);
+    await fetch(`/util/events/send/"game_${whoami.steamid}"/${encodeURIComponent(JSON.stringify(data))}`, { method: "POST" });
 
   };
 
