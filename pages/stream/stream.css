@@ -70,6 +70,10 @@ h2 {
   z-index: 1;
 }
 
+#soundcloud {
+  display: none;
+}
+
 #content {
   position: fixed;
   width: 95%;
@@ -130,16 +134,28 @@ h2 {
 #leaderboard {
   position: absolute;
   left: 5%;
-  top: 20%;
   width: 40%;
-  height: 80%;
+  top: 19vh;
+  height: 78.25vh;
+  padding-bottom: 5vh;
+  box-sizing: border-box;
+  overflow-y: scroll;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
   will-change: transform;
   transition: transform 1s;
 }
+#leaderboard::-webkit-scrollbar {
+  display: none;
+}
 
 #lb-title {
+  position: sticky;
+  top: 0;
+  z-index: 1;
   margin: 0;
   width: 100%;
+  padding-bottom: 3%;
   text-align: center;
   letter-spacing: 0.2rem;
   color: white;
@@ -170,7 +186,7 @@ h2 {
 .lb-entry-compact {
   width: 48%;
   float: left;
-  margin: 3% 1% 0 1%;
+  margin: 0 1% 3% 1%;
 }
 
 .lb-entry h1 {

@@ -11,6 +11,8 @@ const controllerInit = async function () {
   // Connect to the event WebSocket
   const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
   const controllerSocket = new WebSocket(`${protocol}://${window.location.host}/ws/streamController`);
+  // Every 30 seconds, send an empty object as a sort of heartbeat ping
+  setInterval(() => controllerSocket.send("{}"), 30000);
 
   /**
    * Sends WebSocket events to the stream controller event topic, which both the UI and controller listen to
@@ -62,6 +64,21 @@ const controllerInit = async function () {
       }
 
     };
+
+  };
+
+  /**
+   * Sends a request to scroll the leaderboard to have the specified runner on-screen
+   *
+   * @param {string} category Name of the category in which the run is
+   * @param {string} steamid SteamID of the respective runner
+   */
+  window.scrollToRunner = function (category, steamid) {
+
+    window.sendToController({
+      action: "scroll",
+      category, steamid
+    });
 
   };
 
@@ -119,7 +136,9 @@ const controllerInit = async function () {
           ${proof}
         </span>
 
-        <br></a>` + output;
+        </a>
+        &nbsp;<i class="fa-solid fa-arrow-down-short-wide" style="cursor:pointer" onclick="scrollToRunner('${category}', '${run.steamid}')" title="Scroll into view"></i>
+        <br>` + output;
 
     }
     leaderboardContainer.innerHTML = output;
