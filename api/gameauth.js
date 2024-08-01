@@ -35,13 +35,17 @@ module.exports = async function (args, request) {
 
       // Send heartbeat ping every 30s
       const connectHandler = function () {
-        setInterval(function () {
-          events(["send", event, { type: "ping" }]);
+        const interval = setInterval(async function () {
+          if (await events(["get", event])) {
+            await events(["send", event, { type: "ping" }]);
+          } else {
+            clearInterval(interval);
+          }
         }, 30000);
       };
       // Delete the event once the client disconnects
-      const disconnectHandler = function () {
-        events(["delete", event]);
+      const disconnectHandler = async function () {
+        await events(["delete", event]);
       };
 
       // Create a game client event for this user
