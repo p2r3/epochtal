@@ -23,6 +23,7 @@ which will automatically complain if you do something really wrong.
 However, you should still keep the following in mind while coding:
 
 - Curly brackets (`{}`) MUST NOT be omitted unless the associated statement is only a single line.
+- Function declarations SHOULD have a space between the function name and the parenthesis (`()`).
 - File import names MUST match the name of the file.
 - Single ticks (`'`) MUST NOT be used unless absolutely necessary.
 - Conditions that are split up between multiple lines SHOULD be formatted like this:
