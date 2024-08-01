@@ -79,7 +79,8 @@ epochtal.data = {
   },
   // Epochtal Live
   lobbies: { list: {}, data: {} },
-  events: {}
+  events: {},
+  gameauth: {}
 };
 
 // Import dependencies for Discord integration
