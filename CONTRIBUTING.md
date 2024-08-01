@@ -36,6 +36,10 @@ However, you should still keep the following in mind while coding:
         doSomething();
     }
     ```
+- Casing:
+  - Function and variable names MUST be written with `camelCase`.
+  - Constants MUST be written with `UPPER_CASE_SNAKE_CASE`.
+  - Class names MUST be written with `PascalCase`.
 
 ## Documentation
 
