@@ -5,8 +5,22 @@ const initializeUI = async function () {
   const config = await (await fetch("/api/config/get")).json();
   const users = await (await fetch("/api/users/get")).json();
 
-  // Open a separate popup for controlling the UI
-  window.controllerWindow = open("/stream/controller", "_blank", "popup, width=810, height=520");
+  // Create the stream controller event topic if it doesn't exist
+  await fetch("/util/events/create/streamController", { method: "POST" });
+  // Connect to the event WebSocket
+  const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+  const controllerSocket = new WebSocket(`${protocol}://${window.location.host}/ws/streamController`);
+
+  /**
+   * Sends WebSocket events to the stream controller event topic, which both the UI and controller listen to
+   * @param {unknown} data Data to send, converted to a JSON string
+   */
+  window.sendToController = async function (data) {
+
+    const dataString = encodeURIComponent(JSON.stringify(data));
+    await fetch(`/util/events/send/streamController/${dataString}`, { method: "POST" });
+
+  };
 
   // Start music and "Starting Stream" animation, wait for it to finish
   await standbyAnimation(config, leaderboard);
@@ -260,25 +274,27 @@ const initializeUI = async function () {
 
   /**
    * Handles messages sent from the stream UI controller
-   * @param {unknown} event The cross-window message event
+   * @param {unknown} event The WebSocket message event
    */
   const controllerInputHandler = async function (event) {
 
-    if (event.source.location !== controllerWindow.location) return;
+    const data = JSON.parse(event.data);
+    // Messages intended for the stream UI will have an "action" key
+    if (!("action" in data)) return;
 
-    switch (event.data.action) {
+    switch (data.action) {
 
       case "start": return unplayVideo();
-      case "play": return playVideo(event.data.link);
-      case "run": return readyVideo(event.data.category, event.data.steamid);
+      case "play": return playVideo(data.link);
+      case "run": return readyVideo(data.category, data.steamid);
       case "musicSkip": return musicNextTrack();
       case "musicPause": return musicTogglePause();
-      case "category": return updateLeaderboard(event.data.name);
+      case "category": return updateLeaderboard(data.name);
 
     }
 
   };
-  window.addEventListener("message", controllerInputHandler);
+  controllerSocket.addEventListener("message", controllerInputHandler);
 
 };
 initializeUI();

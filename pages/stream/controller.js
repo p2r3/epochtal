@@ -6,6 +6,23 @@ const controllerInit = async function () {
   const config = await (await fetch("/api/config/get")).json();
   const users = await (await fetch("/api/users/get")).json();
 
+  // Create the stream controller event topic if it doesn't exist
+  await fetch("/util/events/create/streamController", { method: "POST" });
+  // Connect to the event WebSocket
+  const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+  const controllerSocket = new WebSocket(`${protocol}://${window.location.host}/ws/streamController`);
+
+  /**
+   * Sends WebSocket events to the stream controller event topic, which both the UI and controller listen to
+   * @param {unknown} data Data to send, converted to a JSON string
+   */
+  window.sendToController = async function (data) {
+
+    const dataString = encodeURIComponent(JSON.stringify(data));
+    await fetch(`/util/events/send/streamController/${dataString}`, { method: "POST" });
+
+  };
+
   /**
    * Sends WebSocket events to the connected user's client
    *
@@ -14,8 +31,8 @@ const controllerInit = async function () {
    */
   window.sendToGame = async function (type, value) {
 
-    const data = { type, value };
-    await fetch(`/util/events/send/"game_${whoami.steamid}"/${encodeURIComponent(JSON.stringify(data))}`, { method: "POST" });
+    const data = encodeURIComponent(JSON.stringify({ type, value }));
+    await fetch(`/util/events/send/"game_${whoami.steamid}"/${data}`, { method: "POST" });
 
   };
 
@@ -28,7 +45,7 @@ const controllerInit = async function () {
    */
   window.selectRunner = function (category, steamid, proof) {
 
-    window.opener.postMessage({
+    window.sendToController({
       action: "run",
       category, steamid
     });
@@ -38,10 +55,10 @@ const controllerInit = async function () {
 
       if (proof === "demo") {
         await sendToGame("cmd", `playdemo tournament/${steamid}_${category}`);
-        window.opener.postMessage({ action: "play" });
+        window.sendToController({ action: "play" });
       } else {
         const link = await (await fetch(`/api/proof/download/"${steamid}"/${category}`)).text();
-        window.opener.postMessage({ action: "play", link });
+        window.sendToController({ action: "play", link });
       }
 
     };
@@ -51,10 +68,7 @@ const controllerInit = async function () {
   // Sends a request to display the leaderboard on-stream
   window.returnToLeaderboard = async function () {
 
-    window.opener.postMessage({
-      action: "start"
-    });
-
+    window.sendToController({ action: "start" });
     await sendToGame("cmd", "stopdemo");
 
   };
@@ -119,7 +133,7 @@ const controllerInit = async function () {
 
     const newCategory = categoriesOptions.value;
 
-    window.opener && window.opener.postMessage({
+    window.sendToController({
       action: "category",
       name: newCategory
     });
@@ -144,7 +158,7 @@ const controllerInit = async function () {
 
   musicPlayPauseButton.onclick = function () {
 
-    window.opener.postMessage({action: "musicPause"});
+    window.sendToController({ action: "musicPause" });
 
     if (musicPlayPauseButton.className === "fa-solid fa-pause") {
       musicPlayPauseButton.className = "fa-solid fa-play";
@@ -156,22 +170,31 @@ const controllerInit = async function () {
 
   musicSkipButton.onclick = function () {
 
-    window.opener.postMessage({action: "musicSkip"});
+    window.sendToController({ action: "musicSkip" });
     musicPlayPauseButton.className = "fa-solid fa-pause";
 
   };
 
-  // Respond to messages sent by the stream UI
-  window.addEventListener("message", async function (event) {
-    switch (event.data.type) {
+  /**
+   * Handles messages sent from the stream UI
+   * @param {unknown} event The WebSocket message event
+   */
+  const controllerMessageHandler = async function (event) {
+
+    const data = JSON.parse(event.data);
+    // Messages intended for the controller will have an "update" key
+    if (!("update" in data)) return;
+
+    switch (data.update) {
 
       case "musicName": {
-        musicNowPlaying.innerHTML = `Now playing: <b>${event.data.trackname}</b>`;
+        musicNowPlaying.innerHTML = `Now playing: <b>${data.trackname}</b>`;
         return;
       }
 
     }
-  });
+  };
+  controllerSocket.addEventListener("message", controllerMessageHandler);
 
 };
 controllerInit();

@@ -34,8 +34,8 @@ window.musicStartPlayer = async function () {
     const trackAuthor = soundDetails.user.username;
 
     // Update the controller on what track is playing
-    controllerWindow.postMessage({
-      type: "musicName",
+    window.sendToController({
+      update: "musicName",
       trackname: trackName
     });
 
