@@ -12,7 +12,7 @@ The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "S
 
 ## Language
 
-All code and documentation MUST be written in english.
+All code and documentation MUST be written in English.
 This includes, but is not limited to, variable and function names, code documentation, other files, GitHub issues,
 and pull requests.
 
