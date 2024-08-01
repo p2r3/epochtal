@@ -12,20 +12,36 @@ The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "S
 
 ## Language
 
-All code and documentation MUST be written in english. This includes, but is not limited to, variable and function names,
-code documentation, other files, GitHub issues and pull requests.
+All code and documentation MUST be written in english.
+This includes, but is not limited to, variable and function names, code documentation, other files, GitHub issues,
+and pull requests.
 
 ## Code style
 
-> This section is currently empty, but will be populated in the future. For now, the best general tip is to read the
-> already existing code and extract a code style from that.
+Epochtal is set up to use [eslint](https://eslint.org/),
+which will automatically complain if you do something really wrong.
+However, you should still keep the following in mind while coding:
+
+- Curly brackets (`{}`) MUST NOT be omitted unless the associated statement is only a single line.
+- File import names MUST match the name of the file.
+- Single ticks (`'`) MUST NOT be used unless absolutely necessary.
+- Conditions that are split up between multiple lines SHOULD be formatted like this:
+    ```js
+    if (
+        foo
+        && bar
+        && foobar
+    ) {
+        doSomething();
+    }
+    ```
 
 ## Documentation
 
 To ensure consistency throughout all code documentation, keep the following in mind as you are working on your
 contribution:
 
-- All classes, functions and globally available fields (such as variables that handle core functionality) SHOULD be
+- All classes, functions, and globally available fields (such as variables that handle core functionality) SHOULD be
 documented following the [JSDoc](https://jsdoc.app/) standard.
 - Function parameters and return values MUST be documented properly in their respective JSDoc blocks, if they exist.
 Value types SHOULD also be documented (types are to be put in `{}`-blocks, see examples [here](https://jsdoc.app/tags-param)).
@@ -35,6 +51,7 @@ already existing documentation is recommended.
 - Function and API endpoint documentation MUST be written in past tense, whereas utility documentation MUST be written
 in present tense. This allows for easier discernment between the two.
 - If code is authored by someone other than p2r3, the `@author` tag MUST be specified in the relevant JSDoc block.
+- Inline code comments MUST have a space after the `//` before the comment text starts.
 - All code MUST NOT be documented. JavaScript code is mostly self-explanatory, and not every single small algorithm
 needs to be explained in detail. Code comments SHOULD be placed throughout code that impacts the overall functionality
 of the application. Code comments SHOULD also be used for parts of the code that are hard to read, or in some other way
