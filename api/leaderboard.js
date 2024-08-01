@@ -104,7 +104,7 @@ module.exports = async function (args, request) {
 
     case "get": {
 
-      // Return the current leaderboard json
+      // Return the leaderboard of all categories
       return epochtal.data.leaderboard;
 
     }
