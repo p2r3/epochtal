@@ -85,7 +85,33 @@ const sppliceGlobals = {
   "onConsoleOutput": false,
   "log": false,
   "fs": false,
-  "fetch": false
+  "fetch": false,
+  "WebSocket": false
+};
+
+// Globals set up by tools.js
+const toolsGlobals = {
+  "ticksToString": false,
+  "ticksToStringArray": false,
+  "stringArrayToTicks": false,
+  "toHTMLString": false,
+  "showPopup": false,
+  "hidePopup": false,
+  "showTooltip": false,
+  "hideTooltip": false,
+  "inViewportPercent": false
+};
+
+// Globals specific to the stream UI
+const streamUIGlobals = {
+  "SC": false,
+  "scWidget": false,
+  "controllerWindow": false,
+  "sendToGame": false,
+  "standbyAnimation": false,
+  "introAnimation": false,
+  "musicNextTrack": false,
+  "musicTogglePause": false
 };
 
 export default [
@@ -107,11 +133,12 @@ export default [
       }],
     }
   }, { // HTML files
-    files: ["**/pages/*.js", "**/pages/admin/*.js", "**/pages/live/*.js", "**/pages/profile/*.js"],
+    files: ["**/pages/*.js", "**/pages/admin/*.js", "**/pages/live/*.js", "**/pages/profile/*.js", "**/pages/stream/*.js"],
     languageOptions: {
       sourceType: "script",
       globals: {
-        ...globals.browser
+        ...globals.browser,
+        ...toolsGlobals
       }
     }
   }, { // Spplice files
@@ -124,6 +151,14 @@ export default [
     },
     rules: {
       ...jsRules
+    }
+  }, { // Stream UI files
+    files: ["**/pages/stream/*.js"],
+    languageOptions: {
+      sourceType: "script",
+      globals: {
+        ...streamUIGlobals
+      }
     }
   }
 ];
