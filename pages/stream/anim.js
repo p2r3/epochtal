@@ -119,7 +119,7 @@ window.standbyAnimation = async function (config, leaderboard) {
 
       // Recalculate music position from the starting time each frame
       const musicPosition = Date.now() - musicStartedTime;
-      // Calculat ethe index of the currently relevant sample
+      // Calculate the index of the currently relevant sample
       const sampleIndex = Math.floor(musicPosition / sampleDuration);
       // Calculate the progress towards the next sample as a number from 0 to 1
       const nextSampleProgress = 1 - (musicPosition % sampleDuration) / sampleDuration;

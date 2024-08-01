@@ -10,6 +10,8 @@ const initializeUI = async function () {
   // Connect to the event WebSocket
   const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
   const controllerSocket = new WebSocket(`${protocol}://${window.location.host}/ws/streamController`);
+  // Every 30 seconds, send an empty object as a sort of heartbeat ping
+  setInterval(() => controllerSocket.send("{}"), 30000);
 
   /**
    * Sends WebSocket events to the stream controller event topic, which both the UI and controller listen to
@@ -52,6 +54,10 @@ const initializeUI = async function () {
     // Push info panel off-screen
     infoPanel.style.transform = "translateX(calc(100% + 2.5vw))";
     infoPanel.style.opacity = 0;
+
+    // Scroll to the top of the board, wait for that to finish
+    leaderboardElement.scrollTo({ top: 0, behavior: "smooth" });
+    await new Promise(resolve => setTimeout(resolve, 500));
 
     // Fade out entries one after another
     const oldEntries = document.querySelectorAll(".lb-entry");
@@ -158,6 +164,51 @@ const initializeUI = async function () {
 
   };
   updateLeaderboard("main", false);
+
+  /**
+   * Scrolls to the specified runner on the leaderboard
+   *
+   * @param {string} category Name of the category in which the run can be found
+   * @param {string} steamid SteamID of the runner to which we're scrolling
+   */
+  window.scrollToRunner = function (category, steamid) {
+
+    // Retrieve the leaderboard index of the run
+    const currCategory = config.categories.find(c => c.name === category);
+    const index = leaderboard[category].findIndex(c => c.steamid === steamid);
+
+    // Smooth scroll to that index
+    const lbEntries = document.querySelectorAll(".lb-entry");
+    lbEntries[index].scrollIntoView({ behavior: "smooth", block: "center" });
+
+  };
+
+  /**
+   * Handle leaderboard scrolling animations
+   */
+  leaderboardElement.onscroll = function () {
+
+    // Get the bounding boxes of the leaderboard title and container
+    const lbEntries = document.querySelectorAll(".lb-entry");
+    const lbTitle = document.querySelector("#lb-title");
+
+    const bboxContainer = leaderboardElement.getBoundingClientRect();
+    const bboxTitle = lbTitle.getBoundingClientRect();
+
+    for (let i = 0; i < lbEntries.length; i ++) {
+      const bboxEntry = lbEntries[i].getBoundingClientRect();
+
+      // Check distance from current entry to title and container bottom
+      const distTitle = 1 - (bboxTitle.bottom - bboxEntry.top) / bboxEntry.height;
+      const distContainer = 1 - (bboxEntry.bottom - bboxContainer.bottom) / bboxEntry.height;
+
+      // If overlapping either one, set opacity to a fraction representing the overlap
+      if (distTitle < 1) lbEntries[i].style.opacity = distTitle;
+      else if (distContainer < 1) lbEntries[i].style.opacity = distContainer;
+      else lbEntries[i].style.opacity = 1;
+    }
+
+  };
 
   /**
    * Brings run info on screen and puts the runner in focus
@@ -290,6 +341,7 @@ const initializeUI = async function () {
       case "musicSkip": return musicNextTrack();
       case "musicPause": return musicTogglePause();
       case "category": return updateLeaderboard(data.name);
+      case "scroll": return scrollToRunner(data.category, data.steamid);
 
     }
 
