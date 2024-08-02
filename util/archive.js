@@ -43,7 +43,11 @@ async function getArchiveContext (name) {
     week: Bun.file(`${path}/config.json`),
     log: `${path}/week.log`,
     vmfs: `${path}/maps`,
-    demos: `${path}/proof`
+    demos: `${path}/proof`,
+    sar: {
+      filesums: `${path}/mdp/filesum_whitelist.txt`,
+      sarsums: `${path}/mdp/sar_whitelist.txt`
+    }
   };
 
   // Parse file data into the context data
@@ -192,6 +196,7 @@ module.exports = async function (args, context = epochtal) {
 
       fs.mkdirSync(`${archivePath}/proof`);
       fs.mkdirSync(`${archivePath}/maps`);
+      fs.mkdirSync(`${archivePath}/mdp`);
 
       // Move context demo files to archive
       const files = fs.readdirSync(context.file.demos);
@@ -204,6 +209,10 @@ module.exports = async function (args, context = epochtal) {
       for (let i = 0; i < vmfs.length; i ++) {
         fs.renameSync(`${context.file.vmfs}/${vmfs[i]}`, `${archivePath}/maps/${vmfs[i]}`);
       }
+
+      // Copy mdp checksums to archive
+      await Bun.write(`${archivePath}/mdp/filesum_whitelist.txt`, Bun.file(context.file.mdp.filesums));
+      await Bun.write(`${archivePath}/mdp/sar_whitelist.txt`, Bun.file(context.file.mdp.sarsums));
 
       return "SUCCESS";
 

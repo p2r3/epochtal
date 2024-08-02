@@ -89,18 +89,21 @@ async function parseDump (file) {
  * @param {string} file Path to the file to parse
  * @returns {object} Parsed demo data
  */
-async function parseMDP (file) {
+async function parseMDP (file, context) {
 
   // Make sure file is decompressed
   const originalFile = file;
   if (file.endsWith(".dem.xz")) file = await decompressXZ(file);
 
+  // Get SAR and file checksum list paths from context
+  const { filesums, sarsums } = context.file.mdp;
+
   // Parse the demo into json
-  const text = (await $`cd ${`${gconfig.bindir}/mdp-json`} && ./mdp ${file}`.text()).replaceAll("\\", "\\\\");
-  const output = JSON.parse(text);
+  const stdout = await $`cd "${gconfig.bindir}/mdp-json" && ./mdp "${file}" --filesum-path "${filesums}" --sarsum-path "${sarsums}"`.text();
+  const json = JSON.parse(stdout.replaceAll("\\", "\\\\"));
   if (originalFile !== file) fs.unlinkSync(file);
 
-  return output;
+  return json;
 
 }
 
@@ -151,7 +154,7 @@ module.exports = async function (args, context = epochtal) {
       if (!fs.existsSync(path)) throw new UtilError("ERR_FILE", args, context);
 
       // Parse the demo file using mdp
-      return await parseMDP(path);
+      return await parseMDP(path, context);
 
     }
 
@@ -162,7 +165,7 @@ module.exports = async function (args, context = epochtal) {
       if (!fs.existsSync(path)) throw new UtilError("ERR_FILE", args, context);
 
       // Fully parse the demo file
-      const mdp = await parseMDP(path);
+      const mdp = await parseMDP(path, context);
       const dump = await parseDump(path);
 
       // Extract the time and portal count from the demo
@@ -202,7 +205,7 @@ module.exports = async function (args, context = epochtal) {
       if (!fs.existsSync(path)) throw new UtilError("ERR_FILE", args, context);
 
       // Parse the demo file using mdp
-      const mdp = await parseMDP(path);
+      const mdp = await parseMDP(path, context);
 
       // Ensure tickrate is correct
       if (Math.abs(mdp.demos[0].tps - 60.00) > 0.01) {

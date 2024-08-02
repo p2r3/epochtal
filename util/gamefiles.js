@@ -182,12 +182,12 @@ async function buildFiles (context) {
 
   // Write additional checksums to MDP whitelist
   const filesum = await Bun.file(`./defaults/filesum_whitelist.txt`).text();
-  await Bun.write(`${gconfig.bindir}/mdp-json/filesum_whitelist.txt`, filesum + checksums);
+  await Bun.write(context.file.mdp.filesums, filesum + checksums);
 
   // Write SAR checksums to MDP whitelist
   let sarsums = "";
   for (let i = 0; i < sar.length; i ++) sarsums += sar[i].crc32 + "\n";
-  await Bun.write(`${gconfig.bindir}/mdp-json/sar_whitelist.txt`, sarsums);
+  await Bun.write(context.file.mdp.sarsums, sarsums);
 
   // Prepare map(s) BSP for simulated co-op
   for (let i = 0; i < mapPaths.length; i ++) {
