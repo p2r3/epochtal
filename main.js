@@ -59,6 +59,10 @@ epochtal.file = {
   spplice: {
     repository: `${gconfig.datadir}/spplice`,
     index: Bun.file(`${gconfig.datadir}/spplice/index.json`)
+  },
+  mdp: {
+    filesums: `${gconfig.datadir}/week/mdp/filesum_whitelist.txt`,
+    sarsums: `${gconfig.datadir}/week/mdp/sar_whitelist.txt`
   }
 };
 

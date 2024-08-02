@@ -85,6 +85,7 @@ async function validate() {
   ensureDir(`${gconfig.datadir}/week`);
   ensureDir(`${gconfig.datadir}/week/proof`);
   ensureDir(`${gconfig.datadir}/week/maps`);
+  ensureDir(`${gconfig.datadir}/week/mdp`);
 
   await ensureFile(`${gconfig.datadir}/users.json`, "{}");
   await ensureFile(`${gconfig.datadir}/entgraphs.json`, "{}");
