@@ -871,12 +871,15 @@ var homepageInit = async function () {
 
         const authcode = document.querySelector("#authcode-input").value.trim();
 
+        showPopup("Connection requested", "Verifying connection...", POPUP_INFO);
+
         try {
           const response = await (await fetch(`/api/gameauth/verify/${authcode}`)).json();
+          if (response === "ERR_AUTHCODE") return showPopup("Incorrect code", "The code you entered does not match what the server received. Please refresh and try again.", POPUP_ERROR);
           if (response !== "SUCCESS") throw response;
         } catch (e) {
           console.error(e);
-          return showPopup("Unknown error", "An unexpected error occurred while submitting the map. Check the JavaScript console for more info.", POPUP_ERROR);
+          return showPopup("Unknown error", "An unexpected error occurred while verifying the connection. Check the JavaScript console for more info.", POPUP_ERROR);
         }
 
         return showPopup("Success", "Your connection has been verified.", POPUP_INFO);
