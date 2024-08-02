@@ -36,9 +36,9 @@ module.exports = async function (args, request) {
       // Send heartbeat ping every 30s
       const connectHandler = function () {
         const interval = setInterval(async function () {
-          if (await events(["get", event])) {
+          try {
             await events(["send", event, { type: "ping" }]);
-          } else {
+          } catch {
             clearInterval(interval);
           }
         }, 30000);
