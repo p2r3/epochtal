@@ -331,7 +331,7 @@ if (gconfig.tls) {
 const server = Bun.serve(servercfg);
 epochtal.data.events.server = server;
 
-console.log(`Listening on ${gconfig.https ? "https" : "http"}://localhost:${server.port}...`);
+console.log(`Listening on ${gconfig.tls ? "https" : "http"}://localhost:${server.port}...`);
 
 // Schedule routines
 utils.routine(["schedule", "epochtal", "concludeWeek", "0 0 15 * * 7"]);
