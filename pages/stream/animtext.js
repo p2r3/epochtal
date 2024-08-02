@@ -47,7 +47,5 @@ Load took: 936ms
 \n\n\n\n\n\n\n
 Redownloading all demos
 T_RedownloadAllDemos took 1489839 msec!
-SAR ${config.sar.name} (Built ${new Date(config.sar.date).toLocaleString("en-GB", { timeZone: "UTC", hour: "2-digit", minute: "2-digit", month: "short", day: "numeric", year: "numeric"})})
-ppmod v3 (Cloned 23:26 Feb 4 2023)
-peanut v1 (Cloned 6:14 Jun 17 2023)
+
 Setting opening scene to tournament/main`);
