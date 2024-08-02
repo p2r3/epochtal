@@ -74,7 +74,7 @@ epochtal.data = {
     update: process.env.DISCORD_CHANNEL_UPDATE
   },
   spplice: {
-    address: `${gconfig.tls ? "https" : "http"}://${gconfig.domain}`,
+    address: `${gconfig.https ? "https" : "http"}://${gconfig.domain}`,
     index: await epochtal.file.spplice.index.json()
   },
   // Epochtal Live
@@ -326,7 +326,7 @@ if (gconfig.tls) {
 const server = Bun.serve(servercfg);
 epochtal.data.events.server = server;
 
-console.log(`Listening on ${gconfig.tls ? "https" : "http"}://localhost:${server.port}...`);
+console.log(`Listening on ${gconfig.https ? "https" : "http"}://localhost:${server.port}...`);
 
 // Schedule routines
 utils.routine(["schedule", "epochtal", "concludeWeek", "0 0 15 * * 7"]);
