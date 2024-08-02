@@ -45,7 +45,7 @@ function wsSetup () {
     const authcode = generateAuthCode();
 
     SendToConsole("hideconsole");
-    SendToConsole(`disconnect "Go to epochtal.p2r3.com and enter the code ${authcode} when prompted."`);
+    SendToConsole(`disconnect "Go to ${hostname} and enter the code ${authcode} when prompted."`);
 
     ws = new WebSocket(`${protocol}://${hostname}/api/gameauth/connect/${authcode}/"${steamid}"`);
     ws.addEventListener("message", wsMessageHandler);
