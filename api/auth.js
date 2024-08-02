@@ -12,8 +12,8 @@ const validate = require("../validate.js");
  * @type {SteamAuth}
  */
 const steam = new SteamAuth({
-  realm: `${gconfig.tls ? "https" : "http"}://${gconfig.domain}`, // Site name displayed to users on logon
-  returnUrl: `${gconfig.tls ? "https" : "http"}://${gconfig.domain}/api/auth/return`, // Return route after authentication
+  realm: `${gconfig.https ? "https" : "http"}://${gconfig.domain}`, // Site name displayed to users on logon
+  returnUrl: `${gconfig.https ? "https" : "http"}://${gconfig.domain}/api/auth/return`, // Return route after authentication
   apiKey: process.env.STEAM_API_KEY // Steam API key
 });
 

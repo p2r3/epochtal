@@ -39,7 +39,7 @@ async function ensureFile(file, content) {
 async function validate() {
   // Validate the global config
   if (!gconfig.domain || !gconfig.secretsdir || !gconfig.datadir || !gconfig.bindir || !gconfig.port) {
-    console.log("Global config is missing required fields: [domain, tls, secretsdir, datadir, bindir]");
+    console.log("Global config is missing required fields: [domain, tls, https, secretsdir, datadir, bindir]");
     return false;
   }
 
