@@ -329,7 +329,7 @@ h2 {
   color: white;
   /* We need to ensure the animation takes up the entire viewport height
   This seems like the simplest (not necessarily best) way to do that */
-  font-size: 1.3vh;
+  font-size: 1.35vh;
 }
 #intro-anim-text-bg {
   filter: blur(5px);
