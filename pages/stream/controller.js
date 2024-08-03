@@ -34,10 +34,13 @@ const controllerInit = async function () {
   window.sendToGame = async function (type, value) {
 
     const data = encodeURIComponent(JSON.stringify({ type, value }));
-    await fetch(`/util/events/send/"game_${whoami.steamid}"/${data}`, { method: "POST" });
+    const response = await (await fetch(`/util/events/send/"game_${whoami.steamid}"/${data}`, { method: "POST" })).json();
+
+    if (response.startsWith("Error: ")) throw response;
 
   };
 
+  const playRunButton = document.querySelector("#button-play");
   /**
    * Sends a request to display the specified run details on-stream
    *
@@ -51,6 +54,10 @@ const controllerInit = async function () {
       action: "run",
       category, steamid
     });
+
+    // Enable the "Play Selected Run" button
+    playRunButton.style.pointerEvents = "auto";
+    playRunButton.style.opacity = 1;
 
     // Define what happens when this run gets played back
     window.playSelectedRun = async function () {
@@ -87,6 +94,10 @@ const controllerInit = async function () {
 
     window.sendToController({ action: "start" });
     await sendToGame("cmd", "stopdemo");
+
+    // Disable the "Play Selected Run" button
+    playRunButton.style.pointerEvents = "none";
+    playRunButton.style.opacity = 0.5;
 
   };
 
