@@ -6,6 +6,14 @@
     <title>Stream UI Controller</title>
     <link rel="icon" href="/icons/favicon.ico" type="image/x-icon">
     <link rel="stylesheet" href="/style.css">
+    <style>
+      /* Disable the "Play Selected Run" button by default */
+      #button-play {
+        pointer-events: none;
+        opacity: 0.5;
+        transition: opacity 0.2s;
+      }
+    </style>
     <script src="https://kit.fontawesome.com/fc2642e2d1.js" crossorigin="anonymous"></script>
   </head>
 
@@ -20,7 +28,7 @@
 
       <p class="marginb_small">Switch state</p>
       <button onclick="returnToLeaderboard()">Return to Leaderboard</button>
-      <button onclick="playSelectedRun()">Play Selected Run</button>
+      <button onclick="playSelectedRun()" id="button-play">Play Selected Run</button>
 
       <p>Selected leaderboard</p>
       <p id="controller-leaderboard" class="marginy"></p>
