@@ -17,7 +17,7 @@ FROM oven/bun:latest
 LABEL authors="Soni"
 WORKDIR /app
 # Install runtime dependencies
-RUN apt update && apt install xz-utils wget -y
+RUN apt update && apt install xz-utils wget libicu-dev -y
 # Get binaries from build step
 RUN mkdir bin
 COPY --from=build /build bin/
