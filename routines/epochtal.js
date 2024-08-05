@@ -347,7 +347,7 @@ async function releaseMap (context) {
   await Bun.write(context.file.log, "");
 
   // Announce the new week on Discord
-  await discord(["announce", "@everyone " + announceText], context);
+  await discord(["releasemap", "@everyone " + announceText], context);
 
   return "SUCCESS";
 
