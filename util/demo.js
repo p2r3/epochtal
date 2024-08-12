@@ -160,6 +160,9 @@ module.exports = async function (args, context = epochtal) {
 
     case "parse": {
 
+      // If set, counts uses of a console command instead of portals fired
+      const portalOverride = args[2];
+
       // Extend demo file path if it is not already an absolute path
       const path = extendFilePath(file);
       if (!fs.existsSync(path)) throw new UtilError("ERR_FILE", args, context);
@@ -185,9 +188,16 @@ module.exports = async function (args, context = epochtal) {
           continue;
         }
 
-        if (event.type === "portal") {
-          output.portals ++;
+        if (portalOverride) {
+          if (event.type === "cmd" && event.value.split(" ")[0].toLowerCase() === portalOverride) {
+            output.portals ++;
+          }
+        } else {
+          if (event.type === "portal") {
+            output.portals ++;
+          }
         }
+
 
       }
 

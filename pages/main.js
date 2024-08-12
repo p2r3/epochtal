@@ -198,7 +198,8 @@ var homepageInit = async function () {
         } catch (e) { } // Too bad ¯\_(ツ)_/¯
       }
 
-      const portalCount = ("portals" in run && categoryData.portals) ? `, ${run.portals} portal${run.portals === 1 ? "" : "s"}` : "";
+      const portalLabel = categoryData.portals && (categoryData.portals === true ? "portal" : categoryData.portals);
+      const portalCount = ("portals" in run && categoryData.portals) ? `, ${run.portals} ${portalLabel}${run.portals === 1 ? "" : "s"}` : "";
 
       const suffix = ["st","nd","rd"][((placement + 90) % 100 - 10) % 10 - 1] || "th"; // what the fuck
 

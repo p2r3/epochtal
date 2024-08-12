@@ -62,7 +62,8 @@ async function discordUpdate (steamid, category) {
   output += ` submitted a new run to "${currCategory.title}" with a time of \`${time}\``;
 
   if (currCategory.portals) {
-    output += ` (${run.portals} portals)`;
+    const label = currCategory.portals === true ? "portal" : currCategory.portals;
+    output += ` (${run.portals} ${label}${run.portals === 1 ? "" : "s"})`;
   }
 
   if (currCategory.points) {
@@ -165,7 +166,8 @@ module.exports = async function (args, request) {
       }
 
       // Parse the demo file
-      const data = await demo(["parse", path]);
+      const portalOverride = categoryData.portals === true ? false : categoryData.portals;
+      const data = await demo(["parse", path, portalOverride]);
 
       // Fail if the player's steamid does not match the demo's steamid
       if (user.steamid !== data.steamid) {
