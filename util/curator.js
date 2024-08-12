@@ -553,7 +553,7 @@ module.exports = async function (args, context = epochtal) {
         } else {
           // If a cache was not found, try to download the BSP and calculate graphs
           const entityLump = await downloadEntityLump(archiveContext.data.week.map.id);
-          if (entityLump.startsWith("ERR_")) throw new UtilError(entityLump, args, context);
+          if (entityLump.startsWith("ERR_")) continue; // If we failed, too bad.
 
           const entities = parseLump(entityLump);
           mapDensity = calculateDensities(entities);
