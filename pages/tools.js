@@ -80,7 +80,7 @@ function stringToTicks (str) {
  * @returns {string} The encoded string
  */
 function toHTMLString (str) {
-  return str.replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return str.toString().replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 // Initialize popup and tooltip element behaviors

@@ -137,7 +137,11 @@ module.exports = async function (args, context = epochtal) {
       if (oldRunIndex !== -1) lb.splice(oldRunIndex, 1);
 
       // Insert the new run into the leaderboard
-      const newRun = { steamid, time, note };
+      const newRun = {
+        steamid: steamid.toString(),
+        time: Number(time),
+        note: note.toString()
+      };
 
       let inserted = false;
 

@@ -32,7 +32,7 @@ var smoothScroll = function (queryString) {
  */
 function sanitizeStringJS (str) {
   return (
-    str.replaceAll("<", "&lt;")
+    str.toString().replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
     .replaceAll("&", "&amp;")
     .replaceAll('"', "&quot;")
@@ -51,7 +51,7 @@ function sanitizeStringJS (str) {
  */
 function sanitizeStringHTML (str) {
   return (
-    str.replaceAll("<", "&lt;")
+    str.toString().replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
     .replaceAll("&", "&amp;")
   );
