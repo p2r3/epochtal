@@ -305,7 +305,9 @@ var homepageInit = async function () {
 
     const run = leaderboard[category].find(curr => curr.steamid === whoami.steamid);
 
-    showPopup("Edit run comment", `<textarea id="edit-note" cols="25" rows="3" placeholder="no comment">${sanitizeStringJS(run.note)}</textarea>`, POPUP_INFO, true);
+    showPopup("Edit run comment", `<textarea id="edit-note" cols="25" rows="3" placeholder="no comment"></textarea>`, POPUP_INFO, true);
+
+    document.querySelector("#edit-note").textContent = run.note;
 
     popupOnOkay = async function () {
 
