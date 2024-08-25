@@ -113,7 +113,7 @@ var profilePageInit = async function () {
     if (request.status === 200) {
       const buffer = new Uint8Array(await request.arrayBuffer());
       profileLog = decodeLog(buffer, profileUserData.categories);
-    } else if (request.status === 404) {
+    } else if (request.status === 204) {
       profileLog = [];
     } else {
       return showPopup("Unknown error", "An unexpected error occurred while fetching the profile log. Check the JavaScript console for more info.", POPUP_ERROR);
