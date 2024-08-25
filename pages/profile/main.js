@@ -122,7 +122,7 @@ var profilePageInit = async function () {
     // Parse the profile log into leaderboards
     for (let i = 0; i < profileLog.length; i ++) {
 
-      const week = Math.floor(profileLog[i].timestamp / 604800) + 1;
+      const week = Math.floor(profileLog[i].timestamp / 604800);
       const category = profileLog[i].category;
 
       if (!(week in leaderboards)) leaderboards[week] = {};
