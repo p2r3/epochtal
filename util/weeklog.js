@@ -154,7 +154,7 @@ module.exports = async function (args, context = epochtal) {
         // Get timestamp of current entry
         let curr = 0;
         for (let j = 0; j < 3; j ++) {
-          curr += buffer[i + 14 + j] * Math.pow(256, 3 - j);
+          curr += buffer[i + 14 + j] * Math.pow(256, 2 - j);
         }
 
         if (curr === timestamp) {
