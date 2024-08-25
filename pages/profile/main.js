@@ -221,10 +221,10 @@ var profilePageInit = async function () {
           if (weeknum > last) last = weeknum;
         }
 
-        data = new Array(last).fill(0);
+        data = new Array(Math.max(last, 0)).fill(0);
 
         // For each week, count the number of submissions
-        for (let i = first - 1; i < last; i ++) {
+        for (let i = first - 1; i <= last; i ++) {
 
           if (!(i in leaderboards)) continue;
 
