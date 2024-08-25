@@ -187,7 +187,7 @@ module.exports = async function (args, context = epochtal) {
       // Grab current timestamp if not provided
       if (!entry.timestamp) {
         const start = await config(["get", "date"], context);
-        entry.timestamp = Math.floor((Date.now() - start) / 1000);
+        entry.timestamp = Math.floor(Date.now() / 1000 - start);
       }
 
       // Ensure all fields are provided
