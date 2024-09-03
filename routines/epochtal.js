@@ -45,15 +45,15 @@ async function concludeWeek (context) {
   // Create a summary of all suspicious demo events
   const { summary, timescales } = await summarizeDemoEvents(context);
 
-  let textSummary = "## [ Demo event summary ]\n";
+  let textSummary = "## Demo event summary\n";
   for (let i = 0; i < summary.length; i ++) {
-    textSummary += `\`${summary[i].cvar}\` in ${summary[i].count} demo${summary[i].count === 1 ? "" : "s"}: \`\`\`json\n${JSON.stringify(summary[i].demos)}\`\`\`\n`;
+    textSummary += `\`${summary[i].cvar}\` in ${summary[i].count} demo${summary[i].count === 1 ? "" : "s"}:\n- \`${summary[i].demos.join("`\n- `")}\`\n\n`;
   }
   if (summary.length === 0) textSummary += "*All demos clean, nothing to report.*";
 
-  let textTimescales = "## [ Demo timescale summary ]\n";
+  let textTimescales = "## Demo timescale summary\n";
   for (let i = 0; i < timescales.length; i ++) {
-    textTimescales += `\`${timescales[i].average.toFixed(5)}\` average in \`${timescales[i].demo}\`:\`\`\`json\n${JSON.stringify(timescales[i].array)}\`\`\`\n`;
+    textTimescales += `\`${timescales[i].average.toFixed(5)}\` average in \`${timescales[i].demo}\`:\n- \`${timescales[i].array.join(", ")}\`\n\n`;
   }
   if (timescales.length === 0) textTimescales += "*All demos clean, nothing to report.*";
 
