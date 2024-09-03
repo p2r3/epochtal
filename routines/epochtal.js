@@ -57,17 +57,21 @@ async function concludeWeek (context) {
   }
   if (timescales.length === 0) textTimescales += "*All demos clean, nothing to report.*";
 
-  // Print report to console
+  // Print report to console and save it to file
   const finalReportText = `${textSummary}\n${textTimescales}`;
   UtilPrint("epochtal(concludeWeek):\n" + finalReportText);
+
+  const finalReportPath = (await tmppath()) + ".md";
+  await Bun.write(finalReportPath, finalReportText);
 
   // Report the summary including the demo files on Discord
   const demoTarPath = (await tmppath()) + ".tar";
   await $`tar -cf ${demoTarPath} -C ${context.file.demos} .`.quiet();
 
   try {
-    await discord(["report", finalReportText, [demoTarPath]], context);
+    await discord(["report", `Week ${week.number} demo report summary:`, [finalReportPath, demoTarPath]], context);
   } finally {
+    fs.unlinkSync(finalReportPath);
     fs.unlinkSync(demoTarPath);
   }
 
