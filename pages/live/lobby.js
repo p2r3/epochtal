@@ -1,6 +1,7 @@
 var lobby, users;
 var avatarCache = {};
 var lobbySocket = null;
+var readyState = false;
 
 const lobbyPlayersList = document.querySelector("#lobby-players-list");
 
@@ -217,26 +218,26 @@ async function lobbyInit () {
 
       // Fetch the api to change the lobby name
       const request = await fetch(`/api/lobbies/rename/${encodedName}/${newName}`);
-      if (request.status !== 200) {
+      let requestData;
+      try {
+        requestData = await request.json();
+      } catch (e) {
         return showPopup("Unknown error", "The server returned an unexpected response. Error code: " + request.status, POPUP_ERROR);
-      } else {
-        const data = await request.json();
-        switch (data) {
+      }
 
-          case "SUCCESS":
-            showPopup("Success", "The lobby name has been successfully updated.");
-            return;
+      switch (requestData) {
+        case "SUCCESS":
+          showPopup("Success", "The lobby name has been successfully updated.");
+          return;
 
-          case "ERR_LOGIN": return showPopup("Not logged in", "Please log in via Steam before editing lobby details.", POPUP_ERROR);
-          case "ERR_STEAMID": return showPopup("Unrecognized user", "Your SteamID is not present in the users database. WTF?", POPUP_ERROR);
-          case "ERR_NAME": return showPopup("Lobby not found", "An open lobby with this name does not exist.", POPUP_ERROR);
-          case "ERR_NEWNAME": return showPopup("Invalid lobby name", "Please keep the lobby name to 50 characters or less.", POPUP_ERROR);
-          case "ERR_EXISTS": return showPopup("Lobby name taken", "A lobby with this name already exists.", POPUP_ERROR);
-          case "ERR_PERMS": return showPopup("Permission denied", "You do not have permission to perform this action.", POPUP_ERROR);
+        case "ERR_LOGIN": return showPopup("Not logged in", "Please log in via Steam before editing lobby details.", POPUP_ERROR);
+        case "ERR_STEAMID": return showPopup("Unrecognized user", "Your SteamID is not present in the users database. WTF?", POPUP_ERROR);
+        case "ERR_NAME": return showPopup("Lobby not found", "An open lobby with this name does not exist.", POPUP_ERROR);
+        case "ERR_NEWNAME": return showPopup("Invalid lobby name", "Please keep the lobby name to 50 characters or less.", POPUP_ERROR);
+        case "ERR_EXISTS": return showPopup("Lobby name taken", "A lobby with this name already exists.", POPUP_ERROR);
+        case "ERR_PERMS": return showPopup("Permission denied", "You do not have permission to perform this action.", POPUP_ERROR);
 
-          default: return showPopup("Unknown error", "The server returned an unexpected response: " + data, POPUP_ERROR);
-
-        }
+        default: return showPopup("Unknown error", "The server returned an unexpected response: " + requestData, POPUP_ERROR);
       }
 
     };
@@ -260,23 +261,23 @@ async function lobbyInit () {
 
       // Fetch the api to change the lobby password
       const request = await fetch(`/api/lobbies/password/${encodedName}/${newPassword}`);
-      if (request.status !== 200) {
+      let requestData;
+      try {
+        requestData = await request.json();
+      } catch (e) {
         return showPopup("Unknown error", "The server returned an unexpected response. Error code: " + request.status, POPUP_ERROR);
-      } else {
-        const data = await request.json();
-        switch (data) {
+      }
 
-          case "SUCCESS":
-            return showPopup("Success", "The lobby password has been successfully updated.");
+      switch (requestData) {
+        case "SUCCESS":
+          return showPopup("Success", "The lobby password has been successfully updated.");
 
-          case "ERR_LOGIN": return showPopup("Not logged in", "Please log in via Steam before editing lobby details.", POPUP_ERROR);
-          case "ERR_STEAMID": return showPopup("Unrecognized user", "Your SteamID is not present in the users database. WTF?", POPUP_ERROR);
-          case "ERR_NAME": return showPopup("Lobby not found", "An open lobby with this name does not exist.", POPUP_ERROR);
-          case "ERR_PERMS": return showPopup("Permission denied", "You do not have permission to perform this action.", POPUP_ERROR);
+        case "ERR_LOGIN": return showPopup("Not logged in", "Please log in via Steam before editing lobby details.", POPUP_ERROR);
+        case "ERR_STEAMID": return showPopup("Unrecognized user", "Your SteamID is not present in the users database. WTF?", POPUP_ERROR);
+        case "ERR_NAME": return showPopup("Lobby not found", "An open lobby with this name does not exist.", POPUP_ERROR);
+        case "ERR_PERMS": return showPopup("Permission denied", "You do not have permission to perform this action.", POPUP_ERROR);
 
-          default: return showPopup("Unknown error", "The server returned an unexpected response: " + data, POPUP_ERROR);
-
-        }
+        default: return showPopup("Unknown error", "The server returned an unexpected response: " + requestData, POPUP_ERROR);
       }
 
     };
@@ -306,26 +307,26 @@ async function lobbyInit () {
 
       // Request map change from API
       const request = await fetch(`/api/lobbies/map/${encodedName}/"${mapid}"`);
-      if (request.status !== 200) {
+      let requestData;
+      try {
+        requestData = await request.json();
+      } catch (e) {
         return showPopup("Unknown error", "The server returned an unexpected response. Error code: " + request.status, POPUP_ERROR);
-      } else {
-        const data = await request.json();
-        switch (data) {
+      }
 
-          case "SUCCESS":
-            showPopup("Success", "The lobby map has been successfully updated.");
-            return;
+      switch (requestData) {
+        case "SUCCESS":
+          showPopup("Success", "The lobby map has been successfully updated.");
+          return;
 
-          case "ERR_LOGIN": return showPopup("Not logged in", "Please log in via Steam before editing lobby details.", POPUP_ERROR);
-          case "ERR_STEAMID": return showPopup("Unrecognized user", "Your SteamID is not present in the users database. WTF?", POPUP_ERROR);
-          case "ERR_NAME": return showPopup("Lobby not found", "An open lobby with this name does not exist.", POPUP_ERROR);
-          case "ERR_PERMS": return showPopup("Permission denied", "You do not have permission to perform this action.", POPUP_ERROR);
-          case "ERR_MAPID": return showPopup("Invalid link", "A workshop map associated with this link could not be found.", POPUP_ERROR);
-          case "ERR_STEAMID": return showPopup("Missing map info", "Failed to retrieve map details. Is this the right link?", POPUP_ERROR);
+        case "ERR_LOGIN": return showPopup("Not logged in", "Please log in via Steam before editing lobby details.", POPUP_ERROR);
+        case "ERR_STEAMID": return showPopup("Unrecognized user", "Your SteamID is not present in the users database. WTF?", POPUP_ERROR);
+        case "ERR_NAME": return showPopup("Lobby not found", "An open lobby with this name does not exist.", POPUP_ERROR);
+        case "ERR_PERMS": return showPopup("Permission denied", "You do not have permission to perform this action.", POPUP_ERROR);
+        case "ERR_MAPID": return showPopup("Invalid link", "A workshop map associated with this link could not be found.", POPUP_ERROR);
+        case "ERR_STEAMID": return showPopup("Missing map info", "Failed to retrieve map details. Is this the right link?", POPUP_ERROR);
 
-          default: return showPopup("Unknown error", "The server returned an unexpected response: " + data, POPUP_ERROR);
-
-        }
+        default: return showPopup("Unknown error", "The server returned an unexpected response: " + requestData, POPUP_ERROR);
       }
 
     };
