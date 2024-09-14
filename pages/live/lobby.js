@@ -33,10 +33,17 @@ async function updatePlayerList () {
       avatar = "../icons/unknown.jpg";
     }
 
+    const ready = lobby.data.ready.includes(steamid);
+
     output += `
 <div class="lobby-player">
   <img src="${avatar}" class="lobby-player-avatar">
   <p class="lobby-player-name">${username}</p>
+  <i
+    class="${ready ? "fa-solid fa-circle-check" : "fa-regular fa-circle"} lobby-player-ready"
+    onmouseover="showTooltip('${ready ? "Ready" : "Not ready"}')"
+    onmouseleave="hideTooltip()"
+  ></i>
 </div>
     `;
 
@@ -137,6 +144,19 @@ async function lobbyEventHandler (event) {
       // Update the lobby map
       lobby.data.map = data.newMap;
       updateLobbyMap();
+
+      return;
+    }
+
+    case "lobby_ready": {
+
+      // Update the ready state of the given player
+      if (data.readyState) {
+        lobby.data.ready.push(data.steamid);
+      } else {
+        lobby.data.ready.splice(lobby.data.ready.indexOf(data.steamid), 1);
+      }
+      updatePlayerList();
 
       return;
     }
@@ -332,6 +352,56 @@ async function lobbyInit () {
     };
 
   }
+
+  const readyButton = document.querySelector("#lobby-ready-button");
+
+  window.toggleReadyState = async function () {
+
+    // If no map is selected, throw early
+    if (!readyState && !lobby.data.map) {
+      return showPopup("No map selected", "Please select a map for the lobby.", POPUP_ERROR);
+    }
+
+    // This might take a while, prevent the user from spamming the button
+    readyButton.style.opacity = 0.5;
+    readyButton.style.pointerEvents = "none";
+
+    // Request ready state change from API
+    const request = await fetch(`/api/lobbies/ready/${encodedName}/${!readyState}`);
+
+    // Restore the button once the request finishes
+    readyButton.style.opacity = 1.0;
+    readyButton.style.pointerEvents = "auto";
+
+    let requestData;
+    try {
+      requestData = await request.json();
+    } catch (e) {
+      return showPopup("Unknown error", "The server returned an unexpected response. Error code: " + request.status, POPUP_ERROR);
+    }
+
+    switch (requestData) {
+      case "SUCCESS": {
+        readyState = !readyState;
+        if (readyState) readyButton.innerHTML = "Not ready!";
+        else readyButton.innerHTML = "I'm ready!";
+        return;
+      }
+
+      case "ERR_LOGIN": return showPopup("Not logged in", "Please log in via Steam before editing lobby details.", POPUP_ERROR);
+      case "ERR_STEAMID": return showPopup("Unrecognized user", "Your SteamID is not present in the users database. WTF?", POPUP_ERROR);
+      case "ERR_NAME": return showPopup("Lobby not found", "An open lobby with this name does not exist.", POPUP_ERROR);
+      case "ERR_PERMS": return showPopup("Permission denied", "You do not have permission to perform this action.", POPUP_ERROR);
+      case "ERR_GAMEAUTH": return showPopup("Game not connected", "You have not authenticated your Portal 2 game client. Start the Spplice package, run 'connect' in the console, and follow the instructions.", POPUP_ERROR);
+      case "ERR_GAMESOCKET": return showPopup("Game client error", "An error occurred while communicating with your game client. Try reconnecting?", POPUP_ERROR);
+      case "ERR_TIMEOUT": return showPopup("Game client timeout", "Timed out while waiting for a response from your game client. Try reconnecting?", POPUP_ERROR);
+      case "ERR_MAP": return showPopup("Map not found", "Please download the lobby map by subscribing to it on the workshop.", POPUP_ERROR);
+      case "ERR_NOMAP": return showPopup("No map selected", "Please select a map for the lobby.", POPUP_ERROR);
+
+      default: return showPopup("Unknown error", "The server returned an unexpected response: " + requestData, POPUP_ERROR);
+    }
+
+  };
 
 }
 lobbyInit();

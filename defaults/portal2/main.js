@@ -12,6 +12,9 @@ let pongIgnore = 0;
 let onReadSteamID = null;
 let ws = null;
 
+let checkmapBlock = false;
+let checkmapExpect = "";
+
 // Generates a random 4 digit code
 function generateAuthCode () {
   let code = Math.floor(Math.random() * 10000).toString();
@@ -27,6 +30,11 @@ function wsMessageHandler (event) {
   switch (data.type) {
     case "cmd": return SendToConsole(data.value);
     case "ping": return ws.send(JSON.stringify({ type: "pong" }));
+    case "checkmap": {
+      checkmapExpect = data.value;
+      SendToConsole("echo [CheckMapStart];sar_workshop_list;echo [CheckMapEnd]");
+      return;
+    }
   }
 
 }
@@ -69,6 +77,31 @@ onConsoleOutput(async function (data) {
 
   // Iterate over each completed new line
   for (let i = 0; i < lines.length; i ++) {
+
+    // Listen for sar_workshop_list blocks requested by the WebSocket
+    if (lines[i].startsWith("[CheckMapStart]")) {
+      checkmapBlock = true;
+      continue;
+    }
+
+    if (checkmapBlock) {
+
+      // If we've reached the end of the block, the map wasn't found
+      if (lines[i].startsWith("[CheckMapEnd]")) {
+        checkmapBlock = false;
+        ws.send(JSON.stringify({ type: "checkmap", value: false }));
+        continue;
+      }
+
+      // If we found the map, report success and stop checking early
+      log.appendl(`'${"workshop/" + lines[i]}' === '${checkmapExpect}'`);
+      if ("workshop/" + lines[i] === checkmapExpect) {
+        ws.send(JSON.stringify({ type: "checkmap", value: true }));
+        checkmapBlock = false;
+      }
+
+      continue;
+    }
 
     // Relay commands to the game
     if (lines[i].startsWith("[SendToConsole] ")) {

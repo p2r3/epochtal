@@ -167,6 +167,11 @@ const fetchHandler = async function (req) {
   // Handle WebSocket connections
   if (urlPath[0] === "ws") {
 
+    // Load authentication header from parameters if present
+    // This is a workaround for internal requests, as the JavaScript WebSockets API doesn't support setting headers
+    const authSecret = url.searchParams.get("Authentication");
+    if (authSecret) req.headers.set("Authentication", authSecret);
+
     // Make sure the user is logged in
     const user = await apis.users(["whoami"], req);
     if (!user) return Response("ERR_LOGIN", { status: 403 });

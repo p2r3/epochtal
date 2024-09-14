@@ -150,6 +150,20 @@ module.exports = async function (args, request) {
 
     }
 
+    case "ready": {
+
+      const readyState = args[2];
+
+      // Check if the player is a member of this lobby
+      const permsCheck = await checkUserPerms(request, name);
+      if (typeof permsCheck === "string") return permsCheck;
+      const { user } = permsCheck;
+
+      // Attempt to change the ready state
+      return lobbies(["ready", name, readyState, user.steamid]);
+
+    }
+
   }
 
   return "ERR_COMMAND";

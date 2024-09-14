@@ -69,6 +69,7 @@ module.exports = async function (args, context = epochtal) {
       };
       const dataEntry = {
         password: password ? hashedPassword : false,
+        ready: [],
         map: null
       };
 
@@ -202,6 +203,97 @@ module.exports = async function (args, context = epochtal) {
       // Brodcast map change to clients
       const eventName = "lobby_" + name;
       await events(["send", eventName, { type: "lobby_map", newMap }], context);
+
+      // Write the lobbies to file if it exists
+      if (file) Bun.write(file, JSON.stringify(lobbies));
+
+      return "SUCCESS";
+
+    }
+
+    case "ready": {
+
+      // Ensure that readyState is a boolean
+      const readyState = args[2] == true;
+
+      // Ensure the lobby exists
+      if (!(name in lobbies.list && name in lobbies.data)) throw new UtilError("ERR_NAME", args, context);
+
+      if (readyState) {
+
+        // Throw ERR_NOMAP if the lobby has no map set
+        if (lobbies.data[name].map === null) throw new UtilError("ERR_NOMAP", args, context);
+
+        // Check if the player's game client is connected
+        try {
+          await events(["get", `game_${steamid}`], context);
+        } catch {
+          throw new UtilError("ERR_GAMEAUTH", args, context);
+        }
+
+        // Check if the player has the map file
+        // First, connect to the game client event
+        const wsProtocol = gconfig.https ? "wss" : "ws";
+        const wsAuthSecret = encodeURIComponent(process.env.INTERNAL_SECRET);
+        const gameSocket = new WebSocket(`${wsProtocol}://${gconfig.domain}/ws/game_${steamid}?Authentication=${wsAuthSecret}`);
+
+        // Wait for the connection to open
+        await new Promise(function (resolve, reject) {
+          const openTimeout = setTimeout(function () {
+            reject(new UtilError("ERR_GAMESOCKET", args, context));
+          }, 5000);
+          gameSocket.addEventListener("open", function () {
+            clearTimeout(openTimeout);
+            resolve();
+          });
+        });
+
+        // Communicate with the game client to retrieve map state
+        hasMapTimeout = null;
+        const hasMap = await new Promise(async function (resolve, reject) {
+
+          // Set up a listener for any echoed checkmap events from the client
+          gameSocket.addEventListener("message", function (event) {
+            const data = JSON.parse(event.data);
+            if (data.type !== "echo") return;
+
+            const echoData = JSON.parse(data.value);
+            if (echoData.type !== "checkmap") return;
+            resolve(echoData.value);
+          });
+
+          // Finally, send a request for the map check
+          const mapFile = lobbies.data[name].map.file;
+          await events(["send", `game_${steamid}`, { type: "checkmap", value: mapFile }], context);
+
+          // Stop waiting for a response after 15 seconds
+          hasMapTimeout = setTimeout(function () {
+            reject(new UtilError("ERR_TIMEOUT", args, context));
+          }, 15000);
+
+        });
+        if (hasMapTimeout) clearTimeout(hasMapTimeout);
+
+        // If the player doesn't have the map, throw ERR_MAP
+        if (!hasMap) throw new UtilError("ERR_MAP", args, context);
+
+        // Add the player to the ready list
+        if (!lobbies.data[name].ready.includes(steamid)) {
+          lobbies.data[name].ready.push(steamid);
+        }
+
+      } else {
+
+        // Remove the player from the ready list
+        if (lobbies.data[name].ready.includes(steamid)) {
+          lobbies.data[name].ready.splice(lobbies.data[name].ready.indexOf(steamid), 1);
+        }
+
+      }
+
+      // Brodcast ready state to clients
+      const eventName = "lobby_" + name;
+      await events(["send", eventName, { type: "lobby_ready", steamid, readyState }], context);
 
       // Write the lobbies to file if it exists
       if (file) Bun.write(file, JSON.stringify(lobbies));

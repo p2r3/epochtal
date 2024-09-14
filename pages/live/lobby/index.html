@@ -8,16 +8,17 @@
     <link rel="icon" href="/icons/favicon.ico" type="image/x-icon">
     <link rel="stylesheet" href="../../style.css">
     <link rel="stylesheet" href="../style.css">
+    <script src="https://kit.fontawesome.com/fc2642e2d1.js" crossorigin="anonymous"></script>
   </head>
   <body>
-    
+
     <div id="bg-anim-container">
       <div id="bg-anim-bg"></div>
       <canvas id="bg-anim"></canvas>
       <div id="bg-anim-blur"></div>
       <script src="../../bg.js"></script>
     </div>
-    
+
     <div id="page-content">
 
       <header>
@@ -55,13 +56,18 @@
 
           <h3 class="marginb_small">Current map</h3>
           <div id="lobby-settings-map" class="votes-entry" style="text-align: left; margin: 0 15%">
-            
+
           </div>
-          
+
+          <br><br>
+
+          <h3 class="marginb_small">Are you ready?</h3>
+          <button id="lobby-ready-button" onclick="toggleReadyState()">I'm ready!</button>
+
         </div>
 
       </div>
-      
+
       <footer></footer>
 
       <div id="global-popup">
@@ -72,7 +78,7 @@
           <button id="global-popup-ok" onclick="popupOnOkay()">OK</button>
         </div>
       </div>
-      
+
       <div id="global-tooltip"></div>
 
     </div>

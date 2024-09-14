@@ -47,10 +47,19 @@ module.exports = async function (args, request) {
       const disconnectHandler = async function () {
         await events(["delete", event]);
       };
+      // Echo any received messages back to the event
+      const messageHandler = async function (message) {
+        await events(["send", event, { type: "echo", value: message }]);
+      };
+      // Authenticate only admins and the internal user
+      const authHandler = async function (steamid) {
+        if (steamid === "00000000000000000") return true;
+        return epochtal.data.users[steamid].admin;
+      };
 
       // Create a game client event for this user
       try {
-        await events(["create", event, null, null, connectHandler, disconnectHandler]);
+        await events(["create", event, authHandler, messageHandler, connectHandler, disconnectHandler]);
       } catch (e) {
         if (e.message !== "ERR_EXISTS") throw e;
       }
