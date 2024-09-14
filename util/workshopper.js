@@ -45,8 +45,8 @@ async function getData (mapid, raw) {
   }
 
   // Extract components of the path to which the map is saved when subscribed to
-  const pathWorkshop = data.file_url.split("/ugc/").pop().split("/")[0];
-  const pathBSP = data.filename.split("/").pop().slice(0, -4);
+  const pathWorkshop = details.file_url.split("/ugc/").pop().split("/")[0];
+  const pathBSP = details.filename.split("/").pop().slice(0, -4);
 
   return {
     id: mapid,
