@@ -44,12 +44,17 @@ async function getData (mapid, raw) {
     if (preview) screenshot = preview.url;
   }
 
+  // Extract components of the path to which the map is saved when subscribed to
+  const pathWorkshop = data.file_url.split("/ugc/").pop().split("/")[0];
+  const pathBSP = data.filename.split("/").pop().slice(0, -4);
+
   return {
     id: mapid,
     title: details.title,
     author: author.personaname,
     thumbnail: details.preview_url.split("https://steamuserimages-a.akamaihd.net/ugc/")[1] || details.preview_url,
-    screenshot: screenshot.split("https://steamuserimages-a.akamaihd.net/ugc/")[1] || screenshot
+    screenshot: screenshot.split("https://steamuserimages-a.akamaihd.net/ugc/")[1] || screenshot,
+    file: `workshop/${pathWorkshop}/${pathBSP}`
   };
 
 }
