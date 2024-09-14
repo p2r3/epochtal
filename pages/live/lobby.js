@@ -170,6 +170,13 @@ async function lobbyEventHandler (event) {
  */
 async function lobbyInit () {
 
+  // If we're coming from a page refresh, put the user back at the lobby list
+  // Refreshing causes them to disconnect from the lobby anyway
+  if (performance.navigation.type === 1) {
+    window.location.href = "/live/";
+    return;
+  }
+
   // Change the login button to a logout button if the user is logged in
   const whoami = await (await fetch("/api/users/whoami")).json();
   if (whoami !== null) {

@@ -100,14 +100,23 @@ module.exports = async function (args, context = epochtal) {
         const eventName = "lobby_" + lobbyName;
         await events(["send", eventName, { type: "lobby_leave", steamid }], context);
 
-        // Delete the lobby if it is empty
+        // Delete the lobby if it is still empty 10 seconds after all players have left
         if (listEntry.players.length === 0) {
-          delete lobbies.list[lobbyName];
-          delete lobbies.data[lobbyName];
+          setTimeout(async function () {
 
-          await events(["delete", eventName], context);
+            if (listEntry.players.length !== 0) return;
 
-          if (file) Bun.write(file, JSON.stringify(lobbies));
+            delete lobbies.list[lobbyName];
+            delete lobbies.data[lobbyName];
+            if (file) Bun.write(file, JSON.stringify(lobbies));
+
+            try {
+              await events(["delete", eventName], context);
+            } catch {
+              // Prevent a full server crash in case of a race condition
+            }
+
+          }, 10000);
         }
 
       };
