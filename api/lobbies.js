@@ -124,6 +124,23 @@ module.exports = async function (args, request) {
 
     }
 
+    case "map": {
+
+      const mapid = args[2];
+
+      // Get the active user and throw ERR_LOGIN if not logged in
+      const user = await api_users(["whoami"], request);
+      if (!user) return "ERR_LOGIN";
+
+      // Get the specified lobby's list entry and throw ERR_PERMS if the user is not in the lobby
+      const listEntry = await lobbies(["get", name]);
+      if (!listEntry.players.includes(user.steamid)) return "ERR_PERMS";
+
+      // Set the specified lobby's map
+      return lobbies(["map", name, mapid]);
+
+    }
+
   }
 
   return "ERR_COMMAND";

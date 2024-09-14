@@ -2,6 +2,7 @@ const UtilError = require("./error.js");
 
 const users = require("./users.js");
 const events = require("./events.js");
+const workshopper = require("./workshopper.js");
 const { createHash } = require("crypto");
 
 /**
@@ -179,6 +180,28 @@ module.exports = async function (args, context = epochtal) {
       // Set the lobby password
       const hashedPassword = createHash("sha256").update(password).digest("base64");
       lobbies.data[name].password = password ? hashedPassword : false;
+
+      // Write the lobbies to file if it exists
+      if (file) Bun.write(file, JSON.stringify(lobbies));
+
+      return "SUCCESS";
+
+    }
+
+    case "map": {
+
+      const mapid = args[2];
+
+      // Ensure the lobby exists
+      if (!(name in lobbies.list && name in lobbies.data)) throw new UtilError("ERR_NAME", args, context);
+
+      // Set the lobby map
+      const newMap = await workshopper(["get", mapid]);
+      lobbies.data[name].map = newMap;
+
+      // Brodcast map change to clients
+      const eventName = "lobby_" + name;
+      await events(["send", eventName, { type: "lobby_map", newMap }], context);
 
       // Write the lobbies to file if it exists
       if (file) Bun.write(file, JSON.stringify(lobbies));

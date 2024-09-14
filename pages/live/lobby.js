@@ -128,6 +128,16 @@ async function lobbyEventHandler (event) {
       }
       updatePlayerList();
 
+      return;
+    }
+
+    case "lobby_map": {
+
+      // Update the lobby map
+      lobby.data.map = data.newMap;
+      updateLobbyMap();
+
+      return;
     }
 
   }
@@ -263,6 +273,55 @@ async function lobbyInit () {
           case "ERR_STEAMID": return showPopup("Unrecognized user", "Your SteamID is not present in the users database. WTF?", POPUP_ERROR);
           case "ERR_NAME": return showPopup("Lobby not found", "An open lobby with this name does not exist.", POPUP_ERROR);
           case "ERR_PERMS": return showPopup("Permission denied", "You do not have permission to perform this action.", POPUP_ERROR);
+
+          default: return showPopup("Unknown error", "The server returned an unexpected response: " + data, POPUP_ERROR);
+
+        }
+      }
+
+    };
+
+  }
+
+  window.selectLobbyMap = function () {
+
+    // Prompt for a workshop map link
+    showPopup("Select a map", `<p>Enter a workshop link to the new map.</p>
+      <input type="text" placeholder="Workshop Link" id="lobby-settings-map-input"></input>
+    `, POPUP_INFO, true);
+
+    popupOnOkay = async function () {
+
+      // Get mapid from link
+      const input = document.querySelector("#lobby-settings-map-input");
+      const mapid = input.value.trim().toLowerCase().split("https://steamcommunity.com/sharedfiles/filedetails/?id=").pop().split("?")[0];
+
+      // Ensure mapid is valid
+      if (!mapid || isNaN(mapid)) {
+        showPopup("Invalid link", "The workshop link you provided could not be parsed.", POPUP_ERROR);
+        return;
+      }
+
+      hidePopup();
+
+      // Request map change from API
+      const request = await fetch(`/api/lobbies/map/${encodedName}/"${mapid}"`);
+      if (request.status !== 200) {
+        return showPopup("Unknown error", "The server returned an unexpected response. Error code: " + request.status, POPUP_ERROR);
+      } else {
+        const data = await request.json();
+        switch (data) {
+
+          case "SUCCESS":
+            showPopup("Success", "The lobby map has been successfully updated.");
+            return;
+
+          case "ERR_LOGIN": return showPopup("Not logged in", "Please log in via Steam before editing lobby details.", POPUP_ERROR);
+          case "ERR_STEAMID": return showPopup("Unrecognized user", "Your SteamID is not present in the users database. WTF?", POPUP_ERROR);
+          case "ERR_NAME": return showPopup("Lobby not found", "An open lobby with this name does not exist.", POPUP_ERROR);
+          case "ERR_PERMS": return showPopup("Permission denied", "You do not have permission to perform this action.", POPUP_ERROR);
+          case "ERR_MAPID": return showPopup("Invalid link", "A workshop map associated with this link could not be found.", POPUP_ERROR);
+          case "ERR_STEAMID": return showPopup("Missing map info", "Failed to retrieve map details. Is this the right link?", POPUP_ERROR);
 
           default: return showPopup("Unknown error", "The server returned an unexpected response: " + data, POPUP_ERROR);
 
