@@ -135,6 +135,11 @@ onConsoleOutput(async function (data) {
       onReadSteamID(steamid);
       continue;
     }
+    if (lines[i].startsWith("Loading game from SAVE\\")) {
+      const steamid = lines[i].split("Loading game from SAVE\\")[1].split("\\....")[0];
+      onReadSteamID(steamid);
+      continue;
+    }
 
   }
 
