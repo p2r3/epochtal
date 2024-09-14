@@ -84,6 +84,14 @@
   font-size: 1.6rem;
 }
 
+.lobby-player-ready {
+  position: absolute;
+  top: 50%;
+  right: 30px;
+  transform: translateY(-50%);
+  font-size: 1.8em;
+}
+
 #lobby-map-button {
   position: absolute;
   right: 10px;
@@ -94,4 +102,8 @@
 }
 #lobby-map-button:hover {
   background-color: rgba(255, 255, 255, 0.25);
+}
+
+#lobby-ready-button {
+  transition: opacity 0.2s;
 }
