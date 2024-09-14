@@ -165,7 +165,7 @@ module.exports = async function (args, context = epochtal) {
     case "get": {
 
       // Ensure the mapid is valid
-      if (!mapid) throw new UtilError("ERR_MAPID", args, context);
+      if (!mapid || isNaN(mapid)) throw new UtilError("ERR_MAPID", args, context);
       const raw = args[2];
 
       // Fetch the map data
