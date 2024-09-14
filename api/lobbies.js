@@ -3,6 +3,30 @@ const { createHash } = require("crypto");
 const lobbies = require("../util/lobbies.js");
 const api_users = require("./users.js");
 
+
+/**
+ * Checks if the user making the request is a member of the given lobby.
+ * Returns the user object and lobby list data as products.
+ *
+ * @param {HttpRequest} request The HTTP request
+ * @param {string} name The lobby name
+ * @returns {object|string} User object and lobby list data, or error string
+ */
+async function checkUserPerms (request, name) {
+
+  // Get the active user and throw ERR_LOGIN if not logged in
+  const user = await api_users(["whoami"], request);
+  if (!user) return "ERR_LOGIN";
+
+  // Get the specified lobby's list entry and throw ERR_PERMS if the user is not in the lobby
+  const listEntry = await lobbies(["get", name]);
+  if (!listEntry.players.includes(user.steamid)) return "ERR_PERMS";
+
+  // Return the products of this operation for further use
+  return { user, listEntry };
+
+}
+
 /**
  * Handles `/api/lobbies/` endpoint requests. This endpoint supports the following commands:
  *
@@ -78,13 +102,10 @@ module.exports = async function (args, request) {
 
     case "get": {
 
-      // Get the active user and throw ERR_LOGIN if not logged in
-      const user = await api_users(["whoami"], request);
-      if (!user) return "ERR_LOGIN";
-
-      // Get the specified lobby's list entry and data. Throw ERR_PERMS if the user is not in the lobby
-      const listEntry = await lobbies(["get", name]);
-      if (!listEntry.players.includes(user.steamid)) return "ERR_PERMS";
+      // Check if the player is a member of this lobby
+      const permsCheck = await checkUserPerms(request, name);
+      if (typeof permsCheck === "string") return permsCheck;
+      const { listEntry } = permsCheck;
 
       const data = await lobbies(["getdata", name]);
 
@@ -96,13 +117,9 @@ module.exports = async function (args, request) {
 
       const newName = args[2];
 
-      // Get the active user and throw ERR_LOGIN if not logged in
-      const user = await api_users(["whoami"], request);
-      if (!user) return "ERR_LOGIN";
-
-      // Get the specified lobby's list entry and throw ERR_PERMS if the user is not in the lobby
-      const listEntry = await lobbies(["get", name]);
-      if (!listEntry.players.includes(user.steamid)) return "ERR_PERMS";
+      // Check if the player is a member of this lobby
+      const permsCheck = await checkUserPerms(request, name);
+      if (typeof permsCheck === "string") return permsCheck;
 
       // Rename the specified lobby
       return lobbies(["rename", name, newName]);
@@ -111,13 +128,9 @@ module.exports = async function (args, request) {
 
     case "password": {
 
-      // Get the active user and throw ERR_LOGIN if not logged in
-      const user = await api_users(["whoami"], request);
-      if (!user) return "ERR_LOGIN";
-
-      // Get the specified lobby's list entry and throw ERR_PERMS if the user is not in the lobby
-      const listEntry = await lobbies(["get", name]);
-      if (!listEntry.players.includes(user.steamid)) return "ERR_PERMS";
+      // Check if the player is a member of this lobby
+      const permsCheck = await checkUserPerms(request, name);
+      if (typeof permsCheck === "string") return permsCheck;
 
       // Set the specified lobby's password
       return lobbies(["password", name, password]);
@@ -128,13 +141,9 @@ module.exports = async function (args, request) {
 
       const mapid = args[2];
 
-      // Get the active user and throw ERR_LOGIN if not logged in
-      const user = await api_users(["whoami"], request);
-      if (!user) return "ERR_LOGIN";
-
-      // Get the specified lobby's list entry and throw ERR_PERMS if the user is not in the lobby
-      const listEntry = await lobbies(["get", name]);
-      if (!listEntry.players.includes(user.steamid)) return "ERR_PERMS";
+      // Check if the player is a member of this lobby
+      const permsCheck = await checkUserPerms(request, name);
+      if (typeof permsCheck === "string") return permsCheck;
 
       // Set the specified lobby's map
       return lobbies(["map", name, mapid]);
