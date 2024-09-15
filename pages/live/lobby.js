@@ -33,12 +33,17 @@ async function updatePlayerList () {
       avatar = "../icons/unknown.jpg";
     }
 
+    // Get the player's last run in this mode, if they have one
+    const leaderboard = lobby.data.context.data.leaderboard[lobby.listEntry.mode];
+    const run = leaderboard.find(c => c.steamid === steamid);
+
+    // Get the player's ready state
     const ready = lobby.data.ready.includes(steamid);
 
     output += `
 <div class="lobby-player">
   <img src="${avatar}" class="lobby-player-avatar">
-  <p class="lobby-player-name">${username}</p>
+  <p class="lobby-player-name">${username}${run ? ` - ${ticksToString(run.time)}` : ""}</p>
   <i
     class="${ready ? "fa-solid fa-circle-check" : "fa-regular fa-circle"} lobby-player-ready"
     onmouseover="showTooltip('${ready ? "Ready" : "Not ready"}')"
@@ -168,6 +173,20 @@ async function lobbyEventHandler (event) {
         if (readyState) lobbyReadyButton.innerHTML = "Not ready!";
         else lobbyReadyButton.innerHTML = "I'm ready!";
       }
+
+      return;
+    }
+
+    case "lobby_submit": {
+
+      // Handle new run submission
+      const run = data.value;
+      const leaderboard = lobby.data.context.data.leaderboard[lobby.listEntry.mode];
+
+      const index = leaderboard.findIndex(c => c.steamid === run.steamid);
+      if (index !== -1) leaderboard.splice(index, 1);
+
+      leaderboard.push(run);
 
       return;
     }
