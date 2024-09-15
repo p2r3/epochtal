@@ -4,7 +4,6 @@ const users = require("./users.js");
 const events = require("./events.js");
 const workshopper = require("./workshopper.js");
 const leaderboard = require("./leaderboard.js");
-const { createHash } = require("crypto");
 
 const [LOBBY_IDLE, LOBBY_INGAME] = [0, 1];
 
@@ -93,7 +92,7 @@ module.exports = async function (args, context = epochtal) {
       if (cleanName in lobbies.list || cleanName in lobbies.data) throw new UtilError("ERR_EXISTS", args, context);
 
       // Create a new lobby and data
-      const hashedPassword = createHash("sha256").update(password).digest("base64");
+      const hashedPassword = await Bun.password.hash(password);
 
       const listEntry = {
         players: [],
@@ -168,7 +167,7 @@ module.exports = async function (args, context = epochtal) {
       if (!user) throw new UtilError("ERR_STEAMID", args, context);
 
       if (!(name in lobbies.list && name in lobbies.data)) throw new UtilError("ERR_NAME", args, context);
-      if (lobbies.data[name].password && lobbies.data[name].password !== password) throw new UtilError("ERR_PASSWORD", args, context);
+      if (lobbies.data[name].password && !(await Bun.password.verify(password, lobbies.data[name].password))) throw new UtilError("ERR_PASSWORD", args, context);
       if (lobbies.list[name].players.includes(steamid)) throw new UtilError("ERR_EXISTS", args, context);
 
       // Add the player to the lobby
@@ -221,7 +220,7 @@ module.exports = async function (args, context = epochtal) {
       if (!(name in lobbies.list && name in lobbies.data)) throw new UtilError("ERR_NAME", args, context);
 
       // Set the lobby password
-      const hashedPassword = createHash("sha256").update(password).digest("base64");
+      const hashedPassword = await Bun.password.hash(password);
       lobbies.data[name].password = password ? hashedPassword : false;
 
       // Write the lobbies to file if it exists
