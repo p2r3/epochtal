@@ -59,7 +59,10 @@ function wsSetup () {
     ws.addEventListener("message", wsMessageHandler);
 
     ws.addEventListener("open", () => SendToConsole("echo WebSocket connection established."));
-    ws.addEventListener("close", () => SendToConsole("echo WebSocket connection closed."));
+    ws.addEventListener("close", () => {
+      ws = null;
+      SendToConsole("echo WebSocket connection closed.");
+    });
 
   };
 
@@ -94,7 +97,6 @@ onConsoleOutput(async function (data) {
       }
 
       // If we found the map, report success and stop checking early
-      log.appendl(`'${"workshop/" + lines[i]}' === '${checkmapExpect}'`);
       if ("workshop/" + lines[i] === checkmapExpect) {
         ws.send(JSON.stringify({ type: "checkmap", value: true }));
         checkmapBlock = false;
@@ -171,6 +173,14 @@ onConsoleOutput(async function (data) {
     if (lines[i].startsWith("Loading game from SAVE\\")) {
       const steamid = lines[i].split("Loading game from SAVE\\")[1].split("\\....")[0];
       onReadSteamID(steamid);
+      continue;
+    }
+
+    // If connected to WebSocket, report all SAR session timers as "finishmap" events
+    // TODO: This isn't a good approach, and should be refactored once lobbies get more attention
+    if (ws && lines[i].startsWith("Session: ")) {
+      const ticks = parseInt(lines[i].split("Session: ")[1].split(" (")[0]);
+      ws.send(JSON.stringify({ type: "finishmap", value: { time: ticks, portals: 0 } }));
       continue;
     }
 

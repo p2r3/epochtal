@@ -3,7 +3,39 @@ const UtilError = require("./error.js");
 const users = require("./users.js");
 const events = require("./events.js");
 const workshopper = require("./workshopper.js");
+const leaderboard = require("./leaderboard.js");
 const { createHash } = require("crypto");
+
+const [LOBBY_IDLE, LOBBY_INGAME] = [0, 1];
+
+/**
+ * Creates a default context for the lobby.
+ * Cointains just enough scaffolding for the required utilities to run.
+ *
+ * @returns {object} An Epochtal context object
+ */
+function createLobbyContext (name) {
+  return {
+    file: {
+      log: "/dev/null"
+    },
+    data: {
+      map: null,
+      leaderboard: {},
+      week: {
+        date: Date.now(),
+        categories: [
+          {
+            name: "ffa",
+            title: "Free For All",
+            portals: false
+          }
+        ]
+      }
+    },
+    name: "lobby_" + name
+  };
+}
 
 /**
  * Handles the `lobbies` utility call. This utility is used to manage game lobbies.
@@ -70,7 +102,8 @@ module.exports = async function (args, context = epochtal) {
       const dataEntry = {
         password: password ? hashedPassword : false,
         ready: [],
-        map: null
+        state: LOBBY_IDLE,
+        context: createLobbyContext(cleanName)
       };
 
       lobbies.list[cleanName] = listEntry;
@@ -207,7 +240,7 @@ module.exports = async function (args, context = epochtal) {
 
       // Set the lobby map
       const newMap = await workshopper(["get", mapid]);
-      lobbies.data[name].map = newMap;
+      lobbies.data[name].context.data.map = newMap;
 
       // Brodcast map change to clients
       const eventName = "lobby_" + name;
@@ -224,14 +257,21 @@ module.exports = async function (args, context = epochtal) {
 
       // Ensure that readyState is a boolean
       const readyState = args[2] == true;
+      // Whether to force ready state change regardless of lobby state
+      const force = args[4];
 
       // Ensure the lobby exists
       if (!(name in lobbies.list && name in lobbies.data)) throw new UtilError("ERR_NAME", args, context);
 
+      // Throw ERR_INGAME if the game has already started
+      if (!force && lobbies.data[name].state === LOBBY_INGAME) {
+        throw new UtilError("ERR_INGAME", args, context);
+      }
+
       if (readyState) {
 
         // Throw ERR_NOMAP if the lobby has no map set
-        if (lobbies.data[name].map === null) throw new UtilError("ERR_NOMAP", args, context);
+        if (lobbies.data[name].context.data.map === null) throw new UtilError("ERR_NOMAP", args, context);
 
         // Check if the player's game client is connected
         try {
@@ -259,24 +299,27 @@ module.exports = async function (args, context = epochtal) {
 
         // Communicate with the game client to retrieve map state
         hasMapTimeout = null;
+        const mapFile = lobbies.data[name].context.data.map.file;
         const hasMap = await new Promise(async function (resolve, reject) {
 
           // Set up a listener for any echoed checkmap events from the client
-          gameSocket.addEventListener("message", function (event) {
+          gameSocket.onmessage = function (event) {
             const data = JSON.parse(event.data);
             if (data.type !== "echo") return;
 
             const echoData = JSON.parse(data.value);
             if (echoData.type !== "checkmap") return;
+
+            gameSocket.onmessage = null;
             resolve(echoData.value);
-          });
+          };
 
           // Finally, send a request for the map check
-          const mapFile = lobbies.data[name].map.file;
           await events(["send", `game_${steamid}`, { type: "checkmap", value: mapFile }], context);
 
           // Stop waiting for a response after 15 seconds
           hasMapTimeout = setTimeout(function () {
+            gameSocket.onmessage = null;
             reject(new UtilError("ERR_TIMEOUT", args, context));
           }, 15000);
 
@@ -291,11 +334,71 @@ module.exports = async function (args, context = epochtal) {
           lobbies.data[name].ready.push(steamid);
         }
 
+        // If everyone's ready, start the game
+        if (lobbies.list[name].players.length === lobbies.data[name].ready.length) {
+
+          lobbies.data[name].state = LOBBY_INGAME;
+
+          // Handle each connected game client
+          for (const steamid of lobbies.list[name].players) {
+
+            // Keep track of time from before any commands were sent to eliminate impossible responses
+            const commandTime = Date.now();
+            // Send a "map" command to the client
+            await events(["send", `game_${steamid}`, { type: "cmd", value: `map ${mapFile}` }], context);
+
+            // Connect to the game client event
+            const gameSocket = new WebSocket(`${wsProtocol}://${gconfig.domain}/ws/game_${steamid}?Authentication=${wsAuthSecret}`);
+
+            // Listen for a message indicating map completion
+            gameSocket.onmessage = async function (event) {
+
+              // Ensure we're handling an echoed "finishmap" event
+              const data = JSON.parse(event.data);
+              if (data.type !== "echo") return;
+              const echoData = JSON.parse(data.value);
+              if (echoData.type !== "finishmap") return;
+
+              // Check if the run length we received puts us in the future
+              if (commandTime + echoData.value.time * (1000 / 60) > Date.now()) return;
+
+              gameSocket.onmessage = null;
+              gameSocket.onclose = null;
+
+              // Submit this run to the lobby leaderboard
+              await leaderboard(["add", lobbies.list[name].mode, steamid, echoData.value.time, "", echoData.value.portals], lobbies.data[name].context);
+              // Broadcast submission to all lobby clients
+              await events(["send", "lobby_" + name, { type: "lobby_submit", value: echoData.value }], context);
+              // Call this same utility, changing the client's ready state to false
+              module.exports(["ready", name, false, steamid, true], context);
+
+            };
+
+            // Handle the socket closing prematurely
+            gameSocket.onclose = function () {
+
+              gameSocket.onmessage = null;
+              gameSocket.onclose = null;
+
+              // Call this same utility, changing the client's ready state to false
+              module.exports(["ready", name, false, steamid, true], context);
+
+            };
+
+          }
+
+        }
+
       } else {
 
         // Remove the player from the ready list
         if (lobbies.data[name].ready.includes(steamid)) {
           lobbies.data[name].ready.splice(lobbies.data[name].ready.indexOf(steamid), 1);
+        }
+
+        // If no one is ready, reset the lobby state
+        if (lobbies.data[name].ready.length === 0) {
+          lobbies.data[name].state = LOBBY_IDLE;
         }
 
       }

@@ -1,4 +1,4 @@
-var lobby, users;
+var lobby, users, whoami;
 var avatarCache = {};
 var lobbySocket = null;
 var readyState = false;
@@ -60,8 +60,10 @@ const lobbyMapContainer = document.querySelector("#lobby-settings-map");
  */
 async function updateLobbyMap () {
 
+  const lobbyMap = lobby.data.context.data.map;
+
   // If no map is selected, display a placeholder
-  if (!lobby.data.map) {
+  if (!lobbyMap) {
     lobbyMapContainer.innerHTML = `
       <p class="votes-text">No map selected</p>
       <button id="lobby-map-button" onclick="selectLobbyMap()">Select</button>
@@ -71,11 +73,11 @@ async function updateLobbyMap () {
 
   // Display the map thumbnail and title
   lobbyMapContainer.innerHTML = `
-    <a href="https://steamcommunity.com/sharedfiles/filedetails/?id=${lobby.data.map.id}" target="_blank">
-      <img class="votes-image" alt="thumbnail" src="https://steamuserimages-a.akamaihd.net/ugc/${lobby.data.map.thumbnail}?impolicy=Letterbox&imw=640&imh=360">
+    <a href="https://steamcommunity.com/sharedfiles/filedetails/?id=${lobbyMap.id}" target="_blank">
+      <img class="votes-image" alt="thumbnail" src="https://steamuserimages-a.akamaihd.net/ugc/${lobbyMap.thumbnail}?impolicy=Letterbox&imw=640&imh=360">
       <p class="votes-text">
-        ${lobby.data.map.title}<br>
-        <i class="font-light">by ${lobby.data.map.author}</i>
+        ${lobbyMap.title}<br>
+        <i class="font-light">by ${lobbyMap.author}</i>
       </p>
     </a>
     <button id="lobby-map-button" onclick="selectLobbyMap()">Select</button>
@@ -84,6 +86,8 @@ async function updateLobbyMap () {
 }
 
 var eventHandlerConnected = false;
+
+const lobbyReadyButton = document.querySelector("#lobby-ready-button");
 
 /**
  * Handle incoming WebSocket events
@@ -142,7 +146,7 @@ async function lobbyEventHandler (event) {
     case "lobby_map": {
 
       // Update the lobby map
-      lobby.data.map = data.newMap;
+      lobby.data.context.data.map = data.newMap;
       updateLobbyMap();
 
       return;
@@ -157,6 +161,13 @@ async function lobbyEventHandler (event) {
         lobby.data.ready.splice(lobby.data.ready.indexOf(data.steamid), 1);
       }
       updatePlayerList();
+
+      // If the given player is us, update the client ready state
+      if (data.steamid === whoami.steamid) {
+        readyState = data.readyState;
+        if (readyState) lobbyReadyButton.innerHTML = "Not ready!";
+        else lobbyReadyButton.innerHTML = "I'm ready!";
+      }
 
       return;
     }
@@ -178,7 +189,7 @@ async function lobbyInit () {
   }
 
   // Change the login button to a logout button if the user is logged in
-  const whoami = await (await fetch("/api/users/whoami")).json();
+  whoami = await (await fetch("/api/users/whoami")).json();
   if (whoami !== null) {
 
     const loginButton = document.querySelector("#login-button");
@@ -360,25 +371,23 @@ async function lobbyInit () {
 
   }
 
-  const readyButton = document.querySelector("#lobby-ready-button");
-
   window.toggleReadyState = async function () {
 
     // If no map is selected, throw early
-    if (!readyState && !lobby.data.map) {
+    if (!readyState && !lobby.data.context.data.map) {
       return showPopup("No map selected", "Please select a map for the lobby.", POPUP_ERROR);
     }
 
     // This might take a while, prevent the user from spamming the button
-    readyButton.style.opacity = 0.5;
-    readyButton.style.pointerEvents = "none";
+    lobbyReadyButton.style.opacity = 0.5;
+    lobbyReadyButton.style.pointerEvents = "none";
 
     // Request ready state change from API
     const request = await fetch(`/api/lobbies/ready/${encodedName}/${!readyState}`);
 
     // Restore the button once the request finishes
-    readyButton.style.opacity = 1.0;
-    readyButton.style.pointerEvents = "auto";
+    lobbyReadyButton.style.opacity = 1.0;
+    lobbyReadyButton.style.pointerEvents = "auto";
 
     let requestData;
     try {
@@ -388,12 +397,7 @@ async function lobbyInit () {
     }
 
     switch (requestData) {
-      case "SUCCESS": {
-        readyState = !readyState;
-        if (readyState) readyButton.innerHTML = "Not ready!";
-        else readyButton.innerHTML = "I'm ready!";
-        return;
-      }
+      case "SUCCESS": return;
 
       case "ERR_LOGIN": return showPopup("Not logged in", "Please log in via Steam before editing lobby details.", POPUP_ERROR);
       case "ERR_STEAMID": return showPopup("Unrecognized user", "Your SteamID is not present in the users database. WTF?", POPUP_ERROR);
@@ -404,6 +408,7 @@ async function lobbyInit () {
       case "ERR_TIMEOUT": return showPopup("Game client timeout", "Timed out while waiting for a response from your game client. Try reconnecting?", POPUP_ERROR);
       case "ERR_MAP": return showPopup("Map not found", "Please download the lobby map by subscribing to it on the workshop.", POPUP_ERROR);
       case "ERR_NOMAP": return showPopup("No map selected", "Please select a map for the lobby.", POPUP_ERROR);
+      case "ERR_INGAME": return showPopup("Game started", "The game has started, you cannot change your ready state.", POPUP_ERROR);
 
       default: return showPopup("Unknown error", "The server returned an unexpected response: " + requestData, POPUP_ERROR);
     }
