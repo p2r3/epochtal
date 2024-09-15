@@ -1,8 +1,5 @@
-const { createHash } = require("crypto");
-
 const lobbies = require("../util/lobbies.js");
 const api_users = require("./users.js");
-
 
 /**
  * Checks if the user making the request is a member of the given lobby.
@@ -65,8 +62,7 @@ module.exports = async function (args, request) {
       await lobbies(["create", name, password]);
 
       // Join the newly created lobby
-      const hashedPassword = createHash("sha256").update(password).digest("base64");
-      await lobbies(["join", name, hashedPassword, user.steamid]);
+      await lobbies(["join", name, password, user.steamid]);
 
       return "SUCCESS";
 
@@ -80,8 +76,7 @@ module.exports = async function (args, request) {
 
       // Join the specified lobby with the specified password
       if (password) {
-        const hashedPassword = createHash("sha256").update(password).digest("base64");
-        await lobbies(["join", name, hashedPassword, user.steamid]);
+        await lobbies(["join", name, password, user.steamid]);
       } else {
         await lobbies(["join", name, false, user.steamid]);
       }
