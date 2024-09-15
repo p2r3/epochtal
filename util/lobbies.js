@@ -92,7 +92,7 @@ module.exports = async function (args, context = epochtal) {
       if (cleanName in lobbies.list || cleanName in lobbies.data) throw new UtilError("ERR_EXISTS", args, context);
 
       // Create a new lobby and data
-      const hashedPassword = await Bun.password.hash(password);
+      const hashedPassword = password && await Bun.password.hash(password);
 
       const listEntry = {
         players: [],
@@ -220,7 +220,7 @@ module.exports = async function (args, context = epochtal) {
       if (!(name in lobbies.list && name in lobbies.data)) throw new UtilError("ERR_NAME", args, context);
 
       // Set the lobby password
-      const hashedPassword = await Bun.password.hash(password);
+      const hashedPassword = password && await Bun.password.hash(password);
       lobbies.data[name].password = password ? hashedPassword : false;
 
       // Write the lobbies to file if it exists
