@@ -20,7 +20,9 @@ function createLobbyContext (name) {
     },
     data: {
       map: null,
-      leaderboard: {},
+      leaderboard: {
+        ffa: []
+      },
       week: {
         date: Date.now(),
         categories: [
@@ -367,6 +369,7 @@ module.exports = async function (args, context = epochtal) {
               // Submit this run to the lobby leaderboard
               await leaderboard(["add", lobbies.list[name].mode, steamid, echoData.value.time, "", echoData.value.portals], lobbies.data[name].context);
               // Broadcast submission to all lobby clients
+              echoData.value.steamid = steamid;
               await events(["send", "lobby_" + name, { type: "lobby_submit", value: echoData.value }], context);
               // Call this same utility, changing the client's ready state to false
               module.exports(["ready", name, false, steamid, true], context);
