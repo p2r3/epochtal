@@ -299,7 +299,7 @@ module.exports = async function (args, context = epochtal) {
         });
 
         // Communicate with the game client to retrieve map state
-        hasMapTimeout = null;
+        let hasMapTimeout = null;
         const mapFile = lobbies.data[name].context.data.map.file;
         const hasMap = await new Promise(async function (resolve, reject) {
 
