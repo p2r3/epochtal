@@ -1,7 +1,7 @@
 const UtilError = require("./error.js");
 const UtilPrint = require("./print.js");
 
-const https = require("http");
+const https = require("https");
 const fs = require("node:fs");
 const weights = require(`${gconfig.secretsdir}/weights.js`);
 
