@@ -417,3 +417,13 @@ async function lobbyInit () {
 
 }
 lobbyInit();
+
+/**
+ * Leave the current lobby by closing the window
+ */
+function leaveLobby () {
+  // Attempt to close the window
+  window.close();
+  // If that failed, redirect to the lobby list page
+  window.location.href = "/live/";
+}
