@@ -43,13 +43,20 @@ module.exports = async function (args, context = epochtal) {
     case "verify": {
 
       if (gameauth[steamid].authcode === authcode) {
-        gameauth[steamid].callback();
-        delete gameauth[steamid];
+        // FIXME: For some reason, the callback hangs the server, likely a Bun bug
+        // So we instead return a response first, and only then run the callback
+        try {
+          return "SUCCESS";
+        } finally {
+          // This timeout is awfully dirty, but it seems necessary
+          setTimeout(function () {
+            gameauth[steamid].callback();
+            delete gameauth[steamid];
+          }, 500);
+        }
       } else {
         throw new UtilError("ERR_AUTHCODE", args, context);
       }
-
-      return "SUCCESS";
 
     }
 

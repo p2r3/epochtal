@@ -910,10 +910,9 @@ var homepageInit = async function () {
       <input type="text" placeholder="0000" id="authcode-input"></input>`, POPUP_INFO, true);
 
       popupOnOkay = async function () {
+        hidePopup();
 
         const authcode = document.querySelector("#authcode-input").value.trim();
-
-        showPopup("Connection requested", "Verifying connection...", POPUP_INFO);
 
         try {
           const response = await (await fetch(`/api/gameauth/verify/${authcode}`)).json();
