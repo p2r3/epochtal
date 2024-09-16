@@ -178,8 +178,7 @@ function createLobbyPopup () {
       switch (data) {
 
         case "SUCCESS":
-          window.open(`/live/lobby/#${name}`);
-          window.location.reload();
+          window.location.href = `/live/lobby/#${name}`;
           return;
 
         case "ERR_LOGIN": return showPopup("Not logged in", "Please log in via Steam before joining a lobby.", POPUP_ERROR);
@@ -221,7 +220,7 @@ async function joinLobby (name) {
 
         case "ERR_EXISTS":
         case "SUCCESS":
-          return window.open(`/live/lobby/#${name}`);
+          return window.location.href = `/live/lobby/#${name}`;
 
         case "ERR_LOGIN": return showPopup("Not logged in", "Please log in via Steam before joining a lobby.", POPUP_ERROR);
         case "ERR_STEAMID": return showPopup("Unrecognized user", "Your SteamID is not present in the users database. WTF?", POPUP_ERROR);
