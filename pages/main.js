@@ -107,6 +107,45 @@ var homepageInit = async function () {
   }
   updateActiveMap();
 
+  const leaderboardCountdown = document.querySelector("#leaderboard-countdown");
+
+  /**
+   * Updates the leaderboard countdown every minute
+   */
+  function updateLeaderboardCountdown () {
+
+    // The time for which the leaderboard is open, in seconds
+    const activeTime = 529200;
+    // The time for which the leaderboard is locked, in seconds
+    const lockedTime = 75600;
+
+    // Get the current time
+    const now = new Date();
+    // Get the start of the week, floored to the nearest hour
+    const start = new Date(config.date * 1000);
+    const startHour = new Date(start.getFullYear(), start.getMonth(), start.getDate(), start.getHours());
+    // Get the time at which the week ends
+    const end = Number(startHour) + activeTime * 1000;
+
+    // Calculate how long (in minutes) until the week ends
+    let mins = (end - now) / 1000 / 60;
+
+    let output = "";
+
+    if (!config.voting) {
+      mins += lockedTime / 60;
+      if (mins > 0) output += `Leaderboards reopen in ${Math.floor(mins / 60 / 24)}d ${Math.floor(mins / 60 % 24)}h ${Math.floor(mins % 60)}m`;
+      else output = "Leaderboards locked";
+    } else {
+      output = `Leaderboards close in ${Math.floor(mins / 60 / 24)}d ${Math.floor(mins / 60 % 24)}h ${Math.floor(mins % 60)}m`;
+    }
+
+    leaderboardCountdown.textContent = output;
+
+  }
+  updateLeaderboardCountdown();
+  setInterval(updateLeaderboardCountdown, 60000);
+
   const leaderboardCategorySelect = document.querySelector("#leaderboard-category-select");
   const leaderboardArchiveSelect = document.querySelector("#leaderboard-archive-select");
 
