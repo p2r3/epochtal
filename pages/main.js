@@ -137,7 +137,7 @@ var homepageInit = async function () {
       if (mins > 0) output += `Leaderboards reopen in ${Math.floor(mins / 60 / 24)}d ${Math.floor(mins / 60 % 24)}h ${Math.floor(mins % 60)}m`;
       else output = "Leaderboards locked";
     } else {
-      output = `Leaderboards close in ${Math.floor(mins / 60 / 24)}d ${Math.floor(mins / 60 % 24)}h ${Math.floor(mins % 60)}m`;
+      output = `Leaderboards lock in ${Math.floor(mins / 60 / 24)}d ${Math.floor(mins / 60 % 24)}h ${Math.floor(mins % 60)}m`;
     }
 
     leaderboardCountdown.textContent = output;
