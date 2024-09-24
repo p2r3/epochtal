@@ -10,7 +10,11 @@ const controllerInit = async function () {
   await fetch("/util/events/create/streamController", { method: "POST" });
   // Connect to the event WebSocket
   const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-  const controllerSocket = new WebSocket(`${protocol}://${window.location.host}/ws/streamController`);
+  const controllerSocket = new WebSocket(`${protocol}://${window.location.host}/api/events/connect`);
+  controllerSocket.onopen = async function (event) {
+    const token = await (await fetch("/api/events/auth/streamController")).json();
+    controllerSocket.send(token);
+  };
   // Every 30 seconds, send an empty object as a sort of heartbeat ping
   setInterval(() => controllerSocket.send("{}"), 30000);
 

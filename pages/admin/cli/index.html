@@ -221,17 +221,38 @@
 
       });
 
-      const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-      const utilPrintSocket = new WebSocket(`${protocol}://${window.location.host}/ws/utilPrint`);
+      fetch("/api/events/auth/utilPrint").then(async function (res) {
 
-      utilPrintSocket.addEventListener("message", function (event) {
+        if (res.status !== 200) {
+          output.innerHTML += `Server returned status ${res.status} when connecting to utilPrint event.<br>`;
+          return;
+        }
 
-        const text = JSON.parse(event.data).replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll("  ", " &nbsp;");
-        const lines = text.split("\n");
+        const token = await res.json();
 
-        lines[0] = `<span class=\"grayed\">${lines[0]}</span>`;
+        const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+        const utilPrintSocket = new WebSocket(`${protocol}://${window.location.host}/api/events/connect`);
 
-        output.innerHTML += lines.join("<br>");
+        utilPrintSocket.onopen = function (event) {
+          utilPrintSocket.send(token);
+        };
+
+        utilPrintSocket.addEventListener("message", function (event) {
+
+          const text = JSON.parse(event.data).replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll("  ", " &nbsp;");
+          const lines = text.split("\n");
+
+          lines[0] = `<span class=\"grayed\">${lines[0]}</span>`;
+
+          output.innerHTML += lines.join("<br>");
+
+        });
+
+        utilPrintSocket.addEventListener("close", function (event) {
+
+          output.innerHTML += `Server closed utilPrint event with code ${event.code} and reason ${event.reason}.<br>`;
+
+        });
 
       });
 
