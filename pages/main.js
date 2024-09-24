@@ -899,38 +899,6 @@ var homepageInit = async function () {
   window.addEventListener("keydown", keyDownFunc);
   window.addEventListener("keyup", keyUpFunc);
 
-  // Check if a gameauth code has been bound
-  if (whoami) {
-
-    const gameAuthCheck = await (await fetch(`/api/gameauth/check`)).json();
-    if (gameAuthCheck === true) {
-
-      showPopup("Connection requested", `<p>Enter the four digit code provided by the game.
-      If you didn't request this sign-in, please ignore this message.</p>
-      <input type="text" placeholder="0000" id="authcode-input"></input>`, POPUP_INFO, true);
-
-      popupOnOkay = async function () {
-        hidePopup();
-
-        const authcode = document.querySelector("#authcode-input").value.trim();
-
-        try {
-          const response = await (await fetch(`/api/gameauth/verify/${authcode}`)).json();
-          if (response === "ERR_AUTHCODE") return showPopup("Incorrect code", "The code you entered does not match what the server received. Please refresh and try again.", POPUP_ERROR);
-          if (response !== "SUCCESS") throw response;
-        } catch (e) {
-          console.error(e);
-          return showPopup("Unknown error", "An unexpected error occurred while verifying the connection. Check the JavaScript console for more info.", POPUP_ERROR);
-        }
-
-        return showPopup("Success", "Your connection has been verified.", POPUP_INFO);
-
-      };
-
-    }
-
-  }
-
 };
 
 let homepageInitAttempts = 0;

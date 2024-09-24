@@ -9,7 +9,6 @@ const SERVER_ADDRESS = fs.read("address.txt");
 let input = "";
 let pongIgnore = 0;
 
-let onReadSteamID = null;
 let ws = null;
 
 let checkmapBlock = false;
@@ -28,11 +27,20 @@ function wsMessageHandler (event) {
   const data = JSON.parse(event.data);
 
   switch (data.type) {
+    case "authenticated": {
+      ws.send(JSON.stringify({ type: "isGame", value: true }));
+      SendToConsole("clear; echo WebSocket connection established.");
+      return;
+    }
     case "cmd": return SendToConsole(data.value);
     case "ping": return ws.send(JSON.stringify({ type: "pong" }));
-    case "checkmap": {
+    case "checkMap": {
       checkmapExpect = data.value;
       SendToConsole("echo [CheckMapStart];sar_workshop_list;echo [CheckMapEnd]");
+      return;
+    }
+    case "lobby_start" : {
+      SendToConsole("map " + data.map);
       return;
     }
   }
@@ -40,31 +48,24 @@ function wsMessageHandler (event) {
 }
 
 // Authenticates and sets up a WebSocket connection
-function wsSetup () {
+function wsSetup (token) {
 
-  // Trying to load a save file prints the user's SteamID to console as a path
-  SendToConsole("load .");
+  const protocol = SERVER_ADDRESS.startsWith("https:") ? "wss" : "ws";
+  const hostname = SERVER_ADDRESS.split("://")[1].split("/")[0];
 
-  // Wait for the SteamID to get read from the console
-  onReadSteamID = function (steamid) {
+  if (ws) ws.close();
+  ws = new WebSocket(`${protocol}://${hostname}/api/events/connect`);
 
-    const protocol = SERVER_ADDRESS.startsWith("https:") ? "wss" : "ws";
-    const hostname = SERVER_ADDRESS.split("://")[1].split("/")[0];
-    const authcode = generateAuthCode();
+  ws.addEventListener("message", wsMessageHandler);
 
-    SendToConsole("hideconsole");
-    SendToConsole(`disconnect "Go to ${hostname} and enter the code ${authcode} when prompted."`);
+  ws.addEventListener("open", () => {
+    ws.send(token);
+  });
 
-    ws = new WebSocket(`${protocol}://${hostname}/api/gameauth/connect/${authcode}/"${steamid}"`);
-    ws.addEventListener("message", wsMessageHandler);
-
-    ws.addEventListener("open", () => SendToConsole("echo WebSocket connection established."));
-    ws.addEventListener("close", () => {
-      ws = null;
-      SendToConsole("echo WebSocket connection closed.");
-    });
-
-  };
+  ws.addEventListener("close", () => {
+    ws = null;
+    SendToConsole("echo WebSocket connection closed.");
+  });
 
 }
 
@@ -92,13 +93,13 @@ onConsoleOutput(async function (data) {
       // If we've reached the end of the block, the map wasn't found
       if (lines[i].startsWith("[CheckMapEnd]")) {
         checkmapBlock = false;
-        ws.send(JSON.stringify({ type: "checkmap", value: false }));
+        ws.send(JSON.stringify({ type: "checkMap", value: false }));
         continue;
       }
 
       // If we found the map, report success and stop checking early
       if ("workshop/" + lines[i] === checkmapExpect) {
-        ws.send(JSON.stringify({ type: "checkmap", value: true }));
+        ws.send(JSON.stringify({ type: "checkMap", value: true }));
         checkmapBlock = false;
       }
 
@@ -159,28 +160,16 @@ onConsoleOutput(async function (data) {
     }
 
     // Respond to request for WebSocket connection
-    if (lines[i] === "Usage:  connect <server>") {
-      wsSetup();
+    if (lines[i].startsWith("ws : ")) {
+      wsSetup(lines[i].slice(5));
       continue;
     }
 
-    // Retrieve SteamID from save file load attempt
-    if (lines[i].startsWith("Loading game from SAVE/")) {
-      const steamid = lines[i].split("Loading game from SAVE/")[1].split("/....")[0];
-      onReadSteamID(steamid);
-      continue;
-    }
-    if (lines[i].startsWith("Loading game from SAVE\\")) {
-      const steamid = lines[i].split("Loading game from SAVE\\")[1].split("\\....")[0];
-      onReadSteamID(steamid);
-      continue;
-    }
-
-    // If connected to WebSocket, report all SAR session timers as "finishmap" events
+    // If connected to WebSocket, report all SAR session timers as "finishRun" events
     // TODO: This isn't a good approach, and should be refactored once lobbies get more attention
     if (ws && lines[i].startsWith("Session: ")) {
       const ticks = parseInt(lines[i].split("Session: ")[1].split(" (")[0]);
-      ws.send(JSON.stringify({ type: "finishmap", value: { time: ticks, portals: 0 } }));
+      ws.send(JSON.stringify({ type: "finishRun", value: { time: ticks, portals: 0 } }));
       continue;
     }
 

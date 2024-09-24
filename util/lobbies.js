@@ -102,7 +102,7 @@ module.exports = async function (args, context = epochtal) {
       };
       const dataEntry = {
         password: password ? hashedPassword : false,
-        ready: [],
+        players: {},
         state: LOBBY_IDLE,
         context: createLobbyContext(cleanName)
       };
@@ -113,13 +113,66 @@ module.exports = async function (args, context = epochtal) {
       // Write the lobbies to file if it exists
       if (file) Bun.write(file, JSON.stringify(lobbies));
 
-      // Create the event handlers for the lobby
+      // Authenticate only those clients who are in the lobby
       const auth = steamid => listEntry.players.includes(steamid);
-      const disconnect = async function (steamid) {
 
-        // Remove the player from the lobby
+      // Handle incoming messages from clients
+      const message = async function (message, ws) {
+
+        const { steamid } = ws.data;
+        const data = JSON.parse(message);
+
+        switch (data.type) {
+
+          // Distinguishes browser clients from game clients
+          // Game clients are expected to send this right after authenticating
+          case "isGame": {
+            dataEntry.players[steamid].gameSocket = ws;
+            return;
+          }
+
+          // Returned by game clients as a response to the server's query
+          case "checkMap": {
+            dataEntry.players[steamid].checkMapCallback(data.value);
+            delete dataEntry.players[steamid].checkMapCallback;
+            return;
+          }
+
+          // Returned by game clients to indicate run completion
+          case "finishRun": {
+
+            const { time, portals } = data.value;
+
+            // Submit this run to the lobby leaderboard
+            await leaderboard(["add", listEntry.mode, steamid, time, "", portals], dataEntry.context);
+            // Broadcast submission to all lobby clients
+            await events(["send", "lobby_" + name, { type: "lobby_submit", value: { time, portals, steamid } }], context);
+            // Change the client's ready state to false
+            await module.exports(["ready", cleanName, false, steamid, true], context);
+
+            return;
+          }
+
+        }
+
+      };
+
+      // Handle clients disconnecting and close lobby if empty
+      const disconnect = async function (ws) {
+
+        const { steamid } = ws.data;
+
+        // If this is a game client, just change their ready state to false and exit
+        if (dataEntry.players[steamid].gameSocket === ws) {
+          delete dataEntry.players[steamid].gameSocket;
+          await module.exports(["ready", cleanName, false, steamid, true], context);
+          return;
+        }
+
+        // If this is a browser client, remove the player from the lobby
         const index = listEntry.players.indexOf(steamid);
         if (index !== -1) listEntry.players.splice(index, 1);
+        delete dataEntry.players[steamid];
 
         // Find the lobby name
         let lobbyName;
@@ -156,7 +209,7 @@ module.exports = async function (args, context = epochtal) {
       };
 
       // Create the lobby creation event
-      await events(["create", "lobby_" + cleanName, auth, null, null, disconnect], context);
+      await events(["create", "lobby_" + cleanName, auth, message, null, disconnect], context);
 
       return "SUCCESS";
 
@@ -174,6 +227,7 @@ module.exports = async function (args, context = epochtal) {
 
       // Add the player to the lobby
       lobbies.list[name].players.push(steamid);
+      lobbies.data[name].players[steamid] = {};
 
       // Write the lobbies to file if it exists
       if (file) Bun.write(file, JSON.stringify(lobbies));
@@ -269,58 +323,32 @@ module.exports = async function (args, context = epochtal) {
         throw new UtilError("ERR_INGAME", args, context);
       }
 
+      // Get the player's lobby data
+      const playerData = lobbies.data[name].players[steamid];
+
       if (readyState) {
 
         // Throw ERR_NOMAP if the lobby has no map set
         if (lobbies.data[name].context.data.map === null) throw new UtilError("ERR_NOMAP", args, context);
 
         // Check if the player's game client is connected
-        try {
-          await events(["get", `game_${steamid}`], context);
-        } catch {
-          throw new UtilError("ERR_GAMEAUTH", args, context);
-        }
+        const gameSocket = playerData.gameSocket;
+        if (!gameSocket) throw new UtilError("ERR_GAMEAUTH", args, context);
 
         // Check if the player has the map file
-        // First, connect to the game client event
-        const wsProtocol = gconfig.https ? "wss" : "ws";
-        const wsAuthSecret = encodeURIComponent(process.env.INTERNAL_SECRET);
-        const gameSocket = new WebSocket(`${wsProtocol}://${gconfig.domain}/ws/game_${steamid}?Authentication=${wsAuthSecret}`);
-
-        // Wait for the connection to open
-        await new Promise(function (resolve, reject) {
-          const openTimeout = setTimeout(function () {
-            reject(new UtilError("ERR_GAMESOCKET", args, context));
-          }, 5000);
-          gameSocket.addEventListener("open", function () {
-            clearTimeout(openTimeout);
-            resolve();
-          });
-        });
-
-        // Communicate with the game client to retrieve map state
-        let hasMapTimeout = null;
         const mapFile = lobbies.data[name].context.data.map.file;
-        const hasMap = await new Promise(async function (resolve, reject) {
+        gameSocket.send(JSON.stringify({ type: "checkMap", value: mapFile }));
 
-          // Set up a listener for any echoed checkmap events from the client
-          gameSocket.onmessage = function (event) {
-            const data = JSON.parse(event.data);
-            if (data.type !== "echo") return;
+        // Handle the response to our checkMap request
+        let hasMapTimeout = null;
+        const hasMap = await new Promise(function (resolve, reject) {
 
-            const echoData = JSON.parse(data.value);
-            if (echoData.type !== "checkmap") return;
-
-            gameSocket.onmessage = null;
-            resolve(echoData.value);
-          };
-
-          // Finally, send a request for the map check
-          await events(["send", `game_${steamid}`, { type: "checkmap", value: mapFile }], context);
+          // Set up a callback function for the request
+          playerData.checkMapCallback = val => resolve(val);
 
           // Stop waiting for a response after 15 seconds
           hasMapTimeout = setTimeout(function () {
-            gameSocket.onmessage = null;
+            delete playerData.checkMapCallback;
             reject(new UtilError("ERR_TIMEOUT", args, context));
           }, 15000);
 
@@ -330,76 +358,36 @@ module.exports = async function (args, context = epochtal) {
         // If the player doesn't have the map, throw ERR_MAP
         if (!hasMap) throw new UtilError("ERR_MAP", args, context);
 
-        // Add the player to the ready list
-        if (!lobbies.data[name].ready.includes(steamid)) {
-          lobbies.data[name].ready.push(steamid);
-        }
+        // Set the player's ready state to true
+        playerData.ready = true;
 
         // If everyone's ready, start the game
-        if (lobbies.list[name].players.length === lobbies.data[name].ready.length) {
-
-          lobbies.data[name].state = LOBBY_INGAME;
-
-          // Handle each connected game client
-          for (const steamid of lobbies.list[name].players) {
-
-            // Keep track of time from before any commands were sent to eliminate impossible responses
-            const commandTime = Date.now();
-            // Send a "map" command to the client
-            await events(["send", `game_${steamid}`, { type: "cmd", value: `map ${mapFile}` }], context);
-
-            // Connect to the game client event
-            const gameSocket = new WebSocket(`${wsProtocol}://${gconfig.domain}/ws/game_${steamid}?Authentication=${wsAuthSecret}`);
-
-            // Listen for a message indicating map completion
-            gameSocket.onmessage = async function (event) {
-
-              // Ensure we're handling an echoed "finishmap" event
-              const data = JSON.parse(event.data);
-              if (data.type !== "echo") return;
-              const echoData = JSON.parse(data.value);
-              if (echoData.type !== "finishmap") return;
-
-              // Check if the run length we received puts us in the future
-              if (commandTime + echoData.value.time * (1000 / 60) > Date.now()) return;
-
-              gameSocket.onmessage = null;
-              gameSocket.onclose = null;
-
-              // Submit this run to the lobby leaderboard
-              await leaderboard(["add", lobbies.list[name].mode, steamid, echoData.value.time, "", echoData.value.portals], lobbies.data[name].context);
-              // Broadcast submission to all lobby clients
-              echoData.value.steamid = steamid;
-              await events(["send", "lobby_" + name, { type: "lobby_submit", value: echoData.value }], context);
-              // Call this same utility, changing the client's ready state to false
-              module.exports(["ready", name, false, steamid, true], context);
-
-            };
-
-            // Handle the socket closing prematurely
-            gameSocket.onclose = function () {
-
-              gameSocket.onmessage = null;
-              gameSocket.onclose = null;
-
-              // Call this same utility, changing the client's ready state to false
-              module.exports(["ready", name, false, steamid, true], context);
-
-            };
-
+        let everyoneReady = true;
+        for (const curr in lobbies.data[name].players) {
+          if (!lobbies.data[name].players[curr].ready) {
+            everyoneReady = false;
+            break;
           }
-
+        }
+        if (everyoneReady) {
+          lobbies.data[name].state = LOBBY_INGAME;
+          await events(["send", "lobby_" + name, { type: "lobby_start", map: mapFile }], context);
         }
 
       } else {
 
-        // Remove the player from the ready list
-        if (lobbies.data[name].ready.includes(steamid)) {
-          lobbies.data[name].ready.splice(lobbies.data[name].ready.indexOf(steamid), 1);
-        }
+        // Set the player's ready state to false
+        playerData.ready = false;
 
         // If no one is ready, reset the lobby state
-        if (lobbies.data[name].ready.length === 0) {
+        let nobodyReady = true;
+        for (const curr in lobbies.data[name].players) {
+          if (lobbies.data[name].players[curr].ready) {
+            nobodyReady = false;
+            break;
+          }
+        }
+        if (nobodyReady) {
           lobbies.data[name].state = LOBBY_IDLE;
         }
 
