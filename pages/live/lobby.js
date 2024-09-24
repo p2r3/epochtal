@@ -34,11 +34,11 @@ async function updatePlayerList () {
     }
 
     // Get the player's last run in this mode, if they have one
-    const leaderboard = lobby.data.context.data.leaderboard[lobby.listEntry.mode];
+    const leaderboard = lobby.data.context.leaderboard[lobby.listEntry.mode];
     const run = leaderboard.find(c => c.steamid === steamid);
 
     // Get the player's ready state
-    const ready = lobby.data.ready.includes(steamid);
+    const ready = lobby.data.players[steamid].ready;
 
     output += `
 <div class="lobby-player">
@@ -65,7 +65,7 @@ const lobbyMapContainer = document.querySelector("#lobby-settings-map");
  */
 async function updateLobbyMap () {
 
-  const lobbyMap = lobby.data.context.data.map;
+  const lobbyMap = lobby.data.context.map;
 
   // If no map is selected, display a placeholder
   if (!lobbyMap) {
@@ -151,7 +151,7 @@ async function lobbyEventHandler (event) {
     case "lobby_map": {
 
       // Update the lobby map
-      lobby.data.context.data.map = data.newMap;
+      lobby.data.context.map = data.newMap;
       updateLobbyMap();
 
       return;
@@ -160,11 +160,7 @@ async function lobbyEventHandler (event) {
     case "lobby_ready": {
 
       // Update the ready state of the given player
-      if (data.readyState) {
-        lobby.data.ready.push(data.steamid);
-      } else {
-        lobby.data.ready.splice(lobby.data.ready.indexOf(data.steamid), 1);
-      }
+      lobby.data.players[data.steamid].ready = data.readyState;
       updatePlayerList();
 
       // If the given player is us, update the client ready state
@@ -181,7 +177,7 @@ async function lobbyEventHandler (event) {
 
       // Handle new run submission
       const run = data.value;
-      const leaderboard = lobby.data.context.data.leaderboard[lobby.listEntry.mode];
+      const leaderboard = lobby.data.context.leaderboard[lobby.listEntry.mode];
 
       const index = leaderboard.findIndex(c => c.steamid === run.steamid);
       if (index !== -1) leaderboard.splice(index, 1);
@@ -254,8 +250,14 @@ async function lobbyInit () {
 
   // Connect to the WebSocket
   if (lobbySocket) lobbySocket.close();
+
   const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-  lobbySocket = new WebSocket(`${protocol}://${window.location.host}/ws/lobby_${encodedName}`);
+
+  lobbySocket = new WebSocket(`${protocol}://${window.location.host}/api/events/connect`);
+  lobbySocket.onopen = async function () {
+    const token = await (await fetch(`/api/events/auth/lobby_${encodedName}`)).json();
+    lobbySocket.send(token);
+  };
   lobbySocket.addEventListener("message", lobbyEventHandler);
 
   // Handle the lobby rename button
@@ -390,10 +392,22 @@ async function lobbyInit () {
 
   }
 
+  window.showGameAuthPopup = async function () {
+
+    const token = await (await fetch(`/api/events/auth/lobby_${encodedName}`)).json();
+
+    showPopup(
+      "Game not connected",
+      `You have not authenticated your Portal 2 game client. Start the Spplice package, <a href="javascript:navigator.clipboard.writeText('echo ws:${token}')">click here</a> to copy your lobby token, then paste that into your console and try again.`,
+      POPUP_ERROR
+    );
+
+  }
+
   window.toggleReadyState = async function () {
 
     // If no map is selected, throw early
-    if (!readyState && !lobby.data.context.data.map) {
+    if (!readyState && !lobby.data.context.map) {
       return showPopup("No map selected", "Please select a map for the lobby.", POPUP_ERROR);
     }
 
@@ -422,8 +436,7 @@ async function lobbyInit () {
       case "ERR_STEAMID": return showPopup("Unrecognized user", "Your SteamID is not present in the users database. WTF?", POPUP_ERROR);
       case "ERR_NAME": return showPopup("Lobby not found", "An open lobby with this name does not exist.", POPUP_ERROR);
       case "ERR_PERMS": return showPopup("Permission denied", "You do not have permission to perform this action.", POPUP_ERROR);
-      case "ERR_GAMEAUTH": return showPopup("Game not connected", "You have not authenticated your Portal 2 game client. Start the Spplice package, run 'connect' in the console, and follow the instructions.", POPUP_ERROR);
-      case "ERR_GAMESOCKET": return showPopup("Game client error", "An error occurred while communicating with your game client. Try reconnecting?", POPUP_ERROR);
+      case "ERR_GAMEAUTH": return showGameAuthPopup();
       case "ERR_TIMEOUT": return showPopup("Game client timeout", "Timed out while waiting for a response from your game client. Try reconnecting?", POPUP_ERROR);
       case "ERR_MAP": return showPopup("Map not found", "Please download the lobby map by subscribing to it on the workshop.", POPUP_ERROR);
       case "ERR_NOMAP": return showPopup("No map selected", "Please select a map for the lobby.", POPUP_ERROR);

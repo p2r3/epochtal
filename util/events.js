@@ -176,15 +176,19 @@ module.exports = async function (args, context = epochtal) {
           if (!("event" in ws.data)) {
 
             // Verify token
-            const data = await getDataFromToken(message, context);
+            const token = message.trim();
+            const data = await getDataFromToken(token, context);
             if (!data) return ws.close(1008, "ERR_TOKEN");
-
-            // Subscribe the websocket and call the event's connect handler
-            ws.subscribe(data.event);
-            await context.data.events[data.event].connect(data.steamid);
 
             // Attach the event data to the websocket
             ws.data = data;
+
+            // Subscribe the websocket and call the event's connect handler
+            ws.subscribe(data.event);
+            await context.data.events[data.event].connect(ws);
+
+            // Send acknowledgement
+            ws.send(JSON.stringify({ type: "authenticated" }));
             return;
 
           }
@@ -195,7 +199,7 @@ module.exports = async function (args, context = epochtal) {
 
           // Send message to the event
           try {
-            await event.message(message);
+            await event.message(message, ws);
           } catch {
             new UtilError("ERR_HANDLER", args, context);
           }
@@ -211,7 +215,7 @@ module.exports = async function (args, context = epochtal) {
           // Unsubscribe the websocket
           try {
             ws.unsubscribe(ws.data.event);
-            await event.disconnect(ws.data.steamid);
+            await event.disconnect(ws);
           } catch {
             new UtilError("ERR_HANDLER", args, context);
           }

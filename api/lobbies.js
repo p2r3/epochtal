@@ -104,7 +104,31 @@ module.exports = async function (args, request) {
 
       const data = await lobbies(["getdata", name]);
 
-      return { listEntry, data };
+      // Filter returned data to omit unwanted properties
+      const clientData = {
+        players: Object.fromEntries(
+          Object.entries(data.players).map(([key, player]) => [key, { ready: player.ready }])
+        ),
+        state: data.state,
+        context: data.context.data
+      };
+      /** The above results in an object with the following pseudo-structure:
+       * {
+       *   players: {
+       *     steamid: { ready },
+       *     steamid: { ready },
+       *     ...
+       *   },
+       *   state,
+       *   context: {
+       *     map,
+       *     leaderboard,
+       *     week
+       *   }
+       * }
+       */
+
+      return { listEntry, data: clientData };
 
     }
 
