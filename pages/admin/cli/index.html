@@ -221,38 +221,28 @@
 
       });
 
-      fetch("/api/events/auth/utilPrint").then(async function (res) {
+      const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+      const utilPrintSocket = new WebSocket(`${protocol}://${window.location.host}/api/events/connect`);
 
-        if (res.status !== 200) {
-          output.innerHTML += `Server returned status ${res.status} when connecting to utilPrint event.<br>`;
-          return;
-        }
+      utilPrintSocket.onopen = async function (event) {
+        const token = await (await fetch("/api/events/auth/utilPrint")).json();
+        utilPrintSocket.send(token);
+      };
 
-        const token = await res.json();
+      utilPrintSocket.addEventListener("message", function (event) {
 
-        const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-        const utilPrintSocket = new WebSocket(`${protocol}://${window.location.host}/api/events/connect`);
+        const text = JSON.parse(event.data).replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll("  ", " &nbsp;");
+        const lines = text.split("\n");
 
-        utilPrintSocket.onopen = function (event) {
-          utilPrintSocket.send(token);
-        };
+        lines[0] = `<span class=\"grayed\">${lines[0]}</span>`;
 
-        utilPrintSocket.addEventListener("message", function (event) {
+        output.innerHTML += lines.join("<br>");
 
-          const text = JSON.parse(event.data).replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll("  ", " &nbsp;");
-          const lines = text.split("\n");
+      });
 
-          lines[0] = `<span class=\"grayed\">${lines[0]}</span>`;
+      utilPrintSocket.addEventListener("close", function (event) {
 
-          output.innerHTML += lines.join("<br>");
-
-        });
-
-        utilPrintSocket.addEventListener("close", function (event) {
-
-          output.innerHTML += `Server closed utilPrint event with code ${event.code} and reason ${event.reason}.<br>`;
-
-        });
+        output.innerHTML += `Server closed utilPrint event with code ${event.code} and reason ${event.reason}.<br>`;
 
       });
 
