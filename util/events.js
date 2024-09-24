@@ -1,6 +1,43 @@
 const UtilError = require("./error.js");
 
 /**
+ * Get the event data from an authentication token
+ *
+ * @param {string} token The authentication token
+ * @param {object} context An Epochtal context object
+ * @returns {object|null} The event data
+ */
+async function getDataFromToken (token, context = epochtal) {
+
+  // Iterate through every event looking for the given token
+  for (const name in context.data.events) {
+
+    const event = context.data.events[name];
+
+    // Look for a matching hash
+    // Tokens are treated as passwords, and thus have to be verified with Bun.password
+    let foundHash = null;
+    for (const hash in event.tokens) {
+      if (await Bun.password.verify(token, hash)) {
+        foundHash = hash;
+        break;
+      }
+    }
+    if (!foundHash) continue;
+
+    // Once the token is found, clear it from the event and return data
+    const steamid = event.tokens[foundHash];
+    delete event.tokens[foundHash];
+    return { steamid, event: name };
+
+  }
+
+  // Return null if the token doesn't correspond to an event
+  return null;
+
+}
+
+/**
  * Handles the `events` utility call. This utility is used to manage websocket events.
  *
  * The following subcommands are available:
@@ -38,7 +75,8 @@ module.exports = async function (args, context = epochtal) {
         auth: auth || (() => true),
         message: message || (() => undefined),
         connect: connect || (() => undefined),
-        disconnect: disconnect || (() => undefined)
+        disconnect: disconnect || (() => undefined),
+        tokens: {}
       };
 
       return "SUCCESS";
@@ -48,8 +86,7 @@ module.exports = async function (args, context = epochtal) {
     case "get": {
 
       // Return the event if it exists
-      if (!(name in events)) throw new UtilError("ERR_NAME", args, context);
-
+      if (!(name in events)) return null;
       return events[name];
 
     }
@@ -99,28 +136,58 @@ module.exports = async function (args, context = epochtal) {
 
     }
 
+    case "addtoken": {
+
+      const [token, steamid] = args.slice(2);
+
+      // Check if the event exists
+      if (!(name in events)) throw new UtilError("ERR_NAME", args, context);
+      // Check if a token was provided
+      if (!token) throw new UtilError("ERR_TOKEN", args, context);
+
+      // Hash the given token before saving it
+      const hash = await Bun.password.hash(token);
+      events[name].tokens[hash] = steamid;
+
+      // Expire the token after 30 seconds
+      setTimeout(function () {
+        if (!(name in events)) return;
+        if (!("tokens" in events[name])) return;
+        delete events[name].tokens[hash];
+      }, 30000);
+
+      return "SUCCESS";
+
+    }
+
     case "wshandler": {
 
       // Handle websocket events
       switch (name) {
 
-        case "open": return async function (ws) {
-
-          // Grab event of websocket
-          const event = context.data.events[ws.data.event];
-          if (!event) return;
-
-          // Authenticate the websocket
-          try {
-            ws.subscribe(ws.data.event);
-            await event.connect(ws.data.steamid);
-          } catch {
-            new UtilError("ERR_HANDLER", args, context);
-          }
-
-        };
+        // We don't govern the opening of new sockets
+        // Instead, authentication is handled when the first message is received
+        case "open": return () => undefined;
 
         case "message": return async function (ws, message) {
+
+          // If no data is set for the socket, assume this is the first message
+          // The first message contains the token - get the event data from it
+          if (!("event" in ws.data)) {
+
+            // Verify token
+            const data = await getDataFromToken(message, context);
+            if (!data) return ws.close(1008, "ERR_TOKEN");
+
+            // Subscribe the websocket and call the event's connect handler
+            ws.subscribe(data.event);
+            await context.data.events[data.event].connect(data.steamid);
+
+            // Attach the event data to the websocket
+            ws.data = data;
+            return;
+
+          }
 
           // Grab event of websocket
           const event = context.data.events[ws.data.event];

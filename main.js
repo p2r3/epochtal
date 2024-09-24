@@ -164,33 +164,6 @@ const fetchHandler = async function (req) {
   const urlPath = url.pathname.split("/").slice(1);
   const userAgent = req.headers.get("User-Agent");
 
-  // Handle WebSocket connections
-  if (urlPath[0] === "ws") {
-
-    // Load authentication header from parameters if present
-    // This is a workaround for internal requests, as the JavaScript WebSockets API doesn't support setting headers
-    const authSecret = url.searchParams.get("Authentication");
-    if (authSecret) req.headers.set("Authentication", authSecret);
-
-    // Make sure the user is logged in
-    const user = await apis.users(["whoami"], req);
-    if (!user) return Response("ERR_LOGIN", { status: 403 });
-
-    // Decode the event from the URL
-    const steamid = user.steamid;
-    const event = decodeURIComponent(urlPath[1]);
-    const eventData = epochtal.data.events[event];
-
-    // Ensure event is valid and user has permission to access it
-    if (!eventData) return Response("ERR_EVENT", { status: 404 });
-    if (!(await eventData.auth(steamid))) return Response("ERR_PERMS", { status: 403 });
-
-    // Upgrade the connection to a WebSocket
-    if (server.upgrade(req, { data: { event, steamid } })) return;
-    return new Response("ERR_PROTOCOL", { status: 500 });
-
-  }
-
   // Handle API calls
   if (urlPath[0] === "api") {
 
