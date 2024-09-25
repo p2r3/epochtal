@@ -64,9 +64,15 @@ function wsSetup (token) {
     ws.send(token);
   });
 
-  ws.addEventListener("close", () => {
+  ws.addEventListener("close", (event) => {
     ws = null;
     SendToConsole("echo WebSocket connection closed.");
+    if (event.reason === "ERR_TOKEN") {
+      SendToConsole("echo");
+      SendToConsole("echo The token you provided was invalid.");
+      SendToConsole("echo It most likely expired, as tokens are only valid for 30 seconds after being issued.");
+      SendToConsole("echo Please try again with a new token obtained through the New Token button at the top of the lobby window.");
+    }
   });
 
 }

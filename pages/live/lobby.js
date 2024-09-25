@@ -407,6 +407,8 @@ async function lobbyInit () {
     const token = await (await fetch(`/api/events/auth/lobby_${encodedName}`)).json();
     navigator.clipboard.writeText(`echo ws:${token}`);
 
+    return showPopup("Token copied", "A new token has been copied to your clipboard. It is valid for 30 seconds, starting now. Paste it in your Portal 2 console to complete the setup.");
+
   }
 
   window.toggleReadyState = async function () {
