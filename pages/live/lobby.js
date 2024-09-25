@@ -260,6 +260,12 @@ async function lobbyInit () {
   };
   lobbySocket.addEventListener("message", lobbyEventHandler);
 
+  // Prompt game client authentication
+  showPopup(
+    "Connect with Portal 2",
+    `To connect your game client, start the Spplice package, <a href="javascript:copyEventToken()">click here</a> to copy your lobby token, then paste that into your console.`
+  );
+
   // Handle the lobby rename button
   window.changeLobbyName = function () {
 
@@ -392,15 +398,13 @@ async function lobbyInit () {
 
   }
 
-  window.showGameAuthPopup = async function () {
+  /**
+   * Fetches the lobby event token and copies it to clipboard.
+   */
+  window.copyEventToken = async function () {
 
     const token = await (await fetch(`/api/events/auth/lobby_${encodedName}`)).json();
-
-    showPopup(
-      "Game not connected",
-      `You have not authenticated your Portal 2 game client. Start the Spplice package, <a href="javascript:navigator.clipboard.writeText('echo ws:${token}')">click here</a> to copy your lobby token, then paste that into your console and try again.`,
-      POPUP_ERROR
-    );
+    navigator.clipboard.writeText(`echo ws:${token}`);
 
   }
 
@@ -436,7 +440,7 @@ async function lobbyInit () {
       case "ERR_STEAMID": return showPopup("Unrecognized user", "Your SteamID is not present in the users database. WTF?", POPUP_ERROR);
       case "ERR_NAME": return showPopup("Lobby not found", "An open lobby with this name does not exist.", POPUP_ERROR);
       case "ERR_PERMS": return showPopup("Permission denied", "You do not have permission to perform this action.", POPUP_ERROR);
-      case "ERR_GAMEAUTH": return showGameAuthPopup();
+      case "ERR_GAMEAUTH": return showPopup("Game not connected", `You have not authenticated your Portal 2 game client. Start the Spplice package, <a href="javascript:copyEventToken()">click here</a> to copy your lobby token, then paste that into your console and try again.`, POPUP_ERROR);
       case "ERR_TIMEOUT": return showPopup("Game client timeout", "Timed out while waiting for a response from your game client. Try reconnecting?", POPUP_ERROR);
       case "ERR_MAP": return showPopup("Map not found", "Please download the lobby map by subscribing to it on the workshop.", POPUP_ERROR);
       case "ERR_NOMAP": return showPopup("No map selected", "Please select a map for the lobby.", POPUP_ERROR);
