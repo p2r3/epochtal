@@ -13,6 +13,7 @@ let ws = null;
 
 let checkmapBlock = false;
 let checkmapExpect = "";
+let menuSession = false;
 
 // Generates a random 4 digit code
 function generateAuthCode () {
@@ -40,6 +41,7 @@ function wsMessageHandler (event) {
       return;
     }
     case "lobby_start" : {
+      menuSession = true;
       SendToConsole("map " + data.map);
       return;
     }
@@ -168,8 +170,16 @@ onConsoleOutput(async function (data) {
     // If connected to WebSocket, report all SAR session timers as "finishRun" events
     // TODO: This isn't a good approach, and should be refactored once lobbies get more attention
     if (ws && lines[i].startsWith("Session: ")) {
+
+      // Ignore the first very one, as that's the session before the map transition
+      if (menuSession) {
+        menuSession = false;
+        continue;
+      }
+
       const ticks = parseInt(lines[i].split("Session: ")[1].split(" (")[0]);
       ws.send(JSON.stringify({ type: "finishRun", value: { time: ticks, portals: 0 } }));
+
       continue;
     }
 
