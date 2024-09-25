@@ -302,6 +302,10 @@ module.exports = async function (args, context = epochtal) {
       // Ensure the lobby exists
       if (!(name in lobbies.list && name in lobbies.data)) throw new UtilError("ERR_NAME", args, context);
 
+      // Check if the map provided is currently being played in the weekly tournament
+      // The loose equality check here is intentional, as either ID might in rare cases be a number
+      if (mapid == epochtal.data.week.map.id) throw new UtilError("ERR_WEEKMAP", args, context);
+
       // Set the lobby map
       const newMap = await workshopper(["get", mapid]);
       lobbies.data[name].context.data.map = newMap;
