@@ -88,6 +88,9 @@ module.exports = async function (args, context = epochtal) {
 
     case "create": {
 
+      // Remove passwords from logs
+      args[2] = "********";
+
       // Ensure the name is valid
       const cleanName = name.trim();
       if (!cleanName || cleanName.length > 50) throw new UtilError("ERR_NAME", args, context);
@@ -217,6 +220,9 @@ module.exports = async function (args, context = epochtal) {
 
     case "join": {
 
+      // Remove passwords from logs
+      args[2] = "********";
+
       // Ensure the user and lobby exist
       const user = await users(["get", steamid], context);
       if (!user) throw new UtilError("ERR_STEAMID", args, context);
@@ -271,6 +277,9 @@ module.exports = async function (args, context = epochtal) {
     }
 
     case "password": {
+
+      // Remove passwords from logs
+      args[2] = "********";
 
       // Ensure the lobby exists
       if (!(name in lobbies.list && name in lobbies.data)) throw new UtilError("ERR_NAME", args, context);
