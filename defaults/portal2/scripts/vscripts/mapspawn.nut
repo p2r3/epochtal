@@ -38,7 +38,14 @@ ppmod.onauto(async(function () {
 
   local index = pparray(epochtal_map).find(GetMapName());
 
-  if (index == -1) {
+  // Don't transition if this is a workshop map
+  // TODO: This is a workaround for lobbies, ideally we'd have a separate check
+  // This is fine for now, because you can't access workshop maps from the menu anyway
+  // The only thing we're trying to prevent is people doing CM/fullgame accidentally
+  local isWorkshop = GetMapName().tolower().slice(0, 9) == "workshop/";
+  local isLobby = index == -1 && isWorkshop;
+
+  if (index == -1 && !isWorkshop) {
     SendToConsole("changelevel " + epochtal_map[0]);
     throw "Not on tournament map!";
   }
@@ -258,8 +265,10 @@ ppmod.onauto(async(function () {
 
     SendToConsole("sar_speedrun_start_on_load 2");
 
-    ppmod.hook("@relay_pti_level_end", "Trigger", function () {
+    ppmod.hook("@relay_pti_level_end", "Trigger", function ():(isLobby) {
       SendToConsole("sar_speedrun_stop");
+      // TODO: Temporary solution, to be revisited when lobbies get more attention
+      if (isLobby) SendToConsole("disconnect");
       return true;
     });
 
