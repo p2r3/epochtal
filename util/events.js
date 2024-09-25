@@ -139,6 +139,7 @@ module.exports = async function (args, context = epochtal) {
     case "addtoken": {
 
       const [token, steamid] = args.slice(2);
+      args[2] = "********"; // Remove tokens from logs
 
       // Check if the event exists
       if (!(name in events)) throw new UtilError("ERR_NAME", args, context);
