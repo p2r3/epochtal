@@ -189,6 +189,12 @@ onConsoleOutput(async function (data) {
       continue;
     }
 
+    // Work around an issue in Spplice 2 where the JS interface remains running after game close
+    if (lines[i].startsWith("Cya :)")) {
+      if (ws) ws.close();
+      throw "Game closing";
+    }
+
   }
 
 });
