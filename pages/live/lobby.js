@@ -12,6 +12,21 @@ async function updatePlayerList () {
 
   let output = "";
 
+  // Get the leaderboard for this lobby mode
+  const leaderboard = lobby.data.context.leaderboard[lobby.listEntry.mode];
+
+  // Sort players by their latest time
+  lobby.listEntry.players.sort(function (a, b) {
+
+    const runA = leaderboard.find(c => c.steamid === a);
+    const runB = leaderboard.find(c => c.steamid === b);
+
+    if (!runA) return 1;
+    if (!runB) return -1;
+    return runA.time - runB.time;
+
+  });
+
   // List all players in the lobby
   for (let i = 0; i < lobby.listEntry.players.length; i ++) {
 
@@ -43,7 +58,6 @@ async function updatePlayerList () {
     }
 
     // Get the player's last run in this mode, if they have one
-    const leaderboard = lobby.data.context.leaderboard[lobby.listEntry.mode];
     const run = leaderboard.find(c => c.steamid === steamid);
 
     // Get the player's ready state
