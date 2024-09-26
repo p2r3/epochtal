@@ -28,14 +28,13 @@ var lobbyListInit = async function () {
     const lobbies = await (await fetch("/api/lobbies/list")).json();
 
     let output = "";
-    for (const name in lobbies) {
+    for (const lobbyid in lobbies) {
 
-      const lobby = lobbies[name];
+      const lobby = lobbies[lobbyid];
 
-      const safeName = name.replaceAll("&", "&amp;")
+      const safeName = lobby.name.replaceAll("&", "&amp;")
         .replaceAll("<", "&lt;")
         .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
 
       // Generate the player list
       let playersString = "";
@@ -75,7 +74,7 @@ var lobbyListInit = async function () {
     <p class="lobby-name">${safeName}</p>
     <p class="lobby-description">${modeString} - ${lobby.players.length} player${lobby.players.length === 1 ? "" : "s"}</p>
     <div class="lobby-players">${playersString}</div>
-    <button class="lobby-button" onclick="joinLobby(\`${encodeURIComponent(name)}\`)">Join Lobby</button>
+    <button class="lobby-button" onclick="joinLobby(\`${lobbyid}\`)">Join Lobby</button>
   </div>
       `;
 
@@ -173,16 +172,15 @@ function createLobbyPopup () {
       const data = await request.json();
       switch (data) {
 
-        case "SUCCESS":
-          window.location.href = `/live/lobby/#${name}`;
-          return;
-
         case "ERR_LOGIN": return showPopup("Not logged in", "Please log in via Steam before joining a lobby.", POPUP_ERROR);
         case "ERR_STEAMID": return showPopup("Unrecognized user", "Your SteamID is not present in the users database. WTF?", POPUP_ERROR);
         case "ERR_NAME": return showPopup("Invalid lobby name", "Please keep the lobby name to 50 characters or less.", POPUP_ERROR);
         case "ERR_EXISTS": return showPopup("Lobby name taken", "A lobby with this name already exists.", POPUP_ERROR);
 
-        default: return showPopup("Unknown error", "The server returned an unexpected response: " + data, POPUP_ERROR);
+        default: {
+          if (data.startsWith("SUCCESS ")) return window.location.href = `/live/lobby/#${data.split("SUCCESS ")[1]}`;
+          return showPopup("Unknown error", "The server returned an unexpected response: " + data, POPUP_ERROR);
+        }
 
       }
     }
@@ -194,18 +192,18 @@ function createLobbyPopup () {
 /**
  * Handles joining a lobby.
  *
- * @param {string} name
+ * @param {string} lobbyid
  */
-async function joinLobby (name) {
+async function joinLobby (lobbyid) {
 
   // Check if the lobby is password-protected
-  const isSecure = await (await fetch(`/api/lobbies/secure/${name}`)).json();
+  const isSecure = await (await fetch(`/api/lobbies/secure/${lobbyid}`)).json();
 
   // Join the lobby if not
   if (!isSecure) {
 
     // Fetch the api to join the lobby
-    const request = await fetch(`/api/lobbies/join/${name}`);
+    const request = await fetch(`/api/lobbies/join/${lobbyid}`);
 
     // Handle the response and open the lobby window
     if (request.status !== 200) {
@@ -216,7 +214,7 @@ async function joinLobby (name) {
 
         case "ERR_EXISTS":
         case "SUCCESS":
-          return window.location.href = `/live/lobby/#${name}`;
+          return window.location.href = `/live/lobby/#${lobbyid}`;
 
         case "ERR_LOGIN": return showPopup("Not logged in", "Please log in via Steam before joining a lobby.", POPUP_ERROR);
         case "ERR_STEAMID": return showPopup("Unrecognized user", "Your SteamID is not present in the users database. WTF?", POPUP_ERROR);
@@ -242,7 +240,7 @@ async function joinLobby (name) {
 
     // Fetch the api to join the lobby
     const password = encodeURIComponent(document.querySelector("#join-lobby-password").value);
-    const request = await fetch(`/api/lobbies/join/${name}/${password}`);
+    const request = await fetch(`/api/lobbies/join/${lobbyid}/${password}`);
 
     // Handle the response and open the lobby window
     if (request.status !== 200) {
@@ -253,7 +251,7 @@ async function joinLobby (name) {
 
         case "ERR_EXISTS":
         case "SUCCESS":
-          return window.open(`/live/lobby/#${name}`);
+          return window.open(`/live/lobby/#${lobbyid}`);
 
         case "ERR_LOGIN": return showPopup("Not logged in", "Please log in via Steam before joining a lobby.", POPUP_ERROR);
         case "ERR_STEAMID": return showPopup("Unrecognized user", "Your SteamID is not present in the users database. WTF?", POPUP_ERROR);

@@ -6,17 +6,17 @@ const api_users = require("./users.js");
  * Returns the user object and lobby list data as products.
  *
  * @param {HttpRequest} request The HTTP request
- * @param {string} name The lobby name
+ * @param {string} lobbyid The lobby ID
  * @returns {object|string} User object and lobby list data, or error string
  */
-async function checkUserPerms (request, name) {
+async function checkUserPerms (request, lobbyid) {
 
   // Get the active user and throw ERR_LOGIN if not logged in
   const user = await api_users(["whoami"], request);
   if (!user) return "ERR_LOGIN";
 
   // Get the specified lobby's list entry and throw ERR_PERMS if the user is not in the lobby
-  const listEntry = await lobbies(["get", name]);
+  const listEntry = await lobbies(["get", lobbyid]);
   if (!listEntry.players.includes(user.steamid)) return "ERR_PERMS";
 
   // Return the products of this operation for further use
@@ -41,7 +41,7 @@ async function checkUserPerms (request, name) {
  */
 module.exports = async function (args, request) {
 
-  const [command, name, password] = args;
+  const [command, lobbyid, password] = args;
 
   switch (command) {
 
@@ -54,17 +54,20 @@ module.exports = async function (args, request) {
 
     case "create": {
 
+      const name = args[1];
+
       // Get the active user and throw ERR_LOGIN if not logged in
       const user = await api_users(["whoami"], request);
       if (!user) return "ERR_LOGIN";
 
       // Create a new lobby with the specified name and password
-      await lobbies(["create", name, password]);
+      const response = await lobbies(["create", name, password]);
+      const newID = response.split("SUCCESS ")[1];
 
       // Join the newly created lobby
-      await lobbies(["join", name, password, user.steamid]);
+      await lobbies(["join", newID, password, user.steamid]);
 
-      return "SUCCESS";
+      return response;
 
     }
 
@@ -76,9 +79,9 @@ module.exports = async function (args, request) {
 
       // Join the specified lobby with the specified password
       if (password) {
-        await lobbies(["join", name, password, user.steamid]);
+        await lobbies(["join", lobbyid, password, user.steamid]);
       } else {
-        await lobbies(["join", name, false, user.steamid]);
+        await lobbies(["join", lobbyid, false, user.steamid]);
       }
 
       return "SUCCESS";
@@ -88,7 +91,7 @@ module.exports = async function (args, request) {
     case "secure": {
 
       // Check if the specified lobby is password-protected
-      const password = (await lobbies(["getdata", name])).password;
+      const password = (await lobbies(["getdata", lobbyid])).password;
 
       if (password) return true;
       return false;
@@ -98,11 +101,11 @@ module.exports = async function (args, request) {
     case "get": {
 
       // Check if the player is a member of this lobby
-      const permsCheck = await checkUserPerms(request, name);
+      const permsCheck = await checkUserPerms(request, lobbyid);
       if (typeof permsCheck === "string") return permsCheck;
       const { listEntry } = permsCheck;
 
-      const data = await lobbies(["getdata", name]);
+      const data = await lobbies(["getdata", lobbyid]);
 
       // Filter returned data to omit unwanted properties
       const clientData = {
@@ -137,22 +140,22 @@ module.exports = async function (args, request) {
       const newName = args[2];
 
       // Check if the player is a member of this lobby
-      const permsCheck = await checkUserPerms(request, name);
+      const permsCheck = await checkUserPerms(request, lobbyid);
       if (typeof permsCheck === "string") return permsCheck;
 
       // Rename the specified lobby
-      return lobbies(["rename", name, newName]);
+      return lobbies(["rename", lobbyid, newName]);
 
     }
 
     case "password": {
 
       // Check if the player is a member of this lobby
-      const permsCheck = await checkUserPerms(request, name);
+      const permsCheck = await checkUserPerms(request, lobbyid);
       if (typeof permsCheck === "string") return permsCheck;
 
       // Set the specified lobby's password
-      return lobbies(["password", name, password]);
+      return lobbies(["password", lobbyid, password]);
 
     }
 
@@ -161,11 +164,11 @@ module.exports = async function (args, request) {
       const mapid = args[2];
 
       // Check if the player is a member of this lobby
-      const permsCheck = await checkUserPerms(request, name);
+      const permsCheck = await checkUserPerms(request, lobbyid);
       if (typeof permsCheck === "string") return permsCheck;
 
       // Set the specified lobby's map
-      return lobbies(["map", name, mapid]);
+      return lobbies(["map", lobbyid, mapid]);
 
     }
 
@@ -174,12 +177,12 @@ module.exports = async function (args, request) {
       const readyState = args[2];
 
       // Check if the player is a member of this lobby
-      const permsCheck = await checkUserPerms(request, name);
+      const permsCheck = await checkUserPerms(request, lobbyid);
       if (typeof permsCheck === "string") return permsCheck;
       const { user } = permsCheck;
 
       // Attempt to change the ready state
-      return lobbies(["ready", name, readyState, user.steamid]);
+      return lobbies(["ready", lobbyid, readyState, user.steamid]);
 
     }
 

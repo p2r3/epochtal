@@ -112,7 +112,6 @@ async function lobbyEventHandler (event) {
 
   // Parse the incoming data
   const data = JSON.parse(event.data);
-  console.log(data, event);
 
   // Handle the event
   switch (data.type) {
@@ -120,12 +119,7 @@ async function lobbyEventHandler (event) {
     case "lobby_name": {
 
       // Rename the lobby
-      const encodedName = window.location.href.split("#")[1];
-      const name = decodeURIComponent(encodedName);
-      const { newName } = data;
-
-      window.location.href = window.location.href.split("#")[0] + "#" + newName;
-      lobbyInit();
+      document.querySelector("#lobby-name").textContent = data.newName;
 
       return;
     }
@@ -287,11 +281,10 @@ async function lobbyInit () {
   }
 
   // Fetch the lobby data
-  const encodedName = window.location.href.split("#")[1];
-  const name = decodeURIComponent(encodedName);
+  const lobbyid = window.location.href.split("#")[1];
 
   users = await (await fetch("/api/users/get")).json();
-  lobby = await (await fetch(`/api/lobbies/get/${encodedName}`)).json();
+  lobby = await (await fetch(`/api/lobbies/get/${lobbyid}`)).json();
 
   const lobbyNameText = document.querySelector("#lobby-name");
   const lobbyModeText = document.querySelector("#lobby-mode");
@@ -303,7 +296,7 @@ async function lobbyInit () {
     default: modeString = "Unknown"; break;
   }
 
-  lobbyNameText.textContent = name;
+  lobbyNameText.textContent = lobby.listEntry.name;
   lobbyModeText.innerHTML = "&nbsp;- " + modeString;
 
   // Update the player list and map display
@@ -317,7 +310,7 @@ async function lobbyInit () {
 
   lobbySocket = new WebSocket(`${protocol}://${window.location.host}/api/events/connect`);
   lobbySocket.onopen = async function () {
-    const token = await (await fetch(`/api/events/auth/lobby_${encodedName}`)).json();
+    const token = await (await fetch(`/api/events/auth/lobby_${lobbyid}`)).json();
     lobbySocket.send(token);
   };
   lobbySocket.addEventListener("message", lobbyEventHandler);
@@ -347,7 +340,7 @@ async function lobbyInit () {
       const newName = encodeURIComponent(document.querySelector("#new-lobby-name").value.trim());
 
       // Fetch the api to change the lobby name
-      const request = await fetch(`/api/lobbies/rename/${encodedName}/${newName}`);
+      const request = await fetch(`/api/lobbies/rename/${lobbyid}/${newName}`);
       let requestData;
       try {
         requestData = await request.json();
@@ -390,7 +383,7 @@ async function lobbyInit () {
       const newPassword = encodeURIComponent(document.querySelector("#new-lobby-password").value.trim());
 
       // Fetch the api to change the lobby password
-      const request = await fetch(`/api/lobbies/password/${encodedName}/${newPassword}`);
+      const request = await fetch(`/api/lobbies/password/${lobbyid}/${newPassword}`);
       let requestData;
       try {
         requestData = await request.json();
@@ -436,7 +429,7 @@ async function lobbyInit () {
       hidePopup();
 
       // Request map change from API
-      const request = await fetch(`/api/lobbies/map/${encodedName}/"${mapid}"`);
+      const request = await fetch(`/api/lobbies/map/${lobbyid}/"${mapid}"`);
       let requestData;
       try {
         requestData = await request.json();
@@ -469,7 +462,7 @@ async function lobbyInit () {
    */
   window.copyEventToken = async function () {
 
-    const token = await (await fetch(`/api/events/auth/lobby_${encodedName}`)).json();
+    const token = await (await fetch(`/api/events/auth/lobby_${lobbyid}`)).json();
     navigator.clipboard.writeText(`echo ws:${token}`);
 
     return showPopup("Token copied", "A new token has been copied to your clipboard. It is valid for 30 seconds, starting now. Paste it in your Portal 2 console to complete the setup.");
@@ -488,7 +481,7 @@ async function lobbyInit () {
     lobbyReadyButton.style.pointerEvents = "none";
 
     // Request ready state change from API
-    const request = await fetch(`/api/lobbies/ready/${encodedName}/${!readyState}`);
+    const request = await fetch(`/api/lobbies/ready/${lobbyid}/${!readyState}`);
 
     // Restore the button once the request finishes
     lobbyReadyButton.style.opacity = 1.0;
