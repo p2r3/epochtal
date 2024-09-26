@@ -56,7 +56,7 @@ function createLobbyContext (name) {
  */
 module.exports = async function (args, context = epochtal) {
 
-  const [command, name, password, steamid] = args;
+  const [command, lobbyid, password, steamid] = args;
 
   const file = context.file.lobbies;
   const lobbies = context.data.lobbies;
@@ -73,16 +73,16 @@ module.exports = async function (args, context = epochtal) {
     case "get": {
 
       // Return a lobby if it exists
-      if (!(name in lobbies.list)) throw new UtilError("ERR_NAME", args, context);
-      return lobbies.list[name];
+      if (!(lobbyid in lobbies.list)) throw new UtilError("ERR_LOBBYID", args, context);
+      return lobbies.list[lobbyid];
 
     }
 
     case "getdata": {
 
       // Return lobby data if it exists
-      if (!(name in lobbies.data)) throw new UtilError("ERR_NAME", args, context);
-      return lobbies.data[name];
+      if (!(lobbyid in lobbies.data)) throw new UtilError("ERR_LOBBYID", args, context);
+      return lobbies.data[lobbyid];
 
     }
 
@@ -92,14 +92,19 @@ module.exports = async function (args, context = epochtal) {
       args[2] = "********";
 
       // Ensure the name is valid
-      const cleanName = name.trim();
+      const cleanName = args[1].trim();
       if (!cleanName || cleanName.length > 50) throw new UtilError("ERR_NAME", args, context);
-      if (cleanName in lobbies.list || cleanName in lobbies.data) throw new UtilError("ERR_EXISTS", args, context);
+
+      // Generate a unique lobby ID
+      const newID = Date.now().toString(36);
+      // Generate an event name from the lobby ID
+      const eventName = "lobby_" + newID;
 
       // Create a new lobby and data
       const hashedPassword = password && await Bun.password.hash(password);
 
       const listEntry = {
+        name: cleanName,
         players: [],
         mode: "ffa"
       };
@@ -110,8 +115,8 @@ module.exports = async function (args, context = epochtal) {
         context: createLobbyContext(cleanName)
       };
 
-      lobbies.list[cleanName] = listEntry;
-      lobbies.data[cleanName] = dataEntry;
+      lobbies.list[newID] = listEntry;
+      lobbies.data[newID] = dataEntry;
 
       // Write the lobbies to file if it exists
       if (file) Bun.write(file, JSON.stringify(lobbies));
@@ -125,15 +130,6 @@ module.exports = async function (args, context = epochtal) {
         const { steamid } = ws.data;
         const data = JSON.parse(message);
 
-        // Find the lobby name // TODO: Ideally, we'd reference by some ID, not name.
-        let lobbyName;
-        for (const name in lobbies.list) {
-          if (lobbies.list[name] === listEntry) {
-            lobbyName = name;
-            break;
-          }
-        }
-
         switch (data.type) {
 
           // Distinguishes browser clients from game clients
@@ -142,7 +138,7 @@ module.exports = async function (args, context = epochtal) {
             // Link the socket to the player data
             dataEntry.players[steamid].gameSocket = ws;
             // Broadcast game client join to all lobby clients
-            await events(["send", "lobby_" + lobbyName, { type: "lobby_join_game", steamid }], context);
+            await events(["send", eventName, { type: "lobby_join_game", steamid }], context);
             return;
           }
 
@@ -164,9 +160,9 @@ module.exports = async function (args, context = epochtal) {
             // Submit this run to the lobby leaderboard
             await leaderboard(["add", listEntry.mode, steamid, time, "", portals], dataEntry.context);
             // Broadcast submission to all lobby clients
-            await events(["send", "lobby_" + lobbyName, { type: "lobby_submit", value: { time, portals, steamid } }], context);
+            await events(["send", eventName, { type: "lobby_submit", value: { time, portals, steamid } }], context);
             // Change the client's ready state to false
-            await module.exports(["ready", lobbyName, false, steamid, true], context);
+            await module.exports(["ready", newID, false, steamid, true], context);
 
             return;
           }
@@ -183,7 +179,7 @@ module.exports = async function (args, context = epochtal) {
         // If this is a game client, just change their ready state to false and exit
         if (dataEntry.players[steamid].gameSocket === ws) {
           delete dataEntry.players[steamid].gameSocket;
-          await module.exports(["ready", cleanName, false, steamid, true], context);
+          await module.exports(["ready", newID, false, steamid, true], context);
           return;
         }
 
@@ -197,17 +193,7 @@ module.exports = async function (args, context = epochtal) {
         if (index !== -1) listEntry.players.splice(index, 1);
         delete dataEntry.players[steamid];
 
-        // Find the lobby name
-        let lobbyName;
-        for (const name in lobbies.list) {
-          if (lobbies.list[name] === listEntry) {
-            lobbyName = name;
-            break;
-          }
-        }
-
         // Brodcast the leave to clients
-        const eventName = "lobby_" + lobbyName;
         await events(["send", eventName, { type: "lobby_leave", steamid }], context);
 
         // Delete the lobby if it is still empty 10 seconds after all players have left
@@ -216,8 +202,8 @@ module.exports = async function (args, context = epochtal) {
 
             if (listEntry.players.length !== 0) return;
 
-            delete lobbies.list[lobbyName];
-            delete lobbies.data[lobbyName];
+            delete lobbies.list[newID];
+            delete lobbies.data[newID];
             if (file) Bun.write(file, JSON.stringify(lobbies));
 
             try {
@@ -232,26 +218,16 @@ module.exports = async function (args, context = epochtal) {
       };
 
       // Create the lobby creation event
-      await events(["create", "lobby_" + cleanName, auth, message, null, disconnect], context);
+      await events(["create", eventName, auth, message, null, disconnect], context);
 
       // Broadcast a heartbeat ping every 30 seconds
       let lobbyHeartbeat;
       lobbyHeartbeat = setInterval(async function () {
-
-        let lobbyName = null;
-        for (const name in lobbies.list) {
-          if (lobbies.list[name] === listEntry) {
-            lobbyName = name;
-            break;
-          }
-        }
-        if (!lobbyName) return clearInterval(lobbyHeartbeat);
-
-        await events(["send", "lobby_" + lobbyName, { type: "ping" }], context);
-
+        if (!(await events(["get", eventName], context))) return clearInterval(lobbyHeartbeat);
+        await events(["send", eventName, { type: "ping" }], context);
       }, 30000);
 
-      return "SUCCESS";
+      return `SUCCESS ${newID}`;
 
     }
 
@@ -260,23 +236,26 @@ module.exports = async function (args, context = epochtal) {
       // Remove passwords from logs
       args[2] = "********";
 
+      const listEntry = lobbies.list[lobbyid];
+      const dataEntry = lobbies.data[lobbyid];
+
       // Ensure the user and lobby exist
       const user = await users(["get", steamid], context);
       if (!user) throw new UtilError("ERR_STEAMID", args, context);
 
-      if (!(name in lobbies.list && name in lobbies.data)) throw new UtilError("ERR_NAME", args, context);
-      if (lobbies.data[name].password && !(await Bun.password.verify(password, lobbies.data[name].password))) throw new UtilError("ERR_PASSWORD", args, context);
-      if (lobbies.list[name].players.includes(steamid)) throw new UtilError("ERR_EXISTS", args, context);
+      if (!listEntry || !dataEntry) throw new UtilError("ERR_LOBBYID", args, context);
+      if (dataEntry.password && !(await Bun.password.verify(password, dataEntry.password))) throw new UtilError("ERR_PASSWORD", args, context);
+      if (listEntry.players.includes(steamid)) throw new UtilError("ERR_EXISTS", args, context);
 
       // Add the player to the lobby
-      lobbies.list[name].players.push(steamid);
-      lobbies.data[name].players[steamid] = {};
+      listEntry.players.push(steamid);
+      dataEntry.players[steamid] = {};
 
       // Write the lobbies to file if it exists
       if (file) Bun.write(file, JSON.stringify(lobbies));
 
       // Brodcast the join to clients
-      await events(["send", "lobby_" + name, { type: "lobby_join", steamid }], context);
+      await events(["send", "lobby_" + lobbyid, { type: "lobby_join", steamid }], context);
 
       return "SUCCESS";
 
@@ -287,24 +266,20 @@ module.exports = async function (args, context = epochtal) {
       const newName = args[2].trim();
 
       // Ensure the new name is valid
-      if (newName in lobbies.list || newName in lobbies.data) throw new UtilError("ERR_EXISTS", args, context);
-      if (!(name in lobbies.list && name in lobbies.data)) throw new UtilError("ERR_NAME", args, context);
       if (!newName || newName.length > 50) throw new UtilError("ERR_NEWNAME", args, context);
 
+      const listEntry = lobbies.list[lobbyid];
+      const dataEntry = lobbies.data[lobbyid];
+      const eventName = "lobby_" + lobbyid;
+
+      // Ensure the lobby exists
+      if (!listEntry || !dataEntry) throw new UtilError("ERR_LOBBYID", args, context);
+
       // Rename the lobby
-      const listEntry = lobbies.list[name];
-      const dataEntry = lobbies.data[name];
-
-      delete lobbies.list[name];
-      delete lobbies.data[name];
-
-      lobbies.list[newName] = listEntry;
-      lobbies.data[newName] = dataEntry;
+      listEntry.name = newName;
 
       // Brodcast name change to clients
-      const eventName = "lobby_" + name;
       await events(["send", eventName, { type: "lobby_name", newName }], context);
-      await events(["rename", eventName, "lobby_" + newName], context);
 
       // Write the lobbies to file if it exists
       if (file) Bun.write(file, JSON.stringify(lobbies));
@@ -318,12 +293,16 @@ module.exports = async function (args, context = epochtal) {
       // Remove passwords from logs
       args[2] = "********";
 
+      const listEntry = lobbies.list[lobbyid];
+      const dataEntry = lobbies.data[lobbyid];
+      const eventName = "lobby_" + lobbyid;
+
       // Ensure the lobby exists
-      if (!(name in lobbies.list && name in lobbies.data)) throw new UtilError("ERR_NAME", args, context);
+      if (!listEntry || !dataEntry) throw new UtilError("ERR_LOBBYID", args, context);
 
       // Set the lobby password
       const hashedPassword = password && await Bun.password.hash(password);
-      lobbies.data[name].password = password ? hashedPassword : false;
+      dataEntry.password = password ? hashedPassword : false;
 
       // Write the lobbies to file if it exists
       if (file) Bun.write(file, JSON.stringify(lobbies));
@@ -336,8 +315,12 @@ module.exports = async function (args, context = epochtal) {
 
       const mapid = args[2];
 
+      const listEntry = lobbies.list[lobbyid];
+      const dataEntry = lobbies.data[lobbyid];
+      const eventName = "lobby_" + lobbyid;
+
       // Ensure the lobby exists
-      if (!(name in lobbies.list && name in lobbies.data)) throw new UtilError("ERR_NAME", args, context);
+      if (!listEntry || !dataEntry) throw new UtilError("ERR_LOBBYID", args, context);
 
       // Check if the map provided is currently being played in the weekly tournament
       // The loose equality check here is intentional, as either ID might in rare cases be a number
@@ -368,10 +351,9 @@ module.exports = async function (args, context = epochtal) {
       newMap.file = `workshop/${pathWorkshop}/${pathBSP}`;
 
       // Set the lobby map
-      lobbies.data[name].context.data.map = newMap;
+      dataEntry.context.data.map = newMap;
 
       // Brodcast map change to clients
-      const eventName = "lobby_" + name;
       await events(["send", eventName, { type: "lobby_map", newMap }], context);
 
       // Write the lobbies to file if it exists
@@ -388,29 +370,33 @@ module.exports = async function (args, context = epochtal) {
       // Whether to force ready state change regardless of lobby state
       const force = args[4];
 
+      const listEntry = lobbies.list[lobbyid];
+      const dataEntry = lobbies.data[lobbyid];
+      const eventName = "lobby_" + lobbyid;
+
       // Ensure the lobby exists
-      if (!(name in lobbies.list && name in lobbies.data)) throw new UtilError("ERR_NAME", args, context);
+      if (!listEntry || !dataEntry) throw new UtilError("ERR_LOBBYID", args, context);
 
       // Throw ERR_INGAME if the game has already started
-      if (!force && lobbies.data[name].state === LOBBY_INGAME) {
+      if (!force && dataEntry.state === LOBBY_INGAME) {
         throw new UtilError("ERR_INGAME", args, context);
       }
 
       // Get the player's lobby data
-      const playerData = lobbies.data[name].players[steamid];
+      const playerData = dataEntry.players[steamid];
 
       if (readyState) {
 
         // Throw ERR_NOMAP if the lobby has no map set
-        if (lobbies.data[name].context.data.map === null) throw new UtilError("ERR_NOMAP", args, context);
+        if (dataEntry.context.data.map === null) throw new UtilError("ERR_NOMAP", args, context);
 
         // Check if the player's game client is connected
         const gameSocket = playerData.gameSocket;
         if (!gameSocket) throw new UtilError("ERR_GAMEAUTH", args, context);
 
         // Ensure that the player has the map file
-        const mapFile = lobbies.data[name].context.data.map.file;
-        const mapLink = lobbies.data[name].context.data.map.link;
+        const mapFile = dataEntry.context.data.map.file;
+        const mapLink = dataEntry.context.data.map.link;
         gameSocket.send(JSON.stringify({ type: "getMap", value: { file: mapFile, link: mapLink } }));
 
         // Handle the response to our getMap request
@@ -442,7 +428,7 @@ module.exports = async function (args, context = epochtal) {
           case 0: {
 
             // Broadcast the start of the download
-            await events(["send", "lobby_" + name, { type: "lobby_download_start", steamid }], context);
+            await events(["send", eventName, { type: "lobby_download_start", steamid }], context);
 
             // Wait for another response from the client indicating success (1) or failure (-1)
             const downloadMapCode = await new Promise(function (resolve, reject) {
@@ -451,7 +437,7 @@ module.exports = async function (args, context = epochtal) {
             });
 
             // Broadcast the end of the download
-            await events(["send", "lobby_" + name, { type: "lobby_download_end", steamid }], context);
+            await events(["send", eventName, { type: "lobby_download_end", steamid }], context);
 
             // If the download was successful, do nothing and continue
             if (downloadMapCode === 1) break;
@@ -470,15 +456,15 @@ module.exports = async function (args, context = epochtal) {
 
         // If everyone's ready, start the game
         let everyoneReady = true;
-        for (const curr in lobbies.data[name].players) {
-          if (!lobbies.data[name].players[curr].ready) {
+        for (const curr in dataEntry.players) {
+          if (!dataEntry.players[curr].ready) {
             everyoneReady = false;
             break;
           }
         }
         if (everyoneReady) {
-          lobbies.data[name].state = LOBBY_INGAME;
-          await events(["send", "lobby_" + name, { type: "lobby_start", map: mapFile }], context);
+          dataEntry.state = LOBBY_INGAME;
+          await events(["send", eventName, { type: "lobby_start", map: mapFile }], context);
         }
 
       } else {
@@ -488,20 +474,19 @@ module.exports = async function (args, context = epochtal) {
 
         // If no one is ready, reset the lobby state
         let nobodyReady = true;
-        for (const curr in lobbies.data[name].players) {
-          if (lobbies.data[name].players[curr].ready) {
+        for (const curr in dataEntry.players) {
+          if (dataEntry.players[curr].ready) {
             nobodyReady = false;
             break;
           }
         }
         if (nobodyReady) {
-          lobbies.data[name].state = LOBBY_IDLE;
+          dataEntry.state = LOBBY_IDLE;
         }
 
       }
 
       // Brodcast ready state to clients
-      const eventName = "lobby_" + name;
       await events(["send", eventName, { type: "lobby_ready", steamid, readyState }], context);
 
       // Write the lobbies to file if it exists
