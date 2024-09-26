@@ -241,6 +241,16 @@ async function lobbyEventHandler (event) {
       return;
     }
 
+    case "lobby_join_game": {
+
+      // Handle game client authentication
+      // Currently only relevant to the player authenticating
+      if (data.steamid !== whoami.steamid) return;
+
+      showPopup("Game connected", "Your game client has been connected successfully. You may now ready up.");
+      return;
+    }
+
   }
 
 }
