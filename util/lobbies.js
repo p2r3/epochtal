@@ -125,6 +125,15 @@ module.exports = async function (args, context = epochtal) {
         const { steamid } = ws.data;
         const data = JSON.parse(message);
 
+        // Find the lobby name // TODO: Ideally, we'd reference by some ID, not name.
+        let lobbyName;
+        for (const name in lobbies.list) {
+          if (lobbies.list[name] === listEntry) {
+            lobbyName = name;
+            break;
+          }
+        }
+
         switch (data.type) {
 
           // Distinguishes browser clients from game clients
@@ -152,9 +161,9 @@ module.exports = async function (args, context = epochtal) {
             // Submit this run to the lobby leaderboard
             await leaderboard(["add", listEntry.mode, steamid, time, "", portals], dataEntry.context);
             // Broadcast submission to all lobby clients
-            await events(["send", "lobby_" + name, { type: "lobby_submit", value: { time, portals, steamid } }], context);
+            await events(["send", "lobby_" + lobbyName, { type: "lobby_submit", value: { time, portals, steamid } }], context);
             // Change the client's ready state to false
-            await module.exports(["ready", cleanName, false, steamid, true], context);
+            await module.exports(["ready", lobbyName, false, steamid, true], context);
 
             return;
           }
