@@ -135,14 +135,17 @@ module.exports = async function (args, context = epochtal) {
           }
 
           // Returned by game clients as a response to the server's query
-          case "checkMap": {
-            dataEntry.players[steamid].checkMapCallback(data.value);
-            delete dataEntry.players[steamid].checkMapCallback;
+          case "getMap": {
+            dataEntry.players[steamid].getMapCallback(data.value);
+            delete dataEntry.players[steamid].getMapCallback;
             return;
           }
 
           // Returned by game clients to indicate run completion
           case "finishRun": {
+
+            // Reject the response if we're not in-game
+            if (dataEntry.state !== LOBBY_INGAME) return;
 
             const { time, portals } = data.value;
 
@@ -311,8 +314,31 @@ module.exports = async function (args, context = epochtal) {
       // The loose equality check here is intentional, as either ID might in rare cases be a number
       if (mapid == epochtal.data.week.map.id) throw new UtilError("ERR_WEEKMAP", args, context);
 
+      // We forge the map entry from a raw workshop request to extract only what we need
+      const details = await workshopper(["get", mapid, true]);
+
+      const newMap = {
+        id: mapid,
+        title: details.title,
+        thumbnail: details.preview_url,
+        link: details.file_url
+      };
+
+      // Fetch the map author's username
+      try {
+        const authorRequest = await fetch(`https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=${process.env.STEAM_API_KEY}&steamids=${details.creator}`);
+        const authorData = await authorRequest.json();
+        newMap.author = authorData.response.players[0].personaname;
+      } catch {
+        throw new UtilError("ERR_STEAMID", args, context);
+      }
+
+      // Get the path to which the map is saved when subscribed to
+      const pathWorkshop = details.file_url.split("/ugc/").pop().split("/")[0];
+      const pathBSP = details.filename.split("/").pop().slice(0, -4);
+      newMap.file = `workshop/${pathWorkshop}/${pathBSP}`;
+
       // Set the lobby map
-      const newMap = await workshopper(["get", mapid]);
       lobbies.data[name].context.data.map = newMap;
 
       // Brodcast map change to clients
@@ -353,28 +379,62 @@ module.exports = async function (args, context = epochtal) {
         const gameSocket = playerData.gameSocket;
         if (!gameSocket) throw new UtilError("ERR_GAMEAUTH", args, context);
 
-        // Check if the player has the map file
+        // Ensure that the player has the map file
         const mapFile = lobbies.data[name].context.data.map.file;
-        gameSocket.send(JSON.stringify({ type: "checkMap", value: mapFile }));
+        const mapLink = lobbies.data[name].context.data.map.link;
+        gameSocket.send(JSON.stringify({ type: "getMap", value: { file: mapFile, link: mapLink } }));
 
-        // Handle the response to our checkMap request
+        // Handle the response to our getMap request
+        // The response will be one of: [ 1 - has map; 0 - downloading; -1 - download failure ]
         let hasMapTimeout = null;
-        const hasMap = await new Promise(function (resolve, reject) {
+        const hasMapCode = await new Promise(function (resolve, reject) {
 
           // Set up a callback function for the request
-          playerData.checkMapCallback = val => resolve(val);
+          playerData.getMapCallback = val => resolve(val);
 
-          // Stop waiting for a response after 15 seconds
+          // Stop waiting for a response after 10 seconds
           hasMapTimeout = setTimeout(function () {
-            delete playerData.checkMapCallback;
+            delete playerData.getMapCallback;
             reject(new UtilError("ERR_TIMEOUT", args, context));
-          }, 15000);
+          }, 10000);
 
         });
         if (hasMapTimeout) clearTimeout(hasMapTimeout);
 
-        // If the player doesn't have the map, throw ERR_MAP
-        if (!hasMap) throw new UtilError("ERR_MAP", args, context);
+        // Handle the response from the client
+        switch (hasMapCode) {
+
+          // If the player already has the map, do nothing and continue
+          case 1: break;
+          // If the download was attempted but failed, throw ERR_MAP
+          case -1: throw new UtilError("ERR_MAP", args, context);
+
+          // If the player has started the download, broadcast this and wait
+          case 0: {
+
+            // Broadcast the start of the download
+            await events(["send", "lobby_" + name, { type: "lobby_download_start", steamid }], context);
+
+            // Wait for another response from the client indicating success (1) or failure (-1)
+            const downloadMapCode = await new Promise(function (resolve, reject) {
+              // Set up a callback function for the request
+              playerData.getMapCallback = val => resolve(val);
+            });
+
+            // Broadcast the end of the download
+            await events(["send", "lobby_" + name, { type: "lobby_download_end", steamid }], context);
+
+            // If the download was successful, do nothing and continue
+            if (downloadMapCode === 1) break;
+            // If the download was attempted but failed, throw ERR_MAP
+            throw new UtilError("ERR_MAP", args, context);
+
+          }
+
+          // If the response was something other than expected, throw ERR_MAP
+          default: throw new UtilError("ERR_MAP", args, context);
+
+        }
 
         // Set the player's ready state to true
         playerData.ready = true;
