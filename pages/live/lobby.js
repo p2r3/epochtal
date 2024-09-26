@@ -226,7 +226,6 @@ async function lobbyEventHandler (event) {
       // Currently only relevant to the player downloading the map
       if (data.steamid !== whoami.steamid) return;
 
-      window.downloadingMap = true;
       showPopup("Download started", "The map is now being downloaded.");
       return;
     }
@@ -236,7 +235,12 @@ async function lobbyEventHandler (event) {
       // Handle a player finishing the map download
       // Currently only relevant to the player downloading the map
       if (data.steamid !== whoami.steamid) return;
-      window.downloadingMap = false;
+
+      // Display the popup *only if* we're not potentially covering up an error
+      const popup = document.querySelector("#global-popup");
+      if (popup.style.opacity == 0 || popup.style.borderColor !== "red") {
+        showPopup("Download finished", "The map has been downloaded. You have been marked as ready.");
+      }
 
       return;
     }
@@ -467,7 +471,6 @@ async function lobbyInit () {
 
   }
 
-  window.downloadingMap = false;
   window.toggleReadyState = async function () {
 
     // If no map is selected, throw early
@@ -494,10 +497,7 @@ async function lobbyInit () {
     }
 
     switch (requestData) {
-      case "SUCCESS": {
-        if (window.downloadingMap) showPopup("Download finished", "The map has been downloaded. You have been marked as ready.");
-        return;
-      }
+      case "SUCCESS": return;
 
       case "ERR_LOGIN": return showPopup("Not logged in", "Please log in via Steam before editing lobby details.", POPUP_ERROR);
       case "ERR_STEAMID": return showPopup("Unrecognized user", "Your SteamID is not present in the users database. WTF?", POPUP_ERROR);
