@@ -322,6 +322,9 @@ module.exports = async function (args, context = epochtal) {
       // Ensure the lobby exists
       if (!listEntry || !dataEntry) throw new UtilError("ERR_LOBBYID", args, context);
 
+      // Reject map change if the lobby is in-game
+      if (dataEntry.state === LOBBY_INGAME) throw new UtilError("ERR_INGAME", args, context);
+
       // Check if the map provided is currently being played in the weekly tournament
       // The loose equality check here is intentional, as either ID might in rare cases be a number
       if (mapid == epochtal.data.week.map.id) throw new UtilError("ERR_WEEKMAP", args, context);
@@ -353,6 +356,8 @@ module.exports = async function (args, context = epochtal) {
       // Set the lobby map
       dataEntry.context.data.map = newMap;
 
+      // Force all player ready states to false
+      for (const player of dataEntry.players) player.ready = false;
       // Brodcast map change to clients
       await events(["send", eventName, { type: "lobby_map", newMap }], context);
 
