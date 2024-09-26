@@ -158,6 +158,14 @@ async function lobbyEventHandler (event) {
       lobby.data.context.map = data.newMap;
       updateLobbyMap();
 
+      // Set all player ready states to false
+      for (const player of lobby.data.players) player.ready = false;
+      updatePlayerList();
+
+      // Update our own ready state
+      readyState = false;
+      lobbyReadyButton.innerHTML = "I'm ready!";
+
       return;
     }
 
@@ -444,6 +452,7 @@ async function lobbyInit () {
         case "ERR_LOGIN": return showPopup("Not logged in", "Please log in via Steam before editing lobby details.", POPUP_ERROR);
         case "ERR_STEAMID": return showPopup("Unrecognized user", "Your SteamID is not present in the users database. WTF?", POPUP_ERROR);
         case "ERR_LOBBYID": return showPopup("Lobby not found", "An open lobby with this ID does not exist.", POPUP_ERROR);
+        case "ERR_INGAME": return showPopup("Game started", "The game has started, you cannot change the lobby map.", POPUP_ERROR);
         case "ERR_PERMS": return showPopup("Permission denied", "You do not have permission to perform this action.", POPUP_ERROR);
         case "ERR_MAPID": return showPopup("Invalid link", "A workshop map associated with this link could not be found.", POPUP_ERROR);
         case "ERR_STEAMAPI": return showPopup("Missing map info", "Failed to retrieve map details. Is this the right link?", POPUP_ERROR);
