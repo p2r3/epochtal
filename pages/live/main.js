@@ -36,10 +36,6 @@ var lobbyListInit = async function () {
         .replaceAll("<", "&lt;")
         .replaceAll(">", "&gt;")
         .replaceAll('"', "&quot;")
-        .replaceAll("\n", "<br>")
-        .replaceAll("\r", "")
-        .replaceAll("\\", "\\\\")
-        .replaceAll("'", "\\'");
 
       // Generate the player list
       let playersString = "";
@@ -79,7 +75,7 @@ var lobbyListInit = async function () {
     <p class="lobby-name">${safeName}</p>
     <p class="lobby-description">${modeString} - ${lobby.players.length} player${lobby.players.length === 1 ? "" : "s"}</p>
     <div class="lobby-players">${playersString}</div>
-    <button class="lobby-button" onclick='joinLobby("${encodeURIComponent(name)}")'>Join Lobby</button>
+    <button class="lobby-button" onclick="joinLobby(\`${encodeURIComponent(name)}\`)">Join Lobby</button>
   </div>
       `;
 

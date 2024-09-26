@@ -260,14 +260,6 @@ async function lobbyInit () {
   // Fetch the lobby data
   const encodedName = window.location.href.split("#")[1];
   const name = decodeURIComponent(encodedName);
-  const safeName = name.replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("\n", "<br>")
-    .replaceAll("\r", "")
-    .replaceAll("\\", "\\\\")
-    .replaceAll("'", "\\'");
 
   users = await (await fetch("/api/users/get")).json();
   lobby = await (await fetch(`/api/lobbies/get/${encodedName}`)).json();
@@ -282,7 +274,7 @@ async function lobbyInit () {
     default: modeString = "Unknown"; break;
   }
 
-  lobbyNameText.innerHTML = safeName;
+  lobbyNameText.textContent = name;
   lobbyModeText.innerHTML = "&nbsp;- " + modeString;
 
   // Update the player list and map display
