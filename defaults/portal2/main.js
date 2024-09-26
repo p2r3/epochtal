@@ -13,6 +13,7 @@ let ws = null;
 
 let checkmapBlock = false;
 let checkmapExpect = "";
+let checkmapLink = "";
 let menuSession = false;
 
 // Generates a random 4 digit code
@@ -35,8 +36,9 @@ function wsMessageHandler (event) {
     }
     case "cmd": return SendToConsole(data.value);
     case "ping": return ws.send(JSON.stringify({ type: "pong" }));
-    case "checkMap": {
-      checkmapExpect = data.value;
+    case "getMap": {
+      checkmapExpect = data.value.file;
+      checkmapLink = data.value.link;
       SendToConsole("echo [CheckMapStart];sar_workshop_list;echo [CheckMapEnd]");
       return;
     }
@@ -86,6 +88,33 @@ function wsSetup (token) {
 
 }
 
+// Downloads a map from the workshop, given a link and output path
+async function downloadMap (link, file) {
+
+  try {
+
+    // Indicate start of download procedure with response code 0
+    ws.send(JSON.stringify({ type: "getMap", value: 0 }));
+
+    const request = await fetch(link);
+    const buffer = Buffer.from(await request.arrayBuffer());
+
+    fs.mkdir(`maps/workshop/${file.split("/")[1]}`);
+    fs.write(`maps/${file}.bsp`, buffer);
+
+    // If the procedure was successful, respond with 1
+    ws.send(JSON.stringify({ type: "getMap", value: 1 }));
+
+  } catch (e) {
+
+    // If the procedure was unsuccessful, respond with -1
+    ws.send(JSON.stringify({ type: "getMap", value: -1 }));
+    log.append(e.toString());
+
+  }
+
+}
+
 // Handle console output
 onConsoleOutput(async function (data) {
 
@@ -110,13 +139,13 @@ onConsoleOutput(async function (data) {
       // If we've reached the end of the block, the map wasn't found
       if (lines[i].startsWith("[CheckMapEnd]")) {
         checkmapBlock = false;
-        ws.send(JSON.stringify({ type: "checkMap", value: false }));
+        downloadMap(checkmapLink, checkmapExpect);
         continue;
       }
 
       // If we found the map, report success and stop checking early
       if ("workshop/" + lines[i] === checkmapExpect) {
-        ws.send(JSON.stringify({ type: "checkMap", value: true }));
+        ws.send(JSON.stringify({ type: "getMap", value: 1 }));
         checkmapBlock = false;
       }
 

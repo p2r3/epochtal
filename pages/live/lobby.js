@@ -79,7 +79,7 @@ async function updateLobbyMap () {
   // Display the map thumbnail and title
   lobbyMapContainer.innerHTML = `
     <a href="https://steamcommunity.com/sharedfiles/filedetails/?id=${lobbyMap.id}" target="_blank">
-      <img class="votes-image" alt="thumbnail" src="https://steamuserimages-a.akamaihd.net/ugc/${lobbyMap.thumbnail}?impolicy=Letterbox&imw=640&imh=360">
+      <img class="votes-image" alt="thumbnail" src="${lobbyMap.thumbnail}?impolicy=Letterbox&imw=640&imh=360">
       <p class="votes-text">
         ${lobbyMap.title}<br>
         <i class="font-light">by ${lobbyMap.author}</i>
@@ -184,6 +184,27 @@ async function lobbyEventHandler (event) {
 
       leaderboard.push(run);
 
+      return;
+    }
+
+    case "lobby_start": {
+
+      // Handle game starting
+      setTimeout(function () {
+        showPopup("Game starting", "Everyone is ready. The game will now start.");
+      }, 1000);
+
+      return;
+    }
+
+    case "lobby_download_start": {
+
+      // Handle a player starting to download the map
+      // Currently only relevant to the player downloading the map
+      if (data.steamid !== whoami.steamid) return;
+
+      window.downloadingMap = true;
+      showPopup("Download started", "The map is now being downloaded. You will be set as \"ready\" once the download finishes. Do not close your game or exit the lobby.");
       return;
     }
 
@@ -411,6 +432,7 @@ async function lobbyInit () {
 
   }
 
+  window.downloadingMap = false;
   window.toggleReadyState = async function () {
 
     // If no map is selected, throw early
@@ -437,7 +459,10 @@ async function lobbyInit () {
     }
 
     switch (requestData) {
-      case "SUCCESS": return;
+      case "SUCCESS": {
+        if (window.downloadingMap) showPopup("Download finished", "The map has been downloaded. You have been marked as ready.");
+        return;
+      }
 
       case "ERR_LOGIN": return showPopup("Not logged in", "Please log in via Steam before editing lobby details.", POPUP_ERROR);
       case "ERR_STEAMID": return showPopup("Unrecognized user", "Your SteamID is not present in the users database. WTF?", POPUP_ERROR);
@@ -445,7 +470,7 @@ async function lobbyInit () {
       case "ERR_PERMS": return showPopup("Permission denied", "You do not have permission to perform this action.", POPUP_ERROR);
       case "ERR_GAMEAUTH": return showPopup("Game not connected", `You have not authenticated your Portal 2 game client. Start the Spplice package, <a href="javascript:copyEventToken()">click here</a> to copy your lobby token, then paste that into your console and try again.`, POPUP_ERROR);
       case "ERR_TIMEOUT": return showPopup("Game client timeout", "Timed out while waiting for a response from your game client. Try reconnecting?", POPUP_ERROR);
-      case "ERR_MAP": return showPopup("Map not found", "Please download the lobby map by subscribing to it on the workshop.", POPUP_ERROR);
+      case "ERR_MAP": return showPopup("Failed to get map", "An error occurred while automatically downloading the map. Please try subscribing to it on the workshop instead.", POPUP_ERROR);
       case "ERR_NOMAP": return showPopup("No map selected", "Please select a map for the lobby.", POPUP_ERROR);
       case "ERR_INGAME": return showPopup("Game started", "The game has started, you cannot change your ready state.", POPUP_ERROR);
 
