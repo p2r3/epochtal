@@ -175,7 +175,6 @@ function createLobbyPopup () {
         case "ERR_LOGIN": return showPopup("Not logged in", "Please log in via Steam before joining a lobby.", POPUP_ERROR);
         case "ERR_STEAMID": return showPopup("Unrecognized user", "Your SteamID is not present in the users database. WTF?", POPUP_ERROR);
         case "ERR_NAME": return showPopup("Invalid lobby name", "Please keep the lobby name to 50 characters or less.", POPUP_ERROR);
-        case "ERR_EXISTS": return showPopup("Lobby name taken", "A lobby with this name already exists.", POPUP_ERROR);
 
         default: {
           if (data.startsWith("SUCCESS ")) return window.location.href = `/live/lobby/#${data.split("SUCCESS ")[1]}`;
@@ -212,13 +211,12 @@ async function joinLobby (lobbyid) {
       const data = await request.json();
       switch (data) {
 
-        case "ERR_EXISTS":
         case "SUCCESS":
           return window.location.href = `/live/lobby/#${lobbyid}`;
 
         case "ERR_LOGIN": return showPopup("Not logged in", "Please log in via Steam before joining a lobby.", POPUP_ERROR);
         case "ERR_STEAMID": return showPopup("Unrecognized user", "Your SteamID is not present in the users database. WTF?", POPUP_ERROR);
-        case "ERR_NAME": return showPopup("Lobby not found", "An open lobby with this name does not exist.", POPUP_ERROR);
+        case "ERR_LOBBYID": return showPopup("Lobby not found", "An open lobby with this ID does not exist.", POPUP_ERROR);
         case "ERR_PASSWORD": return showPopup("Incorrect password", "The password you provided was not correct. (But you didn't provide a password??)", POPUP_ERROR);
 
         default: return showPopup("Unknown error", "The server returned an unexpected response: " + data, POPUP_ERROR);
@@ -249,13 +247,12 @@ async function joinLobby (lobbyid) {
       const data = await request.json();
       switch (data) {
 
-        case "ERR_EXISTS":
         case "SUCCESS":
           return window.open(`/live/lobby/#${lobbyid}`);
 
         case "ERR_LOGIN": return showPopup("Not logged in", "Please log in via Steam before joining a lobby.", POPUP_ERROR);
         case "ERR_STEAMID": return showPopup("Unrecognized user", "Your SteamID is not present in the users database. WTF?", POPUP_ERROR);
-        case "ERR_NAME": return showPopup("Lobby not found", "An open lobby with this name does not exist.", POPUP_ERROR);
+        case "ERR_LOBBYID": return showPopup("Lobby not found", "An open lobby with this ID does not exist.", POPUP_ERROR);
         case "ERR_PASSWORD": return showPopup("Incorrect password", "The password you provided was not correct.", POPUP_ERROR);
 
         default: return showPopup("Unknown error", "The server returned an unexpected response: " + data, POPUP_ERROR);
