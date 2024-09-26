@@ -234,6 +234,23 @@ module.exports = async function (args, context = epochtal) {
       // Create the lobby creation event
       await events(["create", "lobby_" + cleanName, auth, message, null, disconnect], context);
 
+      // Broadcast a heartbeat ping every 30 seconds
+      let lobbyHeartbeat;
+      lobbyHeartbeat = setInterval(async function () {
+
+        let lobbyName = null;
+        for (const name in lobbies.list) {
+          if (lobbies.list[name] === listEntry) {
+            lobbyName = name;
+            break;
+          }
+        }
+        if (!lobbyName) return clearInterval(lobbyHeartbeat);
+
+        await events(["send", "lobby_" + lobbyName, { type: "ping" }], context);
+
+      }, 30000);
+
       return "SUCCESS";
 
     }
