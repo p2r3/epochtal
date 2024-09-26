@@ -16,7 +16,16 @@ async function updatePlayerList () {
   for (let i = 0; i < lobby.listEntry.players.length; i ++) {
 
     const steamid = lobby.listEntry.players[i];
-    const user = users[steamid];
+    let user = users[steamid];
+
+    // If we can't find this user, they might have registered after we joined
+    // In that case, re-fetch the user list
+    if (user === undefined) {
+      users = await (await fetch("/api/users/get")).json();
+      user = users[steamid]; // Try to retrieve the user again
+      // If this user still don't exist, skip them
+      if (user === undefined) continue;
+    }
 
     const username = user.name.replaceAll("<", "&lt;")
       .replaceAll(">", "&gt;")
