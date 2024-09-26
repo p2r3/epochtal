@@ -221,6 +221,10 @@ async function lobbyEventHandler (event) {
 
       }, 1000);
 
+      // Clear previous run times from player list
+      lobby.data.context.leaderboard[lobby.listEntry.mode] = [];
+      updatePlayerList();
+
       return;
     }
 
