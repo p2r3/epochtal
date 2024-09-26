@@ -139,7 +139,10 @@ module.exports = async function (args, context = epochtal) {
           // Distinguishes browser clients from game clients
           // Game clients are expected to send this right after authenticating
           case "isGame": {
+            // Link the socket to the player data
             dataEntry.players[steamid].gameSocket = ws;
+            // Broadcast game client join to all lobby clients
+            await events(["send", "lobby_" + lobbyName, { type: "lobby_join_game", steamid }], context);
             return;
           }
 
