@@ -204,7 +204,7 @@ async function lobbyEventHandler (event) {
       if (data.steamid !== whoami.steamid) return;
 
       window.downloadingMap = true;
-      showPopup("Download started", "The map is now being downloaded. You will be set as \"ready\" once the download finishes. Do not close your game or exit the lobby.");
+      showPopup("Download started", "The map is now being downloaded.");
       return;
     }
 
