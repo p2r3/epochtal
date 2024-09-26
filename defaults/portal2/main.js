@@ -10,10 +10,6 @@ let input = "";
 let pongIgnore = 0;
 
 let ws = null;
-
-let checkmapBlock = false;
-let checkmapExpect = "";
-let checkmapLink = "";
 let menuSession = false;
 
 // Generates a random 4 digit code
@@ -37,9 +33,11 @@ function wsMessageHandler (event) {
     case "cmd": return SendToConsole(data.value);
     case "ping": return ws.send(JSON.stringify({ type: "pong" }));
     case "getMap": {
-      checkmapExpect = data.value.file;
-      checkmapLink = data.value.link;
-      SendToConsole("echo [CheckMapStart];sar_workshop_list;echo [CheckMapEnd]");
+      if (pathExists(data.value.file)) {
+        ws.send(JSON.stringify({ type: "getMap", value: 1 }));
+      } else {
+        downloadMap(data.value.link, data.value.file);
+      }
       return;
     }
     case "lobby_start" : {
@@ -88,6 +86,16 @@ function wsSetup (token) {
 
 }
 
+// Workaround for lack of fs.exists in Spplice 2's JS API
+function pathExists (path) {
+  try {
+    fs.rename(path, path);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
 // Downloads a map from the workshop, given a link and output path
 async function downloadMap (link, file) {
 
@@ -99,7 +107,8 @@ async function downloadMap (link, file) {
     const request = await fetch(link);
     const buffer = Buffer.from(await request.arrayBuffer());
 
-    fs.mkdir(`maps/workshop/${file.split("/")[1]}`);
+    const workshopPath = `maps/workshop/${file.split("/")[1]}`;
+    if (!pathExists(workshopPath)) fs.mkdir(workshopPath);
     fs.write(`maps/${file}.bsp`, buffer);
 
     // If the procedure was successful, respond with 1
@@ -127,30 +136,6 @@ onConsoleOutput(async function (data) {
 
   // Iterate over each completed new line
   for (let i = 0; i < lines.length; i ++) {
-
-    // Listen for sar_workshop_list blocks requested by the WebSocket
-    if (lines[i].startsWith("[CheckMapStart]")) {
-      checkmapBlock = true;
-      continue;
-    }
-
-    if (checkmapBlock) {
-
-      // If we've reached the end of the block, the map wasn't found
-      if (lines[i].startsWith("[CheckMapEnd]")) {
-        checkmapBlock = false;
-        downloadMap(checkmapLink, checkmapExpect);
-        continue;
-      }
-
-      // If we found the map, report success and stop checking early
-      if ("workshop/" + lines[i] === checkmapExpect) {
-        ws.send(JSON.stringify({ type: "getMap", value: 1 }));
-        checkmapBlock = false;
-      }
-
-      continue;
-    }
 
     // Relay commands to the game
     if (lines[i].startsWith("[SendToConsole] ")) {
