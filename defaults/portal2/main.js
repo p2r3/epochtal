@@ -55,7 +55,15 @@ function wsSetup (token) {
   const protocol = SERVER_ADDRESS.startsWith("https:") ? "wss" : "ws";
   const hostname = SERVER_ADDRESS.split("://")[1].split("/")[0];
 
-  if (ws) ws.close();
+  if (ws) {
+    ws.addEventListener("close", () => {
+      ws = null;
+      wsSetup(token);
+    });
+    ws.close();
+    return;
+  }
+
   ws = new WebSocket(`${protocol}://${hostname}/api/events/connect`);
 
   ws.addEventListener("message", wsMessageHandler);
@@ -66,9 +74,10 @@ function wsSetup (token) {
 
   ws.addEventListener("close", (event) => {
     ws = null;
+    SendToConsole("echo \"\"");
     SendToConsole("echo WebSocket connection closed.");
     if (event.reason === "ERR_TOKEN") {
-      SendToConsole("echo");
+      SendToConsole("echo \"\"");
       SendToConsole("echo The token you provided was invalid.");
       SendToConsole("echo It most likely expired, as tokens are only valid for 30 seconds after being issued.");
       SendToConsole("echo Please try again with a new token obtained through the New Token button at the top of the lobby window.");

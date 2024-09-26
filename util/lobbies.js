@@ -172,7 +172,12 @@ module.exports = async function (args, context = epochtal) {
           return;
         }
 
-        // If this is a browser client, remove the player from the lobby
+        // Disconnect the connected game client (if any) for this player
+        if (dataEntry.players[steamid].gameSocket) {
+          dataEntry.players[steamid].gameSocket.close(1001, "LOBBY_LEAVE");
+        }
+
+        // Remove the player from the lobby
         const index = listEntry.players.indexOf(steamid);
         if (index !== -1) listEntry.players.splice(index, 1);
         delete dataEntry.players[steamid];
