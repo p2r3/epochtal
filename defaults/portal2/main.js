@@ -33,7 +33,7 @@ function wsMessageHandler (event) {
     case "cmd": return SendToConsole(data.value);
     case "ping": return ws.send(JSON.stringify({ type: "pong" }));
     case "getMap": {
-      if (pathExists(data.value.file)) {
+      if (pathExists(`maps/${file}.bsp`)) {
         ws.send(JSON.stringify({ type: "getMap", value: 1 }));
       } else {
         downloadMap(data.value.link, data.value.file);
