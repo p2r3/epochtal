@@ -152,6 +152,7 @@ async function lobbyEventHandler (event) {
       if (!lobby.listEntry.players.includes(steamid)) {
         lobby.listEntry.players.push(steamid);
       }
+      lobby.data.players[steamid] = {};
       updatePlayerList();
 
       return;
