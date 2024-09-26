@@ -204,6 +204,19 @@ async function lobbyEventHandler (event) {
         showPopup("Game starting", "Everyone is ready. The game will now start.");
       }, 1000);
 
+      // Hide the popup after 5 seconds
+      const startPopupTimeout = setTimeout(function () {
+        hidePopup();
+      }, 5000);
+
+      // Prevent other popups getting hidden by this
+      const oldShowPopup = showPopup;
+      showPopup = function (title, text, type = POPUP_INFO, hasCancel = false) {
+        clearTimeout(startPopupTimeout);
+        showPopup = oldShowPopup;
+        showPopup(title, text, type, hasCancel);
+      };
+
       return;
     }
 
