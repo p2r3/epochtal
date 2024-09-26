@@ -6,78 +6,8 @@ const demo = require("../util/demo.js");
 const discord = require("../util/discord.js");
 const leaderboard = require("../util/leaderboard.js");
 const categories = require("../util/categories.js");
-const config = require("../util/config.js");
-const users = require("../util/users.js");
 
 const api_users = require("./users.js");
-
-/**
- * Converts ticks to a string format.
- *
- * @param {int} t Ticks
- * @returns {string} The formatted time string
- */
-function ticksToString (t) {
-
-  // Convert ticks to hours, minutes, and seconds
-  let output = "";
-  const hrs = Math.floor(t / 216000),
-    min = Math.floor(t / 3600),
-    sec = t % 3600 / 60;
-
-  // Format the time string
-  if (hrs !== 0) output += `${hrs}:${min % 60 < 10 ? "0" : ""}${min % 60}:`;
-  else if (min !== 0) output += `${min}:`;
-  if (sec < 10) output += "0";
-  output += sec.toFixed(3);
-
-  return output;
-
-}
-
-/**
- * Pushes a run update to the discord.
- *
- * @param {string} steamid Steam user id
- * @param {string} category Category name
- */
-async function discordUpdate (steamid, category) {
-
-  const currBoard = await leaderboard(["get", category]);
-  const currCategory = await categories(["get", category]);
-
-  const run = currBoard.find(c => c.steamid === steamid);
-  const user = await users(["get", steamid]);
-  const time = ticksToString(run.time);
-
-  let emoji = "🎲";
-  let output = `**${user.name}**`;
-
-  if (currCategory.coop) {
-    const partners = await config(["get", "partners"]);
-    const partner = await users(["get", partners[steamid]]);
-    output += ` and **${partner.name}**`;
-  }
-
-  output += ` submitted a new run to "${currCategory.title}" with a time of \`${time}\``;
-
-  if (currCategory.portals) {
-    const label = currCategory.portals === true ? "portal" : currCategory.portals;
-    output += ` (${run.portals} ${label}${run.portals === 1 ? "" : "s"})`;
-  }
-
-  if (currCategory.points) {
-    const suffix = ["st","nd","rd"][((run.placement + 90) % 100 - 10) % 10 - 1] || "th";
-    output += ` in ${run.placement}${suffix} place`;
-  }
-
-  if (currCategory.coop) emoji = "👥";
-  else if (currCategory.portals) emoji = "📉";
-  else if (currCategory.points) emoji = "🏁";
-
-  await discord(["update", `${emoji} ${output}.`]);
-
-}
 
 /**
  * Handles `/api/leaderboard/` endpoint requests. This endpoint supports the following commands:
@@ -214,6 +144,11 @@ module.exports = async function (args, request) {
         return "ERR_NOPARTNER";
       }
 
+      // Try to get the user's existing run
+      const currBoard = await leaderboard(["get", category]);
+      const currRun = currBoard.find(run => run.steamid === user.steamid);
+      const improvement = currRun ? (data.time - currRun.time) : null;
+
       // Try to add the run to the leaderboard
       try {
         await leaderboard(["add", category, data.steamid, data.time, note, data.portals, false]);
@@ -228,7 +163,7 @@ module.exports = async function (args, request) {
       await $`xz -zf9e ${newPath}`.quiet();
 
       // Push the run to the discord
-      discordUpdate(user.steamid, categoryData.name);
+      await discord(["update", categoryData.name, user.steamid, improvement]);
 
       // Return the run data to the user
       return data;
@@ -268,7 +203,7 @@ module.exports = async function (args, request) {
       await Bun.write(newPath, link);
 
       // Push the run to the discord
-      discordUpdate(user.steamid, categoryData.name);
+      await discord(["update", categoryData.name, user.steamid, null]);
 
       // Return the run data to the user
       return data;
