@@ -54,16 +54,9 @@ module.exports = async function (args, context = epochtal) {
       const buffer = await response.arrayBuffer();
 
       // Render map release image
-      const image = await render(
-        buffer,
-        context.data.week.map.title,
-        context.data.week.map.author,
-        context.data.week.map.upvotes,
-        context.data.week.map.downvotes
-      );
-
+      const image = await renderLeaderboard();
       const imagePath = (await tmppath()) + ".png";
-      Bun.write(imagePath, image);
+      await Bun.write(imagePath, image);
 
       // Send the image to the discord server
       try {
@@ -101,32 +94,27 @@ module.exports = async function (args, context = epochtal) {
  * Draw a rounded box on the canvas
  *
  * @author PancakeTAS
- * @param {CanvasKit} CK CanvasKit
- * @param {Canvas} canvas CanvasKit canvas
- * @param {Paint} paint Paint object
- * @param {Number} x X
- * @param {Number} y Y
- * @param {Number} width Width
- * @param {Number} height Height
+ * @param {Object} ctx Rendering context
+ * @param {Number} rect Rectangle to draw
  * @param {Number} radius Radius of the corners
  * @param {Number} stroke Border stroke width
  * @param {Number} fill Box fill color
  * @param {Number} border Border color
  */
-function drawRoundedBox(CK, canvas, paint, x, y, width, height, radius, stroke, fill, border) {
+function drawRoundedBox(ctx, rect, radius, stroke, fill, border) {
 
   // Fill the box
-  paint.setStyle(CK.PaintStyle.Fill);
-  paint.setColor(fill);
+  ctx.paint.setStyle(ctx.CK.PaintStyle.Fill);
+  ctx.paint.setColor(fill);
 
-  canvas.drawRRect(CK.RRectXY(CK.XYWHRect(x, y, width, height), radius, radius), paint);
+  ctx.canvas.drawRRect(ctx.CK.RRectXY(ctx.CK.XYWHRect(rect.x, rect.y, rect.width, rect.height), radius, radius), ctx.paint);
 
   // Draw the border
-  paint.setStyle(CK.PaintStyle.Stroke);
-  paint.setStrokeWidth(stroke);
-  paint.setColor(border);
+  ctx.paint.setStyle(ctx.CK.PaintStyle.Stroke);
+  ctx.paint.setStrokeWidth(stroke);
+  ctx.paint.setColor(border);
 
-  canvas.drawRRect(CK.RRectXY(CK.XYWHRect(x, y, width, height), radius, radius), paint);
+  ctx.canvas.drawRRect(ctx.CK.RRectXY(ctx.CK.XYWHRect(rect.x, rect.y, rect.width, rect.height), radius, radius), ctx.paint);
 
 }
 
@@ -134,38 +122,54 @@ function drawRoundedBox(CK, canvas, paint, x, y, width, height, radius, stroke, 
  * Draw an image with rounded corners on the canvas
  *
  * @author PancakeTAS
- * @param {CanvasKit} CK CanvasKit
- * @param {Canvas} canvas CanvasKit canvas
- * @param {Paint} paint Paint object
+ * @param {Object} ctx Rendering context
+ * @param {Number} rect Rectangle to draw
  * @param {Image} image Image to draw
- * @param {Number} x X
- * @param {Number} y Y
- * @param {Number} width Width
- * @param {Number} height Height
  * @param {Number} radius Radius of the corners
  */
-function drawRoundedImage(CK, canvas, paint, image, x, y, width, height, radius) {
+function drawRoundedImage(ctx, rect, image, radius) {
 
-  paint.setStyle(CK.PaintStyle.Fill);
+  ctx.paint.setStyle(ctx.CK.PaintStyle.Fill);
 
   // Mask the image with a rounded rectangle
-  const path = new CK.Path();
-  path.addRRect(CK.RRectXY(CK.XYWHRect(x, y, width, height), radius, radius));
+  const path = new ctx.CK.Path();
+  path.addRRect(ctx.CK.RRectXY(ctx.CK.XYWHRect(rect.x, rect.y, rect.width, rect.height), radius, radius));
 
-  canvas.save(); // push canvas state
-  canvas.clipPath(path, CK.ClipOp.Intersect, true);
+  ctx.canvas.save(); // push canvas state
+  ctx.canvas.clipPath(path, ctx.CK.ClipOp.Intersect, true);
 
   // Draw the image
-  canvas.drawImageRectOptions(
+  ctx.canvas.drawImageRectOptions(
     image,
-    CK.XYWHRect(0, 0, image.width(), image.height()),
-    CK.XYWHRect(x, y, width, height),
-    CK.FilterMode.Linear, CK.MipmapMode.Linear,
-    paint
+    ctx.CK.XYWHRect(0, 0, image.width(), image.height()),
+    ctx.CK.XYWHRect(rect.x, rect.y, rect.width, rect.height),
+    ctx.CK.FilterMode.Linear, ctx.CK.MipmapMode.Linear,
+    ctx.paint
   );
 
-  canvas.restore(); // pop canvas state
+  ctx.canvas.restore(); // pop canvas state
 
+}
+
+/**
+ * Get the font style for the canvas
+ *
+ * @author PancakeTAS
+ * @param {Object} ctx Rendering context
+ * @param {Number} fontSize Size of the font
+ * @param {Number} color Color of the font
+ * @param {Number} weight Weight of the font
+ * @param {Number} width Width of the font
+ * @param {Number} slant Slant of the font
+ * @returns {Object} Font style
+ */
+function getFontStyle(ctx, fontSize, color, weight = ctx.CK.FontWeight.Normal, width = ctx.CK.FontWeight.Normal, slant = ctx.CK.FontSlant.Normal) {
+  return new ctx.CK.TextStyle({
+    color,
+    fontFamilies: ['Quicksand'],
+    fontSize,
+    fontStyle: { weight, width, slant }
+  });
 }
 
 /**
@@ -179,7 +183,7 @@ function drawRoundedImage(CK, canvas, paint, image, x, y, width, height, radius)
  * @param {number} downvotes The number of downvotes
  * @returns {string} Base64 encoded png image
  */
-async function render(thumbnailData, title, author, upvotes, downvotes) {
+/*async function renderMapRelease(thumbnailData, title, author, upvotes, downvotes) {
 
   const CK = await CanvasKitFuture;
 
@@ -269,7 +273,7 @@ async function render(thumbnailData, title, author, upvotes, downvotes) {
   infoBuilder.addText("  ");
   IF_VOTESSTYLE.color = IF_UPVOTES_COLOR;
   infoBuilder.pushStyle(IF_VOTESSTYLE);
-  infoBuilder.addText(upvotes + " 👍")
+  infoBuilder.addText(upvotes + " 👍");
   infoBuilder.pop();
   infoBuilder.addText("  ");
   IF_VOTESSTYLE.color = IF_DOWNVOTES_COLOR;
@@ -280,6 +284,215 @@ async function render(thumbnailData, title, author, upvotes, downvotes) {
   const infoParagraph = infoBuilder.build();
   infoParagraph.layout(INNER_WIDTH * 0.7);
   canvas.drawParagraph(infoParagraph, IF_X, IF_Y);
+
+  // Save the canvas to a buffer
+  return surface.makeImageSnapshot().encodeToBytes();
+
+}*/
+
+/**
+ * Draw a card on the canvas
+ *
+ * @author PancakeTAS
+ * @param {Object} ctx Rendering context
+ * @param {Object} rect Card rectangle
+ * @param {Number} padding Padding on all sides
+ * @param {string} runnerName Name of the runner
+ * @param {Number} placementNumber Placement number
+ * @param {string} timeString Time string
+ * @param {string} deltaString Delta time string
+ * @param {string} comment Comment
+ * @param {string} arrows Arrows string
+ * @param {string} diff Difference string
+ */
+function drawCard(ctx, rect, padding,
+    runnerName, placementNumber, timeString, deltaString, comment, arrows, diff
+) {
+
+  const arrowLeftPadding = 50 / ctx.refWidth * ctx.width;
+  const diffRightPadding = 250 / ctx.refWidth * ctx.width;
+  const innerRect = {
+    x: rect.x + padding + arrowLeftPadding,
+    y: rect.y + padding,
+    width: rect.width - padding * 2 - arrowLeftPadding - diffRightPadding,
+    height: rect.height - padding * 2
+  };
+
+  // Draw card background
+  const bgColor = ctx.CK.Color(0x04, 0x04, 0x04, 0xFF);
+  const borderColor = ctx.CK.Color(0xFF, 0xFF, 0xFF, 0xFF);
+  const borderRadius = 20 / ctx.refWidth * ctx.width;
+  const borderStroke = 4 / ctx.refWidth * ctx.width;
+
+  drawRoundedBox(
+    ctx,
+    {
+      x: rect.x + borderStroke + arrowLeftPadding,
+      y: rect.y + borderStroke,
+      width: rect.width - borderStroke*2 - arrowLeftPadding - diffRightPadding,
+      height: rect.height - borderStroke*2
+    },
+    borderRadius, borderStroke,
+    bgColor, borderColor
+  );
+
+  // Draw left paragraph
+  const textColor =
+      (placementNumber == 1) ? new ctx.CK.Color(243, 214, 53, 0xFF)
+    : (placementNumber == 2) ? new ctx.CK.Color(149, 203, 225, 0xFF)
+    : (placementNumber == 3) ? new ctx.CK.Color(200, 137, 113, 0xFF)
+    : new ctx.CK.Color(220, 220, 220, 0xFF);
+  const textSize = 61 / ctx.refWidth * ctx.width;
+  const boldStyle = getFontStyle(ctx, textSize, textColor, ctx.CK.FontWeight.Bold, ctx.CK.FontWidth.Bold);
+  const normalStyle = getFontStyle(ctx, textSize, textColor);
+  const deltaStyle = getFontStyle(ctx, textSize * 0.67, ctx.CK.Color(140, 140, 140, 0xFF));
+  const paragraphBuilder = new ctx.CK.ParagraphBuilder.Make(new ctx.CK.ParagraphStyle({
+    textStyle: boldStyle,
+    color: textColor,
+    textAlign: ctx.CK.TextAlign.Left,
+    maxLines: 2
+  }), ctx.CK.FontMgr.FromData(fontData)); // FIXME: preserve fontmgr
+
+  paragraphBuilder.pushStyle(boldStyle);
+  paragraphBuilder.addText(`${runnerName}\n`);
+  paragraphBuilder.pop();
+
+  paragraphBuilder.pushStyle(normalStyle);
+  paragraphBuilder.addText(`${placementNumber + (["st","nd","rd"][((placementNumber+90)%100-10)%10-1]||"th")} place in ${timeString}`);
+  paragraphBuilder.pop();
+
+  if (deltaString) {
+
+    paragraphBuilder.pushStyle(deltaStyle);
+    paragraphBuilder.addText(` (${deltaString})`);
+    paragraphBuilder.pop();
+
+  }
+
+  const paragraph = paragraphBuilder.build();
+  paragraph.layout(innerRect.width * 0.4);
+
+  ctx.canvas.drawParagraph(paragraph, innerRect.x, innerRect.y);
+
+  // Draw comment paragraph
+  if (comment) {
+
+    const commentColor = ctx.CK.Color(240, 240, 240, 0xFF);
+    const commentStyle = getFontStyle(ctx, textSize * 0.67, commentColor, ctx.CK.FontWeight.Light, ctx.CK.FontWidth.Normal, ctx.CK.FontSlant.Italic);
+    const commentBuilder = new ctx.CK.ParagraphBuilder.Make(new ctx.CK.ParagraphStyle({
+      textStyle: commentStyle,
+      color: commentColor,
+      textAlign: ctx.CK.TextAlign.Left,
+      maxLines: 3,
+      ellipsis: "...\""
+    }), ctx.CK.FontMgr.FromData(fontData)); // FIXME: preserve fontmgr, emoji support
+
+    commentBuilder.addText(`"${comment}"`);
+
+    const commentParagraph = commentBuilder.build();
+    commentParagraph.layout(innerRect.width * 0.6);
+
+    ctx.canvas.drawParagraph(commentParagraph, innerRect.x + (innerRect.width * 0.4), innerRect.y);
+
+  }
+
+  // Draw arrows paragraph
+  if (arrows) {
+
+    const arrowsColor = (arrows === "up") ? ctx.CK.Color(23, 192, 233, 0xFF) : ctx.CK.Color(242, 73, 32, 0xFF);
+    const arrowsSize = 45 / ctx.refWidth * ctx.width;
+    const arrowsStyle = getFontStyle(ctx, arrowsSize, arrowsColor);
+    const arrowsBuilder = new ctx.CK.ParagraphBuilder.Make(new ctx.CK.ParagraphStyle({
+      textStyle: arrowsStyle,
+      color: arrowsColor,
+      textAlign: ctx.CK.TextAlign.Left,
+      maxLines: 4
+    }), ctx.CK.FontMgr.FromData(emojisData)); // FIXME: preserve fontmgr
+
+    arrowsBuilder.addText(arrows === "up" ? "\uf0d8\n".repeat(4) : "\uf0d7\n".repeat(4));
+
+    const arrowsParagraph = arrowsBuilder.build();
+    arrowsParagraph.layout(arrowLeftPadding);
+
+    const arrowsHeight = arrowsParagraph.getHeight();
+    ctx.canvas.drawParagraph(arrowsParagraph, rect.x, rect.y + (rect.height / 2) - (arrowsHeight / 2));
+
+  }
+
+  // Draw diff paragraph
+  if (diff) {
+
+    const diffColor = getFontStyle(ctx, textSize * 0.8, ctx.CK.Color(0xFF, 0xFF, 0xFF, 0xFF));
+    const diffBuilder = new ctx.CK.ParagraphBuilder.Make(new ctx.CK.ParagraphStyle({
+      textStyle: diffColor,
+      color: ctx.CK.Color(240, 240, 240, 0xFF),
+      textAlign: ctx.CK.TextAlign.Left,
+      maxLines: 1
+    }), ctx.CK.FontMgr.FromData(fontData)); // FIXME: preserve fontmgr
+
+    diffBuilder.addText(diff);
+
+    const diffParagraph = diffBuilder.build();
+    diffParagraph.layout(diffRightPadding);
+
+    const diffHeight = diffParagraph.getHeight();
+    ctx.canvas.drawParagraph(diffParagraph, rect.x + rect.width - diffRightPadding + (20 / ctx.refWidth * ctx.width), rect.y + (rect.height / 2) - (diffHeight / 2));
+
+  }
+
+}
+
+async function renderLeaderboard() {
+
+  const CK = await CanvasKitFuture;
+  const refWidth = 2000; // reference width on which all numbers are based
+  const width = 1600; // desired width of the image
+
+  const playersAbove = 1; // amount of player cards above/below the submitter
+  const playersBelow = 1;
+  const playersTotal = playersAbove + playersBelow + 1; // total amount of rendered player cards
+
+  const cardGap = 35 / refWidth * width; // gap between player cards
+  const cardPadding = 33.2 / refWidth * width; // padding on all outer sides of a card // FIXME: holy shit 33.2 pixels how the fuck
+  const cardHeight = 226 / refWidth * width; // width/height of a card including padding // FIXME: this should include the padding
+  const cardWidth = width;
+
+  const height = (playersTotal * cardHeight) + ((playersTotal - 1) * cardGap);
+
+  const surface = CK.MakeSurface(width, height);
+  const canvas = surface.getCanvas();
+  const paint = new CK.Paint();
+  paint.setAntiAlias(true);
+
+  const ctx = {
+    CK, surface, canvas, paint,
+    refWidth, width, height
+  };
+  console.log(ctx);
+
+  // Draw player cards
+  const obnoxiouslyLongRunComment = "The mitochondrion is often referred to as the powerhouse of the cell. This is because mitochondria are responsible for producing the energy currency of the cell, ATP (adenosine triphosphate), through a process known as oxidative phosphorylation. Mitochondria are unique organelles within eukaryotic cells that have their own DNA and are capable of replicating independently of the cell in which they reside. The structure of mitochondria includes an outer membrane, an intermembrane space, an inner membrane, and a matrix. The inner membrane is highly folded into structures known as cristae, which increase the surface area available for the electron transport chain and ATP synthesis. The matrix contains enzymes that are involved in the Krebs cycle, also known as the citric acid cycle, which is a key component of cellular respiration. The energy produced by mitochondria is essential for various cellular functions, including muscle contraction, nerve impulse propagation, and chemical synthesis. Without mitochondria, cells would not be able to generate sufficient energy to sustain life. The study of mitochondria has also revealed their role in other cellular processes such as apoptosis (programmed cell death), calcium signaling, and the regulation of the cellular redox state. Mitochondrial dysfunction has been implicated in a variety of diseases, including neurodegenerative disorders, metabolic syndromes, and cardiovascular diseases. Research into mitochondrial biology continues to be a vibrant and important field, with implications for understanding fundamental cellular processes and developing therapeutic strategies for a range of diseases.";
+
+  let y = 0;
+  for (let i = 0; i < playersAbove; i++) {
+    drawCard(
+      ctx, { x: 0, y, width: cardWidth, height: cardHeight }, cardPadding,
+      "Burger40", (i+1+2), "1.133", null, "i am good at portal 2", "up", "-1.000"
+    );
+    y += cardHeight + cardGap;
+  }
+  drawCard(
+    ctx, { x: 0, y, width: cardWidth, height: cardHeight }, cardPadding,
+    "PancakeTAS", 2+2, "2.133", "-0.100", obnoxiouslyLongRunComment, null
+  );
+  y += cardHeight + cardGap;
+  for (let i = 0; i < playersBelow; i++) {
+    drawCard(
+      ctx, { x: 0, y, width: cardWidth, height: cardHeight }, cardPadding,
+      "PortalRunner", (i+1+playersAbove+1+2), "8.133", null, null, "down", "+499.000"
+    );
+    y += cardHeight + cardGap;
+  }
 
   // Save the canvas to a buffer
   return surface.makeImageSnapshot().encodeToBytes();
