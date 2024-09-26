@@ -208,6 +208,16 @@ async function lobbyEventHandler (event) {
       return;
     }
 
+    case "lobby_download_end": {
+
+      // Handle a player finishing the map download
+      // Currently only relevant to the player downloading the map
+      if (data.steamid !== whoami.steamid) return;
+      window.downloadingMap = false;
+
+      return;
+    }
+
   }
 
 }
