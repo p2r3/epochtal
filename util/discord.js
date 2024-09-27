@@ -65,16 +65,14 @@ module.exports = async function (args, context = epochtal) {
 
     }
 
-    case "releasemap": {
+    case "releaseMap": {
 
-      // TODO
-
-      // Parse the content and files from the arguments
-      /*const content = Array.isArray(args[2]) ? args[1] : args.slice(1).join(" ");
-      const files = Array.isArray(args[2]) ? args[2] : [];
+      // Get message content from args
+      const [content] = args.slice(1);
 
       // Download map thumbnail
-      let thumbnail = context.data.week.map.thumbnail;
+      const map = context.data.week.map;
+      let thumbnail = map.thumbnail;
       if (!thumbnail.startsWith("http")) {
         thumbnail = `https://steamuserimages-a.akamaihd.net/ugc/${thumbnail}?impolicy=Letterbox&imh=360`;
       }
@@ -83,17 +81,17 @@ module.exports = async function (args, context = epochtal) {
       const buffer = await response.arrayBuffer();
 
       // Render map release image
-      const image = await renderLeaderboard();
+      const image = await renderMapReleaseAttachment(buffer, map);
       const imagePath = (await tmppath()) + ".png";
       await Bun.write(imagePath, image);
 
       // Send the image to the discord server
       try {
-        files.push({ attachment: imagePath, name: "maprelease.png" });
+        const files = [{ attachment: imagePath, name: "leaderboard.png" }];
         await discordClient.channels.cache.get(context.data.discord.announce).send({ content, files });
       } finally {
         fs.unlinkSync(imagePath);
-      }*/
+      }
 
       return "SUCCESS";
 
@@ -150,6 +148,7 @@ module.exports = async function (args, context = epochtal) {
 /**
  * Render the image attachement for a run update message
  *
+ * @author PancakeTAS
  * @param {String} runner Runner who submitted the run
  * @param {Object} category Category of the run
  * @param {Object} run Run data
@@ -158,6 +157,7 @@ module.exports = async function (args, context = epochtal) {
  * @param {String} fasterUser Faster run user name
  * @param {String} slowerRun Slower run data (or null)
  * @param {String} slowerUser Slower run user name
+ * @returns {Blob} Image data
  */
 async function renderUpdateAttachment(runner, category, run, improvement, fasterRun, fasterUser, slowerRun, slowerUser) {
 
@@ -168,7 +168,7 @@ async function renderUpdateAttachment(runner, category, run, improvement, faster
   const width = 1600; // desired width of the image
 
   const cardGap = 10 / refWidth * width; // gap above and below player cards
-  const cardPadding = 33.2 / refWidth * width; // padding on all outer sides of a card // FIXME: holy
+  const cardPadding = 33 / refWidth * width; // padding on all outer sides of a card
   const cardHeight = 226 / refWidth * width; // width/height of a card including padding
   const cardWidth = width;
 
@@ -179,10 +179,11 @@ async function renderUpdateAttachment(runner, category, run, improvement, faster
   const surface = CK.MakeSurface(width, height);
   const canvas = surface.getCanvas();
   const paint = new CK.Paint();
+  const fontmgr = CK.FontMgr.FromData(emojisData, fontData);
   paint.setAntiAlias(true);
 
   const ctx = {
-    CK, surface, canvas, paint,
+    CK, surface, canvas, paint, fontmgr,
     refWidth, width, height
   };
 
@@ -215,7 +216,7 @@ async function renderUpdateAttachment(runner, category, run, improvement, faster
     }
 
     const style = getFontStyle(ctx, deltaSize, color, ctx.CK.FontWeight.Bold, ctx.CK.FontWidth.Bold);
-    headerHeight = drawTextWithShadow(ctx, cardPadding * 2, 0, width, text, style, ctx.CK.Color(0, 0, 0, 0xFF), 2, 2);
+    headerHeight = drawTextWithShadow(ctx, cardPadding*0.5, 0, width, text, style, ctx.CK.Color(0, 0, 0, 0xFF), 2, 2);
   }
 
   // Draw category name
@@ -260,7 +261,7 @@ async function renderUpdateAttachment(runner, category, run, improvement, faster
     }
 
     const style = getFontStyle(ctx, deltaSize, color, ctx.CK.FontWeight.Bold, ctx.CK.FontWidth.Bold);
-    drawTextWithShadow(ctx, cardPadding * 2, 2 * cardGap + headerHeight + cardHeight + 2, width, text, style, ctx.CK.Color(0, 0, 0, 0xFF), 2, 2);
+    drawTextWithShadow(ctx, cardPadding*0.5, 2 * cardGap + headerHeight + cardHeight + 2, width, text, style, ctx.CK.Color(0, 0, 0, 0xFF), 2, 2);
   }
 
   // Save the canvas to a buffer
@@ -269,122 +270,87 @@ async function renderUpdateAttachment(runner, category, run, improvement, faster
 }
 
 /**
- * Render the map release canvas into a buffer
+ * Render the image attachment for a map release message
  *
- * @author PancakeTAS
- * @param {Array} thumbnailData Byte array of the map thumbnail
- * @param {string} title Title of the map
- * @param {string} author Author of the map
- * @param {number} upvotes The number of upvotes
- * @param {number} downvotes The number of downvotes
- * @returns {string} Base64 encoded png image
+ * @param {Blob} thumbnailData Thumbnail image data
+ * @param {Object} map Map data
+ * @returns {Blob} Image data
  */
-/*async function renderMapRelease(thumbnailData, title, author, upvotes, downvotes) {
+async function renderMapReleaseAttachment(thumbnailData, map) {
 
+  // Create render context
   const CK = await CanvasKitFuture;
 
-  // Create the canvas
-  const CANVAS_WIDTH = 922 * 2;
-  const CANVAS_HEIGHT = 150 * 2;
-  const CANVAS_PADDING = 3840 * 0.5 / 100;
+  const refWidth = 2000;
+  const width = 1600;
 
-  const INNER_WIDTH = CANVAS_WIDTH - CANVAS_PADDING * 2;
-  const INNER_HEIGHT = CANVAS_HEIGHT - CANVAS_PADDING * 2;
-
-  const surface = CK.MakeSurface(CANVAS_WIDTH, CANVAS_HEIGHT);
-  const canvas = surface.getCanvas();
+  const padding = 20 / refWidth * width;
+  const height = 325 / refWidth * width;
 
   const thumbnail = CK.MakeImageFromEncoded(thumbnailData);
+  const thumbnailWidth = width * 0.25;
+  const thumbnailHeight = thumbnailWidth / 16 * 9;
+  const thumbnailRadius = 20 / refWidth * width;
 
+  const surface = CK.MakeSurface(width, height);
+  const canvas = surface.getCanvas();
   const paint = new CK.Paint();
+  const fontmgr = CK.FontMgr.FromData(fontData, emojisData);
   paint.setAntiAlias(true);
 
-  // Draw background
-  const BG_BORDER_STROKE = 4;
-  const BG_RADIUS = 20;
-  const BG_BORDER_COLOR = CK.Color(0xFF, 0xFF, 0xFF, 0xFF);
-  const BG_FILL_COLOR = CK.Color(0x04, 0x04, 0x04, 0xFF);
-  const BG_X = BG_BORDER_STROKE;
-  const BG_Y = BG_BORDER_STROKE;
-  const BG_WIDTH = CANVAS_WIDTH - BG_BORDER_STROKE * 2;
-  const BG_HEIGHT = CANVAS_HEIGHT - BG_BORDER_STROKE * 2;
+  const ctx = {
+    CK, surface, canvas, paint, fontmgr,
+    refWidth, width, height
+  };
 
-  drawRoundedBox(
-    CK, canvas, paint,
-    BG_X, BG_Y, BG_WIDTH, BG_HEIGHT,
-    BG_RADIUS,
-    BG_BORDER_STROKE,
-    BG_FILL_COLOR, BG_BORDER_COLOR
+  // Draw map release card
+  drawCard(
+    ctx, { x: 0, y: 0, width, height }, padding,
+    "", 0, "", "", ""
   );
 
   // Draw map thumbnail
-  const TH_RADIUS = 20;
-  const TH_WIDTH = INNER_WIDTH * 0.25;
-  const TH_HEIGHT = TH_WIDTH / 16 * 9;
-  const TH_X = CANVAS_PADDING;
-  const TH_Y = CANVAS_PADDING + (INNER_HEIGHT - TH_HEIGHT) / 2;
-
   drawRoundedImage(
-    CK, canvas, paint,
-    thumbnail,
-    TH_X, TH_Y, TH_WIDTH, TH_HEIGHT,
-    TH_RADIUS
+    ctx, { x: padding, y: (height - thumbnailHeight) / 2, width: thumbnailWidth, height: thumbnailHeight },
+    thumbnail, thumbnailRadius
   );
 
   // Draw map info
-  const IF_X = TH_X + TH_WIDTH + (INNER_WIDTH * 0.02);
-  const IF_Y = CANVAS_PADDING + 18;
-  const IF_FONTSIZE = 61;
-  const IF_COLOR = CK.WHITE;
-  const IF_UPVOTES_COLOR = CK.Color(23, 192, 233, 0xFF);
-  const IF_DOWNVOTES_COLOR = CK.Color(232, 63, 22, 0xFF);
-  const IF_TITLESTYLE = new CK.TextStyle({
-    color: IF_COLOR,
-    fontFamilies: ['Quicksand'],
-    fontSize: IF_FONTSIZE,
-    fontStyle: { weight: 400, width: CK.FontWidth.Bold, slant: CK.FontSlant.Normal }
-  });
-  const IF_AUTHORSTYLE = new CK.TextStyle({
-    color: IF_COLOR,
-    fontFamilies: ['Quicksand', 'Font Awesome 6 Free'],
-    fontSize: IF_FONTSIZE,
-    fontStyle: { weight: 300, width: CK.FontWidth.Normal, slant: CK.FontSlant.Italic }
-  });
-  const IF_VOTESSTYLE = new CK.TextStyle({
-    fontFamilies: ['Quicksand', 'Font Awesome 6 Free'],
-    fontSize: IF_FONTSIZE
-  });
-  const IF_STYLE = new CK.ParagraphStyle({
-    textStyle: IF_TITLESTYLE,
-    color: IF_COLOR,
+  const titleStyle = getFontStyle(ctx, 61 / refWidth * width, CK.WHITE, CK.FontWeight.Bold, CK.FontWidth.Bold);
+  const authorStyle = getFontStyle(ctx, 61 / refWidth * width, CK.WHITE, CK.FontWeight.Light, CK.FontWidth.Normal, CK.FontSlant.Italic);
+  const votesStyle = getFontStyle(ctx, 61 / refWidth * width, CK.WHITE);
+
+  const infoBuilder = new CK.ParagraphBuilder.Make(new CK.ParagraphStyle({
+    textStyle: titleStyle,
+    color: CK.WHITE,
     textAlign: CK.TextAlign.Left,
     maxLines: 2
-  });
-  const infoBuilder = new CK.ParagraphBuilder.Make(IF_STYLE, CK.FontMgr.FromData(fontData, emojisData));
+  }), ctx.fontmgr);
 
-  infoBuilder.addText(title + "\n");
-  infoBuilder.pushStyle(IF_AUTHORSTYLE);
-  infoBuilder.addText(author);
+  infoBuilder.addText(map.title + "\n");
+  infoBuilder.pushStyle(authorStyle);
+  infoBuilder.addText(map.author);
   infoBuilder.pop();
   infoBuilder.addText("  ");
-  IF_VOTESSTYLE.color = IF_UPVOTES_COLOR;
-  infoBuilder.pushStyle(IF_VOTESSTYLE);
-  infoBuilder.addText(upvotes + " 👍");
+  votesStyle.color = CK.Color(23, 192, 233, 0xFF);
+  infoBuilder.pushStyle(votesStyle);
+  infoBuilder.addText(map.upvotes + " 👍");
   infoBuilder.pop();
   infoBuilder.addText("  ");
-  IF_VOTESSTYLE.color = IF_DOWNVOTES_COLOR;
-  infoBuilder.pushStyle(IF_VOTESSTYLE);
-  infoBuilder.addText(downvotes + " 👎");
+  votesStyle.color = CK.Color(232, 63, 22, 0xFF);
+  infoBuilder.pushStyle(votesStyle);
+  infoBuilder.addText(map.downvotes + " 👎");
   infoBuilder.pop();
 
   const infoParagraph = infoBuilder.build();
-  infoParagraph.layout(INNER_WIDTH * 0.7);
-  canvas.drawParagraph(infoParagraph, IF_X, IF_Y);
+  infoParagraph.layout(width * 0.7);
+
+  canvas.drawParagraph(infoParagraph, padding + thumbnailWidth + (width * 0.02), padding + 18);
 
   // Save the canvas to a buffer
   return surface.makeImageSnapshot().encodeToBytes();
 
-}*/
+}
 
 /**
  * Draw a rounded box on the canvas
@@ -462,7 +428,7 @@ function drawRoundedImage(ctx, rect, image, radius) {
 function getFontStyle(ctx, fontSize, color, weight = ctx.CK.FontWeight.Normal, width = ctx.CK.FontWeight.Normal, slant = ctx.CK.FontSlant.Normal) {
   return new ctx.CK.TextStyle({
     color,
-    fontFamilies: ['Quicksand'],
+    fontFamilies: ['Quicksand', 'Font Awesome 6 Free'],
     fontSize,
     fontStyle: { weight, width, slant }
   });
@@ -489,14 +455,14 @@ function drawTextWithShadow(ctx, x, y, width, text, style, shadowColor, shadowOf
   const shadowBuilder = new ctx.CK.ParagraphBuilder.Make(new ctx.CK.ParagraphStyle({
     textStyle: new ctx.CK.TextStyle({
       color: shadowColor,
-      fontFamilies: ['Quicksand'],
+      fontFamilies: ['Quicksand', 'Font Awesome 6 Free'],
       fontSize: style.fontSize,
       fontStyle: { weight: style.fontStyle.weight, width: style.fontStyle.width, slant: style.fontStyle.slant }
     }),
     color: shadowColor,
     textAlign: align,
     maxLines: 1
-  }), ctx.CK.FontMgr.FromData(fontData)); // FIXME: preserve fontmgr, emoji support
+  }), ctx.fontmgr);
 
   shadowBuilder.addText(text);
 
@@ -511,7 +477,7 @@ function drawTextWithShadow(ctx, x, y, width, text, style, shadowColor, shadowOf
     color: style.color,
     textAlign: align,
     maxLines: 1
-  }), ctx.CK.FontMgr.FromData(fontData)); // FIXME: preserve fontmgr, emoji support
+  }), ctx.fontmgr);
 
   textBuilder.addText(text);
 
@@ -542,11 +508,10 @@ function drawCard(ctx, rect, padding,
     runnerName, placementNumber, timeString, deltaString, note
 ) {
 
-  const arrowLeftPadding = 50 / ctx.refWidth * ctx.width;
   const innerRect = {
-    x: rect.x + padding + arrowLeftPadding,
+    x: rect.x + padding,
     y: rect.y + padding,
-    width: rect.width - padding * 2 - arrowLeftPadding,
+    width: rect.width - padding * 2,
     height: rect.height - padding * 2
   };
 
@@ -559,9 +524,9 @@ function drawCard(ctx, rect, padding,
   drawRoundedBox(
     ctx,
     {
-      x: rect.x + borderStroke + arrowLeftPadding,
+      x: rect.x + borderStroke,
       y: rect.y + borderStroke,
-      width: rect.width - borderStroke*2 - arrowLeftPadding,
+      width: rect.width - borderStroke*2,
       height: rect.height - borderStroke*2
     },
     borderRadius, borderStroke,
@@ -583,14 +548,14 @@ function drawCard(ctx, rect, padding,
     color: textColor,
     textAlign: ctx.CK.TextAlign.Left,
     maxLines: 2
-  }), ctx.CK.FontMgr.FromData(fontData)); // FIXME: preserve fontmgr
+  }), ctx.fontmgr);
 
   paragraphBuilder.pushStyle(boldStyle);
   paragraphBuilder.addText(`${runnerName}\n`);
   paragraphBuilder.pop();
 
   paragraphBuilder.pushStyle(normalStyle);
-  paragraphBuilder.addText(`${placementNumber + (["st","nd","rd"][((placementNumber+90)%100-10)%10-1]||"th")} place in ${timeString}`);
+  if (placementNumber != 0) paragraphBuilder.addText(`${placementNumber + (["st","nd","rd"][((placementNumber+90)%100-10)%10-1]||"th")} place in ${timeString}`);
   paragraphBuilder.pop();
 
   if (deltaString) {
@@ -617,7 +582,7 @@ function drawCard(ctx, rect, padding,
       textAlign: ctx.CK.TextAlign.Left,
       maxLines: 3,
       ellipsis: "...\""
-    }), ctx.CK.FontMgr.FromData(fontData)); // FIXME: preserve fontmgr, emoji support
+    }), ctx.fontmgr);
 
     noteBuilder.addText(`"${note}"`);
 
