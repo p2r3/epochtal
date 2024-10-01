@@ -95,7 +95,7 @@ module.exports = async function (args, context = epochtal) {
       } else {
 
         // Ensure provided icon is a file
-        if (!fs.existsSync(iconLink)) throw new UtilError("ERR_ICON", args, context);
+        if (!fs.existsSync(icon)) throw new UtilError("ERR_ICON", args, context);
 
         const extension = icon.split(".").pop();
         const filename = `${name}.${extension}`;
