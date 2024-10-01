@@ -115,13 +115,6 @@ var lobbyListInit = async function () {
     // Fetch user avatar links into avatarCache
     for (const lobbyid in lobbies) {
 
-      lobbies[lobbyid].players.push(lobbies[lobbyid].players[0]);
-      lobbies[lobbyid].players.push(lobbies[lobbyid].players[0]);
-      lobbies[lobbyid].players.push(lobbies[lobbyid].players[0]);
-      lobbies[lobbyid].players.push(lobbies[lobbyid].players[0]);
-      lobbies[lobbyid].players.push(lobbies[lobbyid].players[0]);
-      lobbies[lobbyid].players.push(lobbies[lobbyid].players[0]);
-
       for (const steamid of lobbies[lobbyid].players) {
 
         try {
