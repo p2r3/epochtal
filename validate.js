@@ -141,6 +141,9 @@ async function setup () {
   // Delete first archive
   fs.rmSync(`${gconfig.datadir}/archives/week0`, { recursive: true, force: true });
 
+  // Build the Epochtal Live package
+  await routines(["run", "live", "rebuildPackage"]);
+
   // Create first run file
   await Bun.write(`${gconfig.datadir}/.first-run`, "");
 }
