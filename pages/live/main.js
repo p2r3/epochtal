@@ -1,3 +1,6 @@
+// Store the currently relevant list of lobbies globally
+var lobbies;
+
 /**
  * Initializes the lobby list page.
  */
@@ -19,43 +22,59 @@ var lobbyListInit = async function () {
   const users = await (await fetch("/api/users/get")).json();
   const avatarCache = {};
 
+  const listContainer = document.querySelector("#lobby-list");
+  const lobbySearch = document.querySelector("#lobby-search");
+
   /**
-   * Fetches the list of lobbies and updates the lobby list.
+   * Update the lobby list HTML
    */
-  const fetchLobbies = async function () {
+  const drawLobbies = function () {
 
-    // Fetch the list of lobbies
-    const lobbies = await (await fetch("/api/lobbies/list")).json();
+    // Get the current search query
+    const searchQuery = lobbySearch.value.trim().toLowerCase();
 
-    let output = "";
+    // Clear the previous lobby list once the new one has been fetched
+    listContainer.innerHTML = "";
+
     for (const lobbyid in lobbies) {
 
       const lobby = lobbies[lobbyid];
+
+      if (!lobby.name.toLowerCase().includes(searchQuery)) continue;
 
       const safeName = lobby.name.replaceAll("&", "&amp;")
         .replaceAll("<", "&lt;")
         .replaceAll(">", "&gt;")
 
+      // Create the lobby entry as a DOM element
+      const entry = document.createElement("div");
+      entry.className = "lobby-entry marginx";
+      listContainer.appendChild(entry);
+
+      // Constrain the player list to 50% of the list entry width
+      // Each profile picture is 44+5*2 pixels in width, we calculate the highest total
+      const entryWidth = entry.getBoundingClientRect().width;
+      const playerWidth = 44 + 5 * 2;
+      const maxListPlayers = Math.floor(entryWidth / 2 / playerWidth);
+
       // Generate the player list
       let playersString = "";
       for (let i = 0; i < lobby.players.length; i ++) {
+
+        // If the player list maximum is exceeded, replace the last entry with a numeric indicator
+        if (i === maxListPlayers - 1 && lobby.players.length > maxListPlayers) {
+          const hidden = lobby.players.length - maxListPlayers + 1;
+          const tooltipString = `onmouseover="showTooltip('+${hidden} more player${hidden === 1 ? "" : "s"}')" onmouseleave="hideTooltip()"`;
+          playersString += `<div ${tooltipString}>+${hidden}</div>`;
+          break;
+        }
 
         const steamid = lobby.players[i];
         const user = users[steamid];
         const username = user.name.replaceAll("&", "&amp;")
           .replaceAll("<", "&lt;")
           .replaceAll(">", "&gt;");
-
-        // Fetch the user's avatar
-        let avatar;
-        if (steamid in avatarCache) avatar = avatarCache[steamid];
-        else try {
-          const profile = await (await fetch(`/api/users/profile/"${steamid}"`)).json();
-          avatar = profile.avatar;
-          avatarCache[steamid] = avatar;
-        } catch (e) {
-          avatar = "../icons/unknown.jpg";
-        }
+        const avatar = avatarCache[steamid];
 
         playersString += `<img src="${avatar}" onmouseover="showTooltip('${username}')" onmouseleave="hideTooltip()"></img>`;
 
@@ -68,48 +87,60 @@ var lobbyListInit = async function () {
         default: modeString = "Unknown"; break;
       }
 
-      // Add the lobby entry to the output
-      output += `
-  <div class="lobby-entry marginx">
-    <p class="lobby-name">${safeName}</p>
-    <p class="lobby-description">${modeString} - ${lobby.players.length} player${lobby.players.length === 1 ? "" : "s"}</p>
-    <div class="lobby-players">${playersString}</div>
-    <button class="lobby-button" onclick="joinLobby(\`${lobbyid}\`)">Join Lobby</button>
-  </div>
+      // Add the entry data to its respective element
+      entry.innerHTML = `
+        <p class="lobby-name">${safeName}</p>
+        <p class="lobby-description">${modeString} - ${lobby.players.length} player${lobby.players.length === 1 ? "" : "s"}</p>
+        <div class="lobby-players">${playersString}</div>
+        <button class="lobby-button" onclick="joinLobby(\`${lobbyid}\`)">Join Lobby</button>
       `;
 
     }
 
-    const lobbyList = document.querySelector("#lobby-list");
-    lobbyList.innerHTML = output;
+  };
+
+  // Redraw lobby list on window resize
+  window.addEventListener("resize", drawLobbies);
+  // Redraw lobby list on search bar input
+  lobbySearch.addEventListener("input", drawLobbies);
+
+  /**
+   * Fetches the list of lobbies and calls drawLobbies
+   */
+  const fetchLobbies = async function () {
+
+    // Fetch the list of lobbies
+    lobbies = await (await fetch("/api/lobbies/list")).json();
+
+    // Fetch user avatar links into avatarCache
+    for (const lobbyid in lobbies) {
+
+      lobbies[lobbyid].players.push(lobbies[lobbyid].players[0]);
+      lobbies[lobbyid].players.push(lobbies[lobbyid].players[0]);
+      lobbies[lobbyid].players.push(lobbies[lobbyid].players[0]);
+      lobbies[lobbyid].players.push(lobbies[lobbyid].players[0]);
+      lobbies[lobbyid].players.push(lobbies[lobbyid].players[0]);
+      lobbies[lobbyid].players.push(lobbies[lobbyid].players[0]);
+
+      for (const steamid of lobbies[lobbyid].players) {
+
+        try {
+          const profile = await (await fetch(`/api/users/profile/"${steamid}"`)).json();
+          avatarCache[steamid] = profile.avatar;
+        } catch (e) {
+          avatarCache[steamid] = "../icons/unknown.jpg";
+        }
+
+      }
+    }
+
+    drawLobbies();
 
   };
   fetchLobbies();
 
   // Refresh the lobby list every 5 seconds
   setInterval(fetchLobbies, 5000);
-
-  // Handle the search bar
-  const lobbySearch = document.querySelector("#lobby-search");
-  lobbySearch.oninput = function () {
-
-    const query = lobbySearch.value.trim().toLowerCase();
-    const entries = lobbyList.getElementsByClassName("lobby-entry");
-
-    for (let i = 0; i < entries.length; i ++) {
-
-      const name = entries[i].getElementsByClassName("lobby-name")[0].innerHTML.toLowerCase();
-
-      // Hide the entry if the name does not contain the query
-      if (name.includes(query)) {
-        entries[i].style.display = "";
-      } else {
-        entries[i].style.display = "none";
-      }
-
-    }
-
-  };
 
   let cliKeysControl = false;
   let cliKeysTilde = false;
