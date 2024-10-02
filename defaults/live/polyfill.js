@@ -130,11 +130,13 @@ var download = {
   },
   // Fetch file, throw error on failure
   async file (path, url) {
+    let taken = true;
     try { fs.rename(path, path) }
-    catch (e) { throw "download.file: Path already occupied" }
+    catch (e) { taken = false }
+    if (taken) throw "download.file: Path already occupied";
 
     try {
-      const buffer = Buffer.from(await (await fetch(link)).arrayBuffer());
+      const buffer = Buffer.from(await (await fetch(url)).arrayBuffer());
       fs.write(path, buffer);
     } catch (e) {
       throw "download.file: Download failed";

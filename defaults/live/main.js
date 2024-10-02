@@ -20,6 +20,9 @@ do { // Attempt connection with the game's console
 
 console.log("Connected to Portal 2 console.");
 
+// Store the time of the currently ongoing run
+var totalTicks = 0;
+
 // Store the last partially received line until it can be processed
 var lastLine = "";
 
@@ -34,13 +37,38 @@ function processConsoleOutput () {
   // Add the latest buffer to any partial data we had before
   lastLine += buffer;
 
-  // Parse input line-by-line
+  // Parse output line-by-line
   const lines = lastLine.replace(/\r/, "").split("\n");
   lines.forEach(function (line) {
 
     // Process WebSocket token
     if (line.indexOf("ws : ") === 0) {
       webSocketToken = line.slice(5, -1);
+      return;
+    }
+
+    // The events below this only apply to conneted clients
+    if (!webSocket) return;
+
+    // Process server time event
+    if (line.indexOf("[elServerTime] ") === 0) {
+      // Parse time from command line and add it to the total timer
+      const ticks = parseInt(line.slice(15));
+      totalTicks += ticks;
+    }
+
+    // Process map finish event
+    if (line.indexOf("[elMapFinished] ") === 0) {
+      // Send the finishRun event
+      const success = ws.send(webSocket, '{type:"finishRun",value:{time:'+ totalTicks +',portals:0}}');
+      // Disconnect from socket on failure
+      if (!success){
+        game.send(gameSocket, "echo Failed to send finishRun event.\n");
+        game.send(gameSocket, "echo Please reconnect to the lobby with a new token.\n");
+        ws.disconnect(webSocket);
+        webSocket = null;
+        return;
+      }
     }
 
   });
@@ -77,24 +105,25 @@ function processServerEvent (data) {
       // Respond to the ping with a pong
       ws.send(webSocket, '{"type":"pong"}');
 
+      return;
     }
 
     // Handle request to download a workshop map
     case "getMap": {
 
       const fullPath = "maps/" + data.value.file + ".bsp";
-      const workshopDir = "maps/workshop/" + data.falue.file.split("/")[1];
+      const workshopDir = "maps/workshop/" + data.value.file.split("/")[1];
 
       // Check if we already have the map
       if (pathExists(fullPath)) {
-        ws.send('{type:"getMap",value:1}');
+        ws.send(webSocket, '{"type":"getMap","value":1}');
         return;
       }
 
       try {
 
         // Indicate start of download procedure with response code 0
-        ws.send('{type:"getMap",value:0}');
+        ws.send(webSocket, '{"type":"getMap","value":0}');
 
         // Ensure the parent path exists
         if (!pathExists(workshopDir)) fs.mkdir(workshopDir);
@@ -102,12 +131,12 @@ function processServerEvent (data) {
         download.file(fullPath, data.value.link);
 
         // If the procedure was successful, respond with code 1
-        ws.send('{type:"getMap",value:1}');
+        ws.send(webSocket, '{"type":"getMap","value":1}');
 
       } catch (e) {
 
         // If the procedure was unsuccessful, respond with code -1
-        ws.send('{type:"getMap",value:-1}');
+        ws.send(webSocket, '{"type":"getMap","value":-1}');
         // Log the error to the Portal 2 console
         game.send(gameSocket, 'echo "' + e.toString().replace(/\"/g, "'") + '"\n');
 
@@ -118,6 +147,9 @@ function processServerEvent (data) {
 
     // Handle round start
     case "lobby_start": {
+
+      // Reset run timer
+      totalTicks = 0;
 
       // Send the map command to start the map
       game.send(gameSocket, "map " + data.map + "\n");
