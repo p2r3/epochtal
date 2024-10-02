@@ -141,20 +141,27 @@ module.exports = async function (args, context = epochtal) {
       // Ensure all required arguments are present
       if (!name) throw new UtilError("ERR_NAME", args, context);
 
-      const packageIndex = index.packages.findIndex(c => c.name === name);
-      if (packageIndex === -1) throw new UtilError("ERR_NAME", args, context);
+      // Iterate over all packages with the given name
+      let packageIndex, found = false;
+      while ((packageIndex = index.packages.findIndex(c => c.name === name)) !== -1) {
+        found = true;
 
-      const curr = index.packages[packageIndex];
+        const curr = index.packages[packageIndex];
 
-      // Remove the package files and icon
-      const iconPath = curr.icon.replace(address, repository);
-      const filePath = curr.file.replace(address, repository);
+        // Remove the package files and icon
+        const iconPath = curr.icon.replace(address, repository);
+        const filePath = curr.file.replace(address, repository);
 
-      fs.unlinkSync(iconPath);
-      fs.unlinkSync(filePath);
+        fs.unlinkSync(iconPath);
+        fs.unlinkSync(filePath);
 
-      // Remove the package from the index
-      index.packages.splice(packageIndex, 1);
+        // Remove the package from the index
+        index.packages.splice(packageIndex, 1);
+
+      }
+
+      // If no packages with this name were found, throw ERR_NAME
+      if (!found) throw new UtilError("ERR_NAME", args, context);
 
       // Save the index to the file if it exists
       if (file) Bun.write(file, JSON.stringify(index));
