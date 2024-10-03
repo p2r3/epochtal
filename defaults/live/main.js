@@ -20,8 +20,15 @@ do { // Attempt connection with the game's console
 
 console.log("Connected to Portal 2 console.");
 
-// Store the time of the currently ongoing run
+// Time of the currently ongoing run
 var totalTicks = 0;
+// Session time from last received report
+var lastTimeReport = 0;
+// Expected session time report:
+// 0 - none, 1 - load start, 2 - load end, 3 - run end
+var expectReport = 0;
+// Name of the map we're running
+var runMap = null;
 
 // Store the last partially received line until it can be processed
 var lastLine = "";
@@ -47,28 +54,82 @@ function processConsoleOutput () {
       return;
     }
 
-    // The events below this only apply to conneted clients
+    // The events below this only apply to connected clients
     if (!webSocket) return;
 
-    // Process server time event
-    if (line.indexOf("[elServerTime] ") === 0) {
-      // Parse time from command line and add it to the total timer
-      const ticks = parseInt(line.slice(15));
-      totalTicks += ticks;
+    // Process start of map load event
+    if (line.indexOf("(Server shutting down)") !== -1) {
+      // Request total session time for load start
+      game.send(gameSocket, "display_elapsedtime\n");
+      expectReport = 1;
+
+      return;
+    }
+
+    // Process end of map load event
+    if (line.indexOf("Redownloading all lightmaps") === 0) {
+      // Request total session time for load end
+      game.send(gameSocket, "display_elapsedtime\n");
+      expectReport = 2;
+
+      // Process the start of a workshop map
+      if (runMap.indexOf("workshop/") === 0) {
+        // Attach an output to report time and run end on PTI level end
+        // In workshop maps, we can afford running cheat commands
+        game.send(gameSocket, 'script ::__elFinish<-function(){ printl("elFinish") }\n');
+        game.send(gameSocket, 'ent_fire @relay_pti_level_end AddOutput "OnTrigger !self:RunScriptCode:__elFinish():0:1"\n');
+      }
+
+      return;
     }
 
     // Process map finish event
-    if (line.indexOf("[elMapFinished] ") === 0) {
-      // Send the finishRun event
-      const success = ws.send(webSocket, '{type:"finishRun",value:{time:'+ totalTicks +',portals:0}}');
-      // Disconnect from socket on failure
-      if (!success){
-        game.send(gameSocket, "echo Failed to send finishRun event.\n");
-        game.send(gameSocket, "echo Please reconnect to the lobby with a new token.\n");
-        ws.disconnect(webSocket);
-        webSocket = null;
-        return;
+    if (line.indexOf("elFinish") === 0) {
+      // Request total session time for map finish
+      game.send(gameSocket, "display_elapsedtime\n");
+      expectReport = 3;
+
+      return;
+    }
+
+    // Process total session time report
+    if (line.indexOf("Elapsed time: ") === 0) {
+
+      // If not expecting a time report, do nothing
+      if (!expectReport) return;
+
+      // Parse time from command output
+      const seconds = parseFloat(line.slice(14));
+      const ticks = Math.round(seconds * 60);
+
+      // If this is the end of a segment, add time since last report to total run time
+      if (expectReport !== 2 && lastTimeReport !== 0) {
+        totalTicks += ticks - lastTimeReport;
       }
+
+      // If this is the end of a run, send the finishRun event
+      if (expectReport === 3) {
+        const success = ws.send(webSocket, '{"type":"finishRun","value":{"time":'+ totalTicks +',"portals":0}}');
+        // Disconnect from socket on failure
+        if (!success){
+          game.send(gameSocket, "echo Failed to send finishRun event.\n");
+          game.send(gameSocket, "echo Please reconnect to the lobby with a new token.\n");
+          ws.disconnect(webSocket);
+          webSocket = null;
+        }
+      }
+
+      /**
+       * Finally, store the time of this report for future reference.
+       *
+       * Since these reports start counting from engine startup, we need a
+       * way to convert that to relative time. Even though the start of a
+       * map load doesn't have any special handling above, it's still
+       * important to store it so that we're not adding loading times into
+       * the final submission.
+       */
+      lastTimeReport = ticks;
+      return;
     }
 
   });
@@ -150,6 +211,10 @@ function processServerEvent (data) {
 
       // Reset run timer
       totalTicks = 0;
+      // Update the currently active map
+      runMap = data.map;
+      // Clear last known session time
+      lastTimeReport = 0;
 
       // Send the map command to start the map
       game.send(gameSocket, "map " + data.map + "\n");
