@@ -195,6 +195,19 @@ module.exports = async function (args, request) {
 
     }
 
+    case "host": {
+
+      const newHost = args[2];
+
+      // Check if the player is the host of this lobby
+      const permsCheck = await checkUserPerms(request, lobbyid, true);
+      if (typeof permsCheck === "string") return permsCheck;
+
+      // Transfer the host role
+      return lobbies(["host", lobbyid, newHost]);
+
+    }
+
   }
 
   return "ERR_COMMAND";
