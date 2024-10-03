@@ -23,13 +23,24 @@
 
 .lobby-players {
   right: 20px;
-  bottom: 0;
+  bottom: 5px;
   position: absolute;
 }
-.lobby-players img {
+.lobby-players * {
   border-radius: 100%;
+  width: 44px;
   height: 44px;
+  line-height: 44px;
   padding: 5px;
+  display: inline-block;
+  vertical-align: middle;
+}
+.lobby-players div {
+  padding: 0;
+  margin: 5px;
+  font-weight: bold;
+  background-color: #666;
+  cursor: default;
 }
 
 .lobby-button {
@@ -73,6 +84,9 @@
   width: 52px;
   border: 3px solid rgb(112, 191, 255);
   border-radius: 100%;
+}
+.lobby-host-avatar {
+  border: 3px solid #faa81a;
 }
 
 .lobby-player-name {

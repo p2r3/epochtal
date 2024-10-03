@@ -2,6 +2,7 @@ var lobby, users, whoami;
 var avatarCache = {};
 var lobbySocket = null;
 var readyState = false;
+var amHost = false;
 
 const lobbyPlayersList = document.querySelector("#lobby-players-list");
 
@@ -11,6 +12,29 @@ const lobbyPlayersList = document.querySelector("#lobby-players-list");
 async function updatePlayerList () {
 
   let output = "";
+
+  // Get the leaderboard for this lobby mode
+  const leaderboard = lobby.data.context.leaderboard[lobby.listEntry.mode];
+  // Check if we are the host
+  amHost = lobby.data.host === whoami.steamid;
+
+  // Sort players by their latest time
+  lobby.listEntry.players.sort(function (a, b) {
+
+    const runA = leaderboard.find(c => c.steamid === a);
+    const runB = leaderboard.find(c => c.steamid === b);
+
+    // In the event of a tie, prefer the lobby host
+    if (runA === runB) {
+      if (a === lobby.data.host) return -1;
+      if (b === lobby.data.host) return 1;
+    }
+
+    if (!runA) return 1;
+    if (!runB) return -1;
+    return runA.time - runB.time;
+
+  });
 
   // List all players in the lobby
   for (let i = 0; i < lobby.listEntry.players.length; i ++) {
@@ -43,15 +67,27 @@ async function updatePlayerList () {
     }
 
     // Get the player's last run in this mode, if they have one
-    const leaderboard = lobby.data.context.leaderboard[lobby.listEntry.mode];
     const run = leaderboard.find(c => c.steamid === steamid);
 
     // Get the player's ready state
     const ready = lobby.data.players[steamid].ready;
+    // Check if this player is the host
+    const isHost = lobby.data.host === steamid;
 
     output += `
 <div class="lobby-player">
-  <img src="${avatar}" class="lobby-player-avatar">
+  <img
+    src="${avatar}"
+    class="lobby-player-avatar ${isHost ? "lobby-host-avatar" : (amHost ? "pointer" : "")}"
+    ${isHost ? `
+      onmouseover="showTooltip('Lobby host')"
+      onmouseleave="hideTooltip()"
+    ` : (amHost ? `
+      onmouseover="showTooltip('Click to transfer host role')"
+      onmouseleave="hideTooltip()"
+      onclick="transferHost('${steamid}')"
+      ` : "")}
+  >
   <p class="lobby-player-name">${username}${run ? ` - ${ticksToString(run.time)}` : ""}</p>
   <i
     class="${ready ? "fa-solid fa-circle-check" : "fa-regular fa-circle"} lobby-player-ready"
@@ -99,6 +135,40 @@ async function updateLobbyMap () {
 
 }
 
+/**
+ * Updates the UI to indicate whether we're the lobby host
+ */
+function updateLobbyHost () {
+
+  // Enable or disable settings buttons based on if we're the host
+  const buttons = [
+    document.querySelector("#lobby-name-button"),
+    document.querySelector("#lobby-password-button")
+  ];
+
+  if (amHost) {
+    for (const button of buttons) {
+      button.style.opacity = 1.0;
+      button.style.cursor = "pointer";
+      button.removeAttribute("onmouseover");
+      button.removeAttribute("onmouseleave");
+    }
+  } else {
+    for (const button of buttons) {
+      button.style.opacity = 0.5;
+      button.style.cursor = "default";
+      button.setAttribute("onmouseover", "showTooltip('Only the host can do this.')");
+      button.setAttribute("onmouseleave", "hideTooltip()");
+    }
+  }
+
+  // Hide the map select button entirely for non-hosts
+  const mapButton = document.querySelector("#lobby-map-button");
+  if (amHost) mapButton.style.display = "";
+  else mapButton.style.display = "none";
+
+};
+
 var eventHandlerConnected = false;
 
 const lobbyReadyButton = document.querySelector("#lobby-ready-button");
@@ -112,7 +182,6 @@ async function lobbyEventHandler (event) {
 
   // Parse the incoming data
   const data = JSON.parse(event.data);
-  console.log(data, event);
 
   // Handle the event
   switch (data.type) {
@@ -120,12 +189,7 @@ async function lobbyEventHandler (event) {
     case "lobby_name": {
 
       // Rename the lobby
-      const encodedName = window.location.href.split("#")[1];
-      const name = decodeURIComponent(encodedName);
-      const { newName } = data;
-
-      window.location.href = window.location.href.split("#")[0] + "#" + newName;
-      lobbyInit();
+      document.querySelector("#lobby-name").textContent = data.newName;
 
       return;
     }
@@ -158,11 +222,31 @@ async function lobbyEventHandler (event) {
       return;
     }
 
+    case "lobby_host": {
+
+      // Handle lobby host change
+      const { steamid } = data;
+
+      lobby.data.host = steamid;
+      updatePlayerList();
+      updateLobbyHost();
+
+      return;
+    }
+
     case "lobby_map": {
 
       // Update the lobby map
       lobby.data.context.map = data.newMap;
       updateLobbyMap();
+
+      // Set all player ready states to false
+      for (const player in lobby.data.players) player.ready = false;
+      updatePlayerList();
+
+      // Update our own ready state
+      readyState = false;
+      lobbyReadyButton.innerHTML = "I'm ready!";
 
       return;
     }
@@ -218,6 +302,10 @@ async function lobbyEventHandler (event) {
         };
 
       }, 1000);
+
+      // Clear previous run times from player list
+      lobby.data.context.leaderboard[lobby.listEntry.mode] = [];
+      updatePlayerList();
 
       return;
     }
@@ -287,11 +375,10 @@ async function lobbyInit () {
   }
 
   // Fetch the lobby data
-  const encodedName = window.location.href.split("#")[1];
-  const name = decodeURIComponent(encodedName);
+  const lobbyid = window.location.href.split("#")[1];
 
   users = await (await fetch("/api/users/get")).json();
-  lobby = await (await fetch(`/api/lobbies/get/${encodedName}`)).json();
+  lobby = await (await fetch(`/api/lobbies/get/${lobbyid}`)).json();
 
   const lobbyNameText = document.querySelector("#lobby-name");
   const lobbyModeText = document.querySelector("#lobby-mode");
@@ -303,12 +390,13 @@ async function lobbyInit () {
     default: modeString = "Unknown"; break;
   }
 
-  lobbyNameText.textContent = name;
+  lobbyNameText.textContent = lobby.listEntry.name;
   lobbyModeText.innerHTML = "&nbsp;- " + modeString;
 
   // Update the player list and map display
   updatePlayerList();
   updateLobbyMap();
+  updateLobbyHost();
 
   // Connect to the WebSocket
   if (lobbySocket) lobbySocket.close();
@@ -317,7 +405,7 @@ async function lobbyInit () {
 
   lobbySocket = new WebSocket(`${protocol}://${window.location.host}/api/events/connect`);
   lobbySocket.onopen = async function () {
-    const token = await (await fetch(`/api/events/auth/lobby_${encodedName}`)).json();
+    const token = await (await fetch(`/api/events/auth/lobby_${lobbyid}`)).json();
     lobbySocket.send(token);
   };
   lobbySocket.addEventListener("message", lobbyEventHandler);
@@ -334,6 +422,9 @@ async function lobbyInit () {
   // Handle the lobby rename button
   window.changeLobbyName = function () {
 
+    // Exit early if we don't have host permissions
+    if (!amHost) return;
+
     // Display a popup to change the lobby name
     showPopup("Change Name", `
       Enter a new lobby name<br>
@@ -347,7 +438,7 @@ async function lobbyInit () {
       const newName = encodeURIComponent(document.querySelector("#new-lobby-name").value.trim());
 
       // Fetch the api to change the lobby name
-      const request = await fetch(`/api/lobbies/rename/${encodedName}/${newName}`);
+      const request = await fetch(`/api/lobbies/rename/${lobbyid}/${newName}`);
       let requestData;
       try {
         requestData = await request.json();
@@ -362,9 +453,8 @@ async function lobbyInit () {
 
         case "ERR_LOGIN": return showPopup("Not logged in", "Please log in via Steam before editing lobby details.", POPUP_ERROR);
         case "ERR_STEAMID": return showPopup("Unrecognized user", "Your SteamID is not present in the users database. WTF?", POPUP_ERROR);
-        case "ERR_NAME": return showPopup("Lobby not found", "An open lobby with this name does not exist.", POPUP_ERROR);
+        case "ERR_LOBBYID": return showPopup("Lobby not found", "An open lobby with this ID does not exist.", POPUP_ERROR);
         case "ERR_NEWNAME": return showPopup("Invalid lobby name", "Please keep the lobby name to 50 characters or less.", POPUP_ERROR);
-        case "ERR_EXISTS": return showPopup("Lobby name taken", "A lobby with this name already exists.", POPUP_ERROR);
         case "ERR_PERMS": return showPopup("Permission denied", "You do not have permission to perform this action.", POPUP_ERROR);
 
         default: return showPopup("Unknown error", "The server returned an unexpected response: " + requestData, POPUP_ERROR);
@@ -376,6 +466,9 @@ async function lobbyInit () {
 
   // Handle the lobby change password button
   window.changeLobbyPassword = function () {
+
+    // Exit early if we don't have host permissions
+    if (!amHost) return;
 
     // Display a popup to change the lobby password
     showPopup("Change Password", `
@@ -390,7 +483,7 @@ async function lobbyInit () {
       const newPassword = encodeURIComponent(document.querySelector("#new-lobby-password").value.trim());
 
       // Fetch the api to change the lobby password
-      const request = await fetch(`/api/lobbies/password/${encodedName}/${newPassword}`);
+      const request = await fetch(`/api/lobbies/password/${lobbyid}/${newPassword}`);
       let requestData;
       try {
         requestData = await request.json();
@@ -404,7 +497,7 @@ async function lobbyInit () {
 
         case "ERR_LOGIN": return showPopup("Not logged in", "Please log in via Steam before editing lobby details.", POPUP_ERROR);
         case "ERR_STEAMID": return showPopup("Unrecognized user", "Your SteamID is not present in the users database. WTF?", POPUP_ERROR);
-        case "ERR_NAME": return showPopup("Lobby not found", "An open lobby with this name does not exist.", POPUP_ERROR);
+        case "ERR_LOBBYID": return showPopup("Lobby not found", "An open lobby with this ID does not exist.", POPUP_ERROR);
         case "ERR_PERMS": return showPopup("Permission denied", "You do not have permission to perform this action.", POPUP_ERROR);
 
         default: return showPopup("Unknown error", "The server returned an unexpected response: " + requestData, POPUP_ERROR);
@@ -417,7 +510,7 @@ async function lobbyInit () {
   window.selectLobbyMap = function () {
 
     // Prompt for a workshop map link
-    showPopup("Select a map", `<p>Enter a workshop link to the new map.</p>
+    showPopup("Select a map", `<p>Enter a workshop link, or a map name from the single-player campaign.</p>
       <input type="text" placeholder="Workshop Link" id="lobby-settings-map-input"></input>
     `, POPUP_INFO, true);
 
@@ -427,16 +520,10 @@ async function lobbyInit () {
       const input = document.querySelector("#lobby-settings-map-input");
       const mapid = input.value.trim().toLowerCase().split("https://steamcommunity.com/sharedfiles/filedetails/?id=").pop().split("?")[0];
 
-      // Ensure mapid is valid
-      if (!mapid || isNaN(mapid)) {
-        showPopup("Invalid link", "The workshop link you provided could not be parsed.", POPUP_ERROR);
-        return;
-      }
-
       hidePopup();
 
       // Request map change from API
-      const request = await fetch(`/api/lobbies/map/${encodedName}/"${mapid}"`);
+      const request = await fetch(`/api/lobbies/map/${lobbyid}/"${mapid}"`);
       let requestData;
       try {
         requestData = await request.json();
@@ -451,9 +538,10 @@ async function lobbyInit () {
 
         case "ERR_LOGIN": return showPopup("Not logged in", "Please log in via Steam before editing lobby details.", POPUP_ERROR);
         case "ERR_STEAMID": return showPopup("Unrecognized user", "Your SteamID is not present in the users database. WTF?", POPUP_ERROR);
-        case "ERR_NAME": return showPopup("Lobby not found", "An open lobby with this name does not exist.", POPUP_ERROR);
+        case "ERR_LOBBYID": return showPopup("Lobby not found", "An open lobby with this ID does not exist.", POPUP_ERROR);
+        case "ERR_INGAME": return showPopup("Game started", "The game has started, you cannot change the lobby map.", POPUP_ERROR);
         case "ERR_PERMS": return showPopup("Permission denied", "You do not have permission to perform this action.", POPUP_ERROR);
-        case "ERR_MAPID": return showPopup("Invalid link", "A workshop map associated with this link could not be found.", POPUP_ERROR);
+        case "ERR_MAPID": return showPopup("Invalid map", "The string you provided does not name a valid workshop or campaign map.", POPUP_ERROR);
         case "ERR_STEAMAPI": return showPopup("Missing map info", "Failed to retrieve map details. Is this the right link?", POPUP_ERROR);
         case "ERR_WEEKMAP": return showPopup("Active Epochtal map", "You may not play the currently active weekly tournament map in lobbies.", POPUP_ERROR);
 
@@ -469,7 +557,7 @@ async function lobbyInit () {
    */
   window.copyEventToken = async function () {
 
-    const token = await (await fetch(`/api/events/auth/lobby_${encodedName}`)).json();
+    const token = await (await fetch(`/api/events/auth/lobby_${lobbyid}`)).json();
     navigator.clipboard.writeText(`echo ws:${token}`);
 
     return showPopup("Token copied", "A new token has been copied to your clipboard. It is valid for 30 seconds, starting now. Paste it in your Portal 2 console to complete the setup.");
@@ -488,7 +576,7 @@ async function lobbyInit () {
     lobbyReadyButton.style.pointerEvents = "none";
 
     // Request ready state change from API
-    const request = await fetch(`/api/lobbies/ready/${encodedName}/${!readyState}`);
+    const request = await fetch(`/api/lobbies/ready/${lobbyid}/${!readyState}`);
 
     // Restore the button once the request finishes
     lobbyReadyButton.style.opacity = 1.0;
@@ -506,13 +594,38 @@ async function lobbyInit () {
 
       case "ERR_LOGIN": return showPopup("Not logged in", "Please log in via Steam before editing lobby details.", POPUP_ERROR);
       case "ERR_STEAMID": return showPopup("Unrecognized user", "Your SteamID is not present in the users database. WTF?", POPUP_ERROR);
-      case "ERR_NAME": return showPopup("Lobby not found", "An open lobby with this name does not exist.", POPUP_ERROR);
+      case "ERR_LOBBYID": return showPopup("Lobby not found", "An open lobby with this ID does not exist.", POPUP_ERROR);
       case "ERR_PERMS": return showPopup("Permission denied", "You do not have permission to perform this action.", POPUP_ERROR);
       case "ERR_GAMEAUTH": return showPopup("Game not connected", `You have not authenticated your Portal 2 game client. Start the Spplice package, <a href="javascript:copyEventToken()">click here</a> to copy your lobby token, then paste that into your console and try again.`, POPUP_ERROR);
       case "ERR_TIMEOUT": return showPopup("Game client timeout", "Timed out while waiting for a response from your game client. Try reconnecting?", POPUP_ERROR);
       case "ERR_MAP": return showPopup("Failed to get map", "An error occurred while automatically downloading the map. Please try subscribing to it on the workshop instead.", POPUP_ERROR);
       case "ERR_NOMAP": return showPopup("No map selected", "Please select a map for the lobby.", POPUP_ERROR);
       case "ERR_INGAME": return showPopup("Game started", "The game has started, you cannot change your ready state.", POPUP_ERROR);
+
+      default: return showPopup("Unknown error", "The server returned an unexpected response: " + requestData, POPUP_ERROR);
+    }
+
+  };
+
+  window.transferHost = async function (steamid) {
+
+    // Request host role transfer from API
+    const request = await fetch(`/api/lobbies/host/${lobbyid}/"${steamid}"`);
+
+    let requestData;
+    try {
+      requestData = await request.json();
+    } catch (e) {
+      return showPopup("Unknown error", "The server returned an unexpected response. Error code: " + request.status, POPUP_ERROR);
+    }
+
+    switch (requestData) {
+      case "SUCCESS": return;
+
+      case "ERR_LOGIN": return showPopup("Not logged in", "Please log in via Steam before editing lobby details.", POPUP_ERROR);
+      case "ERR_STEAMID": return showPopup("Unrecognized user", "The user you've selected does not exist or is not part of this lobby.", POPUP_ERROR);
+      case "ERR_LOBBYID": return showPopup("Lobby not found", "An open lobby with this ID does not exist.", POPUP_ERROR);
+      case "ERR_PERMS": return showPopup("Permission denied", "You do not have permission to perform this action.", POPUP_ERROR);
 
       default: return showPopup("Unknown error", "The server returned an unexpected response: " + requestData, POPUP_ERROR);
     }

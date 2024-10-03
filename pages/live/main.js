@@ -1,3 +1,6 @@
+// Store the currently relevant list of lobbies globally
+var lobbies;
+
 /**
  * Initializes the lobby list page.
  */
@@ -19,44 +22,59 @@ var lobbyListInit = async function () {
   const users = await (await fetch("/api/users/get")).json();
   const avatarCache = {};
 
+  const listContainer = document.querySelector("#lobby-list");
+  const lobbySearch = document.querySelector("#lobby-search");
+
   /**
-   * Fetches the list of lobbies and updates the lobby list.
+   * Update the lobby list HTML
    */
-  const fetchLobbies = async function () {
+  const drawLobbies = function () {
 
-    // Fetch the list of lobbies
-    const lobbies = await (await fetch("/api/lobbies/list")).json();
+    // Get the current search query
+    const searchQuery = lobbySearch.value.trim().toLowerCase();
 
-    let output = "";
-    for (const name in lobbies) {
+    // Clear the previous lobby list once the new one has been fetched
+    listContainer.innerHTML = "";
 
-      const lobby = lobbies[name];
+    for (const lobbyid in lobbies) {
 
-      const safeName = name.replaceAll("&", "&amp;")
+      const lobby = lobbies[lobbyid];
+
+      if (!lobby.name.toLowerCase().includes(searchQuery)) continue;
+
+      const safeName = lobby.name.replaceAll("&", "&amp;")
         .replaceAll("<", "&lt;")
         .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
+
+      // Create the lobby entry as a DOM element
+      const entry = document.createElement("div");
+      entry.className = "lobby-entry marginx";
+      listContainer.appendChild(entry);
+
+      // Constrain the player list to 50% of the list entry width
+      // Each profile picture is 44+5*2 pixels in width, we calculate the highest total
+      const entryWidth = entry.getBoundingClientRect().width;
+      const playerWidth = 44 + 5 * 2;
+      const maxListPlayers = Math.floor(entryWidth / 2 / playerWidth);
 
       // Generate the player list
       let playersString = "";
       for (let i = 0; i < lobby.players.length; i ++) {
+
+        // If the player list maximum is exceeded, replace the last entry with a numeric indicator
+        if (i === maxListPlayers - 1 && lobby.players.length > maxListPlayers) {
+          const hidden = lobby.players.length - maxListPlayers + 1;
+          const tooltipString = `onmouseover="showTooltip('+${hidden} more player${hidden === 1 ? "" : "s"}')" onmouseleave="hideTooltip()"`;
+          playersString += `<div ${tooltipString}>+${hidden}</div>`;
+          break;
+        }
 
         const steamid = lobby.players[i];
         const user = users[steamid];
         const username = user.name.replaceAll("&", "&amp;")
           .replaceAll("<", "&lt;")
           .replaceAll(">", "&gt;");
-
-        // Fetch the user's avatar
-        let avatar;
-        if (steamid in avatarCache) avatar = avatarCache[steamid];
-        else try {
-          const profile = await (await fetch(`/api/users/profile/"${steamid}"`)).json();
-          avatar = profile.avatar;
-          avatarCache[steamid] = avatar;
-        } catch (e) {
-          avatar = "../icons/unknown.jpg";
-        }
+        const avatar = avatarCache[steamid];
 
         playersString += `<img src="${avatar}" onmouseover="showTooltip('${username}')" onmouseleave="hideTooltip()"></img>`;
 
@@ -69,48 +87,53 @@ var lobbyListInit = async function () {
         default: modeString = "Unknown"; break;
       }
 
-      // Add the lobby entry to the output
-      output += `
-  <div class="lobby-entry marginx">
-    <p class="lobby-name">${safeName}</p>
-    <p class="lobby-description">${modeString} - ${lobby.players.length} player${lobby.players.length === 1 ? "" : "s"}</p>
-    <div class="lobby-players">${playersString}</div>
-    <button class="lobby-button" onclick="joinLobby(\`${encodeURIComponent(name)}\`)">Join Lobby</button>
-  </div>
+      // Add the entry data to its respective element
+      entry.innerHTML = `
+        <p class="lobby-name">${safeName}</p>
+        <p class="lobby-description">${modeString} - ${lobby.players.length} player${lobby.players.length === 1 ? "" : "s"}</p>
+        <div class="lobby-players">${playersString}</div>
+        <button class="lobby-button" onclick="joinLobby(\`${lobbyid}\`)">Join Lobby</button>
       `;
 
     }
 
-    const lobbyList = document.querySelector("#lobby-list");
-    lobbyList.innerHTML = output;
+  };
+
+  // Redraw lobby list on window resize
+  window.addEventListener("resize", drawLobbies);
+  // Redraw lobby list on search bar input
+  lobbySearch.addEventListener("input", drawLobbies);
+
+  /**
+   * Fetches the list of lobbies and calls drawLobbies
+   */
+  const fetchLobbies = async function () {
+
+    // Fetch the list of lobbies
+    lobbies = await (await fetch("/api/lobbies/list")).json();
+
+    // Fetch user avatar links into avatarCache
+    for (const lobbyid in lobbies) {
+
+      for (const steamid of lobbies[lobbyid].players) {
+
+        try {
+          const profile = await (await fetch(`/api/users/profile/"${steamid}"`)).json();
+          avatarCache[steamid] = profile.avatar;
+        } catch (e) {
+          avatarCache[steamid] = "../icons/unknown.jpg";
+        }
+
+      }
+    }
+
+    drawLobbies();
 
   };
   fetchLobbies();
 
   // Refresh the lobby list every 5 seconds
   setInterval(fetchLobbies, 5000);
-
-  // Handle the search bar
-  const lobbySearch = document.querySelector("#lobby-search");
-  lobbySearch.oninput = function () {
-
-    const query = lobbySearch.value.trim().toLowerCase();
-    const entries = lobbyList.getElementsByClassName("lobby-entry");
-
-    for (let i = 0; i < entries.length; i ++) {
-
-      const name = entries[i].getElementsByClassName("lobby-name")[0].innerHTML.toLowerCase();
-
-      // Hide the entry if the name does not contain the query
-      if (name.includes(query)) {
-        entries[i].style.display = "";
-      } else {
-        entries[i].style.display = "none";
-      }
-
-    }
-
-  };
 
   let cliKeysControl = false;
   let cliKeysTilde = false;
@@ -173,16 +196,14 @@ function createLobbyPopup () {
       const data = await request.json();
       switch (data) {
 
-        case "SUCCESS":
-          window.location.href = `/live/lobby/#${name}`;
-          return;
-
         case "ERR_LOGIN": return showPopup("Not logged in", "Please log in via Steam before joining a lobby.", POPUP_ERROR);
         case "ERR_STEAMID": return showPopup("Unrecognized user", "Your SteamID is not present in the users database. WTF?", POPUP_ERROR);
         case "ERR_NAME": return showPopup("Invalid lobby name", "Please keep the lobby name to 50 characters or less.", POPUP_ERROR);
-        case "ERR_EXISTS": return showPopup("Lobby name taken", "A lobby with this name already exists.", POPUP_ERROR);
 
-        default: return showPopup("Unknown error", "The server returned an unexpected response: " + data, POPUP_ERROR);
+        default: {
+          if (data.startsWith("SUCCESS ")) return window.location.href = `/live/lobby/#${data.split("SUCCESS ")[1]}`;
+          return showPopup("Unknown error", "The server returned an unexpected response: " + data, POPUP_ERROR);
+        }
 
       }
     }
@@ -194,18 +215,18 @@ function createLobbyPopup () {
 /**
  * Handles joining a lobby.
  *
- * @param {string} name
+ * @param {string} lobbyid
  */
-async function joinLobby (name) {
+async function joinLobby (lobbyid) {
 
   // Check if the lobby is password-protected
-  const isSecure = await (await fetch(`/api/lobbies/secure/${name}`)).json();
+  const isSecure = await (await fetch(`/api/lobbies/secure/${lobbyid}`)).json();
 
   // Join the lobby if not
   if (!isSecure) {
 
     // Fetch the api to join the lobby
-    const request = await fetch(`/api/lobbies/join/${name}`);
+    const request = await fetch(`/api/lobbies/join/${lobbyid}`);
 
     // Handle the response and open the lobby window
     if (request.status !== 200) {
@@ -214,13 +235,12 @@ async function joinLobby (name) {
       const data = await request.json();
       switch (data) {
 
-        case "ERR_EXISTS":
         case "SUCCESS":
-          return window.location.href = `/live/lobby/#${name}`;
+          return window.location.href = `/live/lobby/#${lobbyid}`;
 
         case "ERR_LOGIN": return showPopup("Not logged in", "Please log in via Steam before joining a lobby.", POPUP_ERROR);
         case "ERR_STEAMID": return showPopup("Unrecognized user", "Your SteamID is not present in the users database. WTF?", POPUP_ERROR);
-        case "ERR_NAME": return showPopup("Lobby not found", "An open lobby with this name does not exist.", POPUP_ERROR);
+        case "ERR_LOBBYID": return showPopup("Lobby not found", "An open lobby with this ID does not exist.", POPUP_ERROR);
         case "ERR_PASSWORD": return showPopup("Incorrect password", "The password you provided was not correct. (But you didn't provide a password??)", POPUP_ERROR);
 
         default: return showPopup("Unknown error", "The server returned an unexpected response: " + data, POPUP_ERROR);
@@ -242,7 +262,7 @@ async function joinLobby (name) {
 
     // Fetch the api to join the lobby
     const password = encodeURIComponent(document.querySelector("#join-lobby-password").value);
-    const request = await fetch(`/api/lobbies/join/${name}/${password}`);
+    const request = await fetch(`/api/lobbies/join/${lobbyid}/${password}`);
 
     // Handle the response and open the lobby window
     if (request.status !== 200) {
@@ -251,13 +271,12 @@ async function joinLobby (name) {
       const data = await request.json();
       switch (data) {
 
-        case "ERR_EXISTS":
         case "SUCCESS":
-          return window.open(`/live/lobby/#${name}`);
+          return window.open(`/live/lobby/#${lobbyid}`);
 
         case "ERR_LOGIN": return showPopup("Not logged in", "Please log in via Steam before joining a lobby.", POPUP_ERROR);
         case "ERR_STEAMID": return showPopup("Unrecognized user", "Your SteamID is not present in the users database. WTF?", POPUP_ERROR);
-        case "ERR_NAME": return showPopup("Lobby not found", "An open lobby with this name does not exist.", POPUP_ERROR);
+        case "ERR_LOBBYID": return showPopup("Lobby not found", "An open lobby with this ID does not exist.", POPUP_ERROR);
         case "ERR_PASSWORD": return showPopup("Incorrect password", "The password you provided was not correct.", POPUP_ERROR);
 
         default: return showPopup("Unknown error", "The server returned an unexpected response: " + data, POPUP_ERROR);
