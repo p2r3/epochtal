@@ -2,6 +2,7 @@ var lobby, users, whoami;
 var avatarCache = {};
 var lobbySocket = null;
 var readyState = false;
+var amHost = false;
 
 const lobbyPlayersList = document.querySelector("#lobby-players-list");
 
@@ -14,6 +15,8 @@ async function updatePlayerList () {
 
   // Get the leaderboard for this lobby mode
   const leaderboard = lobby.data.context.leaderboard[lobby.listEntry.mode];
+  // Check if we are the host
+  amHost = lobby.data.host === whoami.steamid;
 
   // Sort players by their latest time
   lobby.listEntry.players.sort(function (a, b) {
@@ -62,10 +65,22 @@ async function updatePlayerList () {
 
     // Get the player's ready state
     const ready = lobby.data.players[steamid].ready;
+    // Check if this player is the host
+    const isHost = lobby.data.host === steamid;
 
     output += `
 <div class="lobby-player">
-  <img src="${avatar}" class="lobby-player-avatar">
+  <img
+    src="${avatar}"
+    class="lobby-player-avatar ${isHost ? "lobby-host-avatar" : (amHost ? "pointer" : "")}"
+    ${isHost ? `
+      onmouseover="showTooltip('Lobby host')"
+      onmouseleave="hideTooltip()"
+    ` : (amHost ? `
+      onmouseover="showTooltip('Click to transfer host role')"
+      onmouseleave="hideTooltip()"
+    ` : "")}
+  >
   <p class="lobby-player-name">${username}${run ? ` - ${ticksToString(run.time)}` : ""}</p>
   <i
     class="${ready ? "fa-solid fa-circle-check" : "fa-regular fa-circle"} lobby-player-ready"
@@ -112,6 +127,40 @@ async function updateLobbyMap () {
   `;
 
 }
+
+/**
+ * Updates the UI to indicate whether we're the lobby host
+ */
+function updateLobbyHost () {
+
+  // Enable or disable settings buttons based on if we're the host
+  const buttons = [
+    document.querySelector("#lobby-name-button"),
+    document.querySelector("#lobby-password-button")
+  ];
+
+  if (amHost) {
+    for (const button of buttons) {
+      button.style.opacity = 1.0;
+      button.style.cursor = "pointer";
+      button.removeAttribute("onmouseover");
+      button.removeAttribute("onmouseleave");
+    }
+  } else {
+    for (const button of buttons) {
+      button.style.opacity = 0.5;
+      button.style.cursor = "default";
+      button.setAttribute("onmouseover", "showTooltip('Only the host can do this.')");
+      button.setAttribute("onmouseleave", "hideTooltip()");
+    }
+  }
+
+  // Hide the map select button entirely for non-hosts
+  const mapButton = document.querySelector("#lobby-map-button");
+  if (amHost) mapButton.style.display = "";
+  else mapButton.style.display = "none";
+
+};
 
 var eventHandlerConnected = false;
 
@@ -162,6 +211,18 @@ async function lobbyEventHandler (event) {
       }
       lobby.data.players[steamid] = {};
       updatePlayerList();
+
+      return;
+    }
+
+    case "lobby_host": {
+
+      // Handle lobby host change
+      const { steamid } = data;
+
+      lobby.data.host = steamid;
+      updatePlayerList();
+      updateLobbyHost();
 
       return;
     }
@@ -328,6 +389,7 @@ async function lobbyInit () {
   // Update the player list and map display
   updatePlayerList();
   updateLobbyMap();
+  updateLobbyHost();
 
   // Connect to the WebSocket
   if (lobbySocket) lobbySocket.close();
@@ -352,6 +414,9 @@ async function lobbyInit () {
 
   // Handle the lobby rename button
   window.changeLobbyName = function () {
+
+    // Exit early if we don't have host permissions
+    if (!amHost) return;
 
     // Display a popup to change the lobby name
     showPopup("Change Name", `
@@ -394,6 +459,9 @@ async function lobbyInit () {
 
   // Handle the lobby change password button
   window.changeLobbyPassword = function () {
+
+    // Exit early if we don't have host permissions
+    if (!amHost) return;
 
     // Display a popup to change the lobby password
     showPopup("Change Password", `

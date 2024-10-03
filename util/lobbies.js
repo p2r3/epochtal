@@ -197,6 +197,8 @@ module.exports = async function (args, context = epochtal) {
         // If the host just left, assign a new host
         if (dataEntry.host === steamid) {
           dataEntry.host = listEntry.players[0];
+          // Broadcast the host change to clients
+          await events(["send", eventName, { type: "lobby_host", steamid: listEntry.players[0] }], context);
         }
 
         // Brodcast the leave to clients

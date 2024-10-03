@@ -119,6 +119,7 @@ module.exports = async function (args, request) {
         players: Object.fromEntries(
           Object.entries(data.players).map(([key, player]) => [key, { ready: player.ready }])
         ),
+        host: data.host,
         state: data.state,
         context: data.context.data
       };
@@ -129,6 +130,7 @@ module.exports = async function (args, request) {
        *     steamid: { ready },
        *     ...
        *   },
+       *   host,
        *   state,
        *   context: {
        *     map,
