@@ -7,9 +7,10 @@ const api_users = require("./users.js");
  *
  * @param {HttpRequest} request The HTTP request
  * @param {string} lobbyid The lobby ID
+ * @param {boolean} checkHost Whether to check if this user is the host
  * @returns {object|string} User object and lobby list data, or error string
  */
-async function checkUserPerms (request, lobbyid) {
+async function checkUserPerms (request, lobbyid, checkHost = false) {
 
   // Get the active user and throw ERR_LOGIN if not logged in
   const user = await api_users(["whoami"], request);
@@ -18,6 +19,12 @@ async function checkUserPerms (request, lobbyid) {
   // Get the specified lobby's list entry and throw ERR_PERMS if the user is not in the lobby
   const listEntry = await lobbies(["get", lobbyid]);
   if (!listEntry.players.includes(user.steamid)) return "ERR_PERMS";
+
+  if (checkHost) {
+    // Get the specified lobby's data entry and determine whether this user is the host
+    const dataEntry = await lobbies(["getdata", lobbyid]);
+    if (dataEntry.host !== user.steamid) return "ERR_PERMS";
+  }
 
   // Return the products of this operation for further use
   return { user, listEntry };
@@ -139,8 +146,8 @@ module.exports = async function (args, request) {
 
       const newName = args[2];
 
-      // Check if the player is a member of this lobby
-      const permsCheck = await checkUserPerms(request, lobbyid);
+      // Check if the player is the host of this lobby
+      const permsCheck = await checkUserPerms(request, lobbyid, true);
       if (typeof permsCheck === "string") return permsCheck;
 
       // Rename the specified lobby
@@ -150,8 +157,8 @@ module.exports = async function (args, request) {
 
     case "password": {
 
-      // Check if the player is a member of this lobby
-      const permsCheck = await checkUserPerms(request, lobbyid);
+      // Check if the player is the host of this lobby
+      const permsCheck = await checkUserPerms(request, lobbyid, true);
       if (typeof permsCheck === "string") return permsCheck;
 
       // Set the specified lobby's password
@@ -163,8 +170,8 @@ module.exports = async function (args, request) {
 
       const mapid = args[2];
 
-      // Check if the player is a member of this lobby
-      const permsCheck = await checkUserPerms(request, lobbyid);
+      // Check if the player is the host of this lobby
+      const permsCheck = await checkUserPerms(request, lobbyid, true);
       if (typeof permsCheck === "string") return permsCheck;
 
       // Set the specified lobby's map
