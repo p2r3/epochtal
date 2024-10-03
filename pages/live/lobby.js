@@ -24,6 +24,12 @@ async function updatePlayerList () {
     const runA = leaderboard.find(c => c.steamid === a);
     const runB = leaderboard.find(c => c.steamid === b);
 
+    // In the event of a tie, prefer the lobby host
+    if (runA === runB) {
+      if (a === lobby.data.host) return -1;
+      if (b === lobby.data.host) return 1;
+    }
+
     if (!runA) return 1;
     if (!runB) return -1;
     return runA.time - runB.time;
@@ -79,7 +85,8 @@ async function updatePlayerList () {
     ` : (amHost ? `
       onmouseover="showTooltip('Click to transfer host role')"
       onmouseleave="hideTooltip()"
-    ` : "")}
+      onclick="transferHost('${steamid}')"
+      ` : "")}
   >
   <p class="lobby-player-name">${username}${run ? ` - ${ticksToString(run.time)}` : ""}</p>
   <i
@@ -600,6 +607,31 @@ async function lobbyInit () {
       case "ERR_MAP": return showPopup("Failed to get map", "An error occurred while automatically downloading the map. Please try subscribing to it on the workshop instead.", POPUP_ERROR);
       case "ERR_NOMAP": return showPopup("No map selected", "Please select a map for the lobby.", POPUP_ERROR);
       case "ERR_INGAME": return showPopup("Game started", "The game has started, you cannot change your ready state.", POPUP_ERROR);
+
+      default: return showPopup("Unknown error", "The server returned an unexpected response: " + requestData, POPUP_ERROR);
+    }
+
+  };
+
+  window.transferHost = async function (steamid) {
+
+    // Request host role transfer from API
+    const request = await fetch(`/api/lobbies/host/${lobbyid}/"${steamid}"`);
+
+    let requestData;
+    try {
+      requestData = await request.json();
+    } catch (e) {
+      return showPopup("Unknown error", "The server returned an unexpected response. Error code: " + request.status, POPUP_ERROR);
+    }
+
+    switch (requestData) {
+      case "SUCCESS": return;
+
+      case "ERR_LOGIN": return showPopup("Not logged in", "Please log in via Steam before editing lobby details.", POPUP_ERROR);
+      case "ERR_STEAMID": return showPopup("Unrecognized user", "The user you've selected does not exist or is not part of this lobby.", POPUP_ERROR);
+      case "ERR_LOBBYID": return showPopup("Lobby not found", "An open lobby with this ID does not exist.", POPUP_ERROR);
+      case "ERR_PERMS": return showPopup("Permission denied", "You do not have permission to perform this action.", POPUP_ERROR);
 
       default: return showPopup("Unknown error", "The server returned an unexpected response: " + requestData, POPUP_ERROR);
     }

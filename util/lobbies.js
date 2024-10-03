@@ -514,6 +514,36 @@ module.exports = async function (args, context = epochtal) {
 
     }
 
+    case "host": {
+
+      const newHost = args[2];
+
+      // Ensure a valid user SteamID was provided
+      const user = await users(["get", newHost], context);
+      if (!user) throw new UtilError("ERR_STEAMID", args, context);
+
+      const listEntry = lobbies.list[lobbyid];
+      const dataEntry = lobbies.data[lobbyid];
+      const eventName = "lobby_" + lobbyid;
+
+      // Ensure the lobby exists
+      if (!listEntry || !dataEntry) throw new UtilError("ERR_LOBBYID", args, context);
+      // Ensure the new host is in the lobby
+      if (!listEntry.players.includes(newHost)) throw new UtilError("ERR_STEAMID", args, context);
+
+      // Assign the new host
+      dataEntry.host = newHost;
+
+      // Brodcast host change to clients
+      await events(["send", eventName, { type: "lobby_host", steamid: newHost }], context);
+
+      // Write the lobbies to file if it exists
+      if (file) Bun.write(file, JSON.stringify(lobbies));
+
+      return "SUCCESS";
+
+    }
+
   }
 
   throw new UtilError("ERR_COMMAND", args, context);
