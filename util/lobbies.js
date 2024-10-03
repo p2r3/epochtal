@@ -251,7 +251,9 @@ module.exports = async function (args, context = epochtal) {
 
       if (!listEntry || !dataEntry) throw new UtilError("ERR_LOBBYID", args, context);
       if (dataEntry.password && !(await Bun.password.verify(password, dataEntry.password))) throw new UtilError("ERR_PASSWORD", args, context);
-      if (listEntry.players.includes(steamid)) throw new UtilError("ERR_EXISTS", args, context);
+
+      // If the player is already in the lobby, pretend the join was successful
+      if (listEntry.players.includes(steamid)) return "SUCCESS";
 
       // Add the player to the lobby
       listEntry.players.push(steamid);
