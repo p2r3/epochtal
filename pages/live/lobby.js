@@ -241,7 +241,7 @@ async function lobbyEventHandler (event) {
       updateLobbyMap();
 
       // Set all player ready states to false
-      for (const player of lobby.data.players) player.ready = false;
+      for (const player in lobby.data.players) player.ready = false;
       updatePlayerList();
 
       // Update our own ready state
@@ -510,7 +510,7 @@ async function lobbyInit () {
   window.selectLobbyMap = function () {
 
     // Prompt for a workshop map link
-    showPopup("Select a map", `<p>Enter a workshop link to the new map.</p>
+    showPopup("Select a map", `<p>Enter a workshop link, or a map name from the single-player campaign.</p>
       <input type="text" placeholder="Workshop Link" id="lobby-settings-map-input"></input>
     `, POPUP_INFO, true);
 
@@ -519,12 +519,6 @@ async function lobbyInit () {
       // Get mapid from link
       const input = document.querySelector("#lobby-settings-map-input");
       const mapid = input.value.trim().toLowerCase().split("https://steamcommunity.com/sharedfiles/filedetails/?id=").pop().split("?")[0];
-
-      // Ensure mapid is valid
-      if (!mapid || isNaN(mapid)) {
-        showPopup("Invalid link", "The workshop link you provided could not be parsed.", POPUP_ERROR);
-        return;
-      }
 
       hidePopup();
 
@@ -547,7 +541,7 @@ async function lobbyInit () {
         case "ERR_LOBBYID": return showPopup("Lobby not found", "An open lobby with this ID does not exist.", POPUP_ERROR);
         case "ERR_INGAME": return showPopup("Game started", "The game has started, you cannot change the lobby map.", POPUP_ERROR);
         case "ERR_PERMS": return showPopup("Permission denied", "You do not have permission to perform this action.", POPUP_ERROR);
-        case "ERR_MAPID": return showPopup("Invalid link", "A workshop map associated with this link could not be found.", POPUP_ERROR);
+        case "ERR_MAPID": return showPopup("Invalid map", "The string you provided does not name a valid workshop or campaign map.", POPUP_ERROR);
         case "ERR_STEAMAPI": return showPopup("Missing map info", "Failed to retrieve map details. Is this the right link?", POPUP_ERROR);
         case "ERR_WEEKMAP": return showPopup("Active Epochtal map", "You may not play the currently active weekly tournament map in lobbies.", POPUP_ERROR);
 
