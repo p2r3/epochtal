@@ -111,6 +111,7 @@ module.exports = async function (args, context = epochtal) {
       const dataEntry = {
         password: password ? hashedPassword : false,
         players: {},
+        host: undefined,
         state: LOBBY_IDLE,
         context: createLobbyContext(cleanName)
       };
@@ -193,6 +194,11 @@ module.exports = async function (args, context = epochtal) {
         if (index !== -1) listEntry.players.splice(index, 1);
         delete dataEntry.players[steamid];
 
+        // If the host just left, assign a new host
+        if (dataEntry.host === steamid) {
+          dataEntry.host = listEntry.players[0];
+        }
+
         // Brodcast the leave to clients
         await events(["send", eventName, { type: "lobby_leave", steamid }], context);
 
@@ -250,6 +256,9 @@ module.exports = async function (args, context = epochtal) {
       // Add the player to the lobby
       listEntry.players.push(steamid);
       dataEntry.players[steamid] = {};
+
+      // The first player to join is given the role of host
+      if (!dataEntry.host) dataEntry.host = steamid;
 
       // Write the lobbies to file if it exists
       if (file) Bun.write(file, JSON.stringify(lobbies));
