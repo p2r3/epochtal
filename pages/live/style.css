@@ -85,6 +85,9 @@
   border: 3px solid rgb(112, 191, 255);
   border-radius: 100%;
 }
+.lobby-host-avatar {
+  border: 3px solid #faa81a;
+}
 
 .lobby-player-name {
   position: absolute;
