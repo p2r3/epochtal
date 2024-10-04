@@ -93,7 +93,7 @@ function processConsoleOutput () {
     }
 
     // Process map transition event
-    if (line.indexOf("DEFAULT_WRITE_PATH") !== -1 && line.slice(-8 - runMap.length, -8) !== runMap) {
+    if (line.indexOf("DEFAULT_WRITE_PATH") !== -1 && line.indexOf(runMap) === -1) {
       // Notice that we don't actually request a new time report
       // Instead, we tell it to treat the last one (start of map load) as a map finish event
       expectReport = 3;
@@ -304,9 +304,13 @@ function processWebSocket () {
 
 }
 
-// Run each processing function every 500ms
+// Run each processing function on an interval
 while (true) {
   processConsoleOutput();
   processWebSocket();
-  sleep(500);
+
+  // If we're not connected yet, we can afford a slower loop
+  if (!webSocket) sleep(500);
+  // Otherwise, we need timer precision down to the tick
+  else sleep(16);
 }
