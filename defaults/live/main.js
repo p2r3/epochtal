@@ -58,7 +58,7 @@ function processConsoleOutput () {
     if (!webSocket) return;
 
     // Process start of map load event
-    if (line.indexOf("(Server shutting down)") !== -1) {
+    if (line.indexOf("---- Host_") === 0) {
       // Request total session time for load start
       game.send(gameSocket, "display_elapsedtime\n");
       expectReport = 1;
@@ -83,10 +83,19 @@ function processConsoleOutput () {
       return;
     }
 
-    // Process map finish event
+    // Process workshop map finish event
     if (line.indexOf("elFinish") === 0) {
       // Request total session time for map finish
       game.send(gameSocket, "display_elapsedtime\n");
+      expectReport = 3;
+
+      return;
+    }
+
+    // Process map transition event
+    if (line.indexOf("DEFAULT_WRITE_PATH") !== -1 && line.slice(-8 - runMap.length, -8) !== runMap) {
+      // Notice that we don't actually request a new time report
+      // Instead, we tell it to treat the last one (start of map load) as a map finish event
       expectReport = 3;
 
       return;
