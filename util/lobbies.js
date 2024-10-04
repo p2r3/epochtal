@@ -209,8 +209,8 @@ module.exports = async function (args, context = epochtal) {
 
         // Delete the lobby if it is still empty 10 seconds after all players have left
         if (listEntry.players.length === 0) {
-          setTimeout(async function () {
 
+          setTimeout(async function () {
             if (listEntry.players.length !== 0) return;
 
             delete lobbies.list[newID];
@@ -222,8 +222,23 @@ module.exports = async function (args, context = epochtal) {
             } catch {
               // Prevent a full server crash in case of a race condition
             }
-
           }, 10000);
+
+        } else {
+
+          // If everyone remaining is ready, start the game
+          let everyoneReady = true;
+          for (const curr in dataEntry.players) {
+            if (!dataEntry.players[curr].ready) {
+              everyoneReady = false;
+              break;
+            }
+          }
+          if (everyoneReady) {
+            dataEntry.state = LOBBY_INGAME;
+            await events(["send", eventName, { type: "lobby_start", map: mapFile }], context);
+          }
+
         }
 
       };
