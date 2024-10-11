@@ -26,20 +26,6 @@ var console = {
   }
 };
 
-/**
- * Spplice 2 has no synchronous sleep() function. The workaround is to make
- * HTTP requests to localhost until the required delay is reached. This isn't
- * pretty, but unlike a busy-loop, at least it's somewhat non-blocking.
- */
-const __pfLOG1_26 = Math.log(1.26);
-var sleep = async function (t) {
-  // This is really just a crude guess obtained from empirical testing
-	const goal = t * Math.max(Math.log(t - 16) / __pfLOG1_26 - 3, 2);
-	for (let i = 0; i < goal; i ++) {
-		try { await fetch("http://localhost:0") } catch { }
-	}
-}
-
 var game = {
   // Spplice 2 connects before starting the JS interface, so this is a dummy function
   connect () {
