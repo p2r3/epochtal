@@ -1,5 +1,5 @@
 // Polyfills for Spplice 2
-if (!("sleep" in this)) eval(fs.read("polyfill.js"));
+if (!("game" in this)) eval(fs.read("polyfill.js"));
 
 // Read the server's HTTP address from file
 const HTTP_ADDRESS = fs.read("address.txt");
@@ -272,7 +272,7 @@ function processWebSocket () {
     }
 
     // Shortly after, send a ping to check that we're still connected
-    sleep(200);
+    sleep(1000);
     const pingSuccess = ws.send(webSocket, '{"type":"ping"}');
 
     // If this failed, the server probably closed the connection, indicating auth failure
@@ -311,6 +311,6 @@ while (true) {
 
   // If we're not connected yet, we can afford a slower loop
   if (!webSocket) sleep(500);
-  // Otherwise, we need timer precision down to the tick
-  else sleep(16);
+  // Otherwise, we need sub-tick timer precision
+  else sleep(5);
 }
