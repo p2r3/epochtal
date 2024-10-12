@@ -6,7 +6,11 @@ const HTTP_ADDRESS = fs.read("address.txt");
 // Get the WebSocket address from the HTTP address
 const WS_ADDRESS = HTTP_ADDRESS.replace("http", "ws");
 
-// Utility funtion, checks if the given file path exists
+/**
+ * Utility funtion, checks if the given file path exists
+ * @param {string} path Path to the file or directory, relative to tempcontent
+ * @returns {boolean} True if the path exists, false otherwise
+ */
 function pathExists (path) {
   try { fs.rename(path, path) }
   catch (_) { return false }
@@ -33,7 +37,9 @@ var runMap = null;
 // Store the last partially received line until it can be processed
 var lastLine = "";
 
-// Processes output from the Portal 2 console
+/**
+ * Processes output from the Portal 2 console
+ */
 function processConsoleOutput () {
 
   // Receive 1024 bytes from the game console socket
@@ -148,7 +154,12 @@ function processConsoleOutput () {
 
 }
 
-// Processes events sent by the server
+/**
+ * Processes events sent by the server
+ *
+ * @param {Object} data Event data, as parsed from JSON
+ * @param {string} data.type Event type
+ */
 function processServerEvent (data) {
 
   switch (data.type) {
@@ -239,7 +250,9 @@ function processServerEvent (data) {
 var webSocket = null;
 var webSocketToken = null;
 
-// Processes communication with the WebSocket
+/**
+ * Processes communication with the WebSocket
+ */
 function processWebSocket () {
 
   // If we have a token, attempt to use it
