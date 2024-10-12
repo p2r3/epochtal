@@ -9,8 +9,7 @@ const SERVER_ADDRESS = fs.read("address.txt");
 let input = "";
 let pongIgnore = 0;
 
-let ws = null;
-let menuSession = false;
+let ws = null, wsPrompt = null;
 
 // Generates a random 4 digit code
 function generateAuthCode () {
@@ -32,19 +31,6 @@ function wsMessageHandler (event) {
     }
     case "cmd": return SendToConsole(data.value);
     case "ping": return ws.send(JSON.stringify({ type: "pong" }));
-    case "getMap": {
-      if (pathExists(`maps/${data.value.file}.bsp`)) {
-        ws.send(JSON.stringify({ type: "getMap", value: 1 }));
-      } else {
-        downloadMap(data.value.link, data.value.file);
-      }
-      return;
-    }
-    case "lobby_start" : {
-      menuSession = true;
-      SendToConsole("map " + data.map);
-      return;
-    }
   }
 
 }
@@ -79,8 +65,6 @@ function wsSetup (token) {
     if (event.reason === "ERR_TOKEN") {
       SendToConsole("echo \"\"");
       SendToConsole("echo The token you provided was invalid.");
-      SendToConsole("echo It most likely expired, as tokens are only valid for 30 seconds after being issued.");
-      SendToConsole("echo Please try again with a new token obtained through the New Token button at the top of the lobby window.");
     }
   });
 
@@ -94,34 +78,6 @@ function pathExists (path) {
   } catch (e) {
     return false;
   }
-}
-
-// Downloads a map from the workshop, given a link and output path
-async function downloadMap (link, file) {
-
-  try {
-
-    // Indicate start of download procedure with response code 0
-    ws.send(JSON.stringify({ type: "getMap", value: 0 }));
-
-    const request = await fetch(link);
-    const buffer = Buffer.from(await request.arrayBuffer());
-
-    const workshopPath = `maps/workshop/${file.split("/")[1]}`;
-    if (!pathExists(workshopPath)) fs.mkdir(workshopPath);
-    fs.write(`maps/${file}.bsp`, buffer);
-
-    // If the procedure was successful, respond with 1
-    ws.send(JSON.stringify({ type: "getMap", value: 1 }));
-
-  } catch (e) {
-
-    // If the procedure was unsuccessful, respond with -1
-    ws.send(JSON.stringify({ type: "getMap", value: -1 }));
-    log.append(e.toString());
-
-  }
-
 }
 
 // Handle console output
@@ -192,23 +148,15 @@ onConsoleOutput(async function (data) {
 
     // Respond to request for WebSocket connection
     if (lines[i].startsWith("ws : ")) {
-      wsSetup(lines[i].slice(5));
-      continue;
-    }
-
-    // If connected to WebSocket, report all SAR session timers as "finishRun" events
-    // TODO: This isn't a good approach, and should be refactored once lobbies get more attention
-    if (ws && lines[i].startsWith("Session: ")) {
-
-      // Ignore the first very one, as that's the session before the map transition
-      if (menuSession) {
-        menuSession = false;
+      if (!wsPrompt) {
+        SendToConsole("echo Looks like you're trying to connect to an Epochtal Live lobby.");
+        SendToConsole("echo Please use the dedicated Epochtal Live Spplice package for that instead, this will not work.");
+        SendToConsole("echo \"\"");
+        SendToConsole("echo If you know what you're doing, send the command again.");
+        wsPrompt = true;
         continue;
       }
-
-      const ticks = parseInt(lines[i].split("Session: ")[1].split(" (")[0]);
-      ws.send(JSON.stringify({ type: "finishRun", value: { time: ticks, portals: 0 } }));
-
+      wsSetup(lines[i].slice(5));
       continue;
     }
 
