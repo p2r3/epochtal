@@ -24,14 +24,19 @@ async function updatePlayerList () {
     const runA = leaderboard.find(c => c.steamid === a);
     const runB = leaderboard.find(c => c.steamid === b);
 
-    // In the event of a tie, prefer the lobby host
-    if (runA === runB) {
+    const runATime = runA && runA.time;
+    const runBTime = runB && runB.time;
+
+    if (runATime === runBTime) {
+      // In the event of a tie, prefer the lobby host
       if (a === lobby.data.host) return -1;
       if (b === lobby.data.host) return 1;
+      // If neither player is host, sort by SteamID string
+      return a < b ? 1 : -1;
     }
 
-    if (!runA) return 1;
-    if (!runB) return -1;
+    if (!runATime) return 1;
+    if (!runBTime) return -1;
     return runA.time - runB.time;
 
   });

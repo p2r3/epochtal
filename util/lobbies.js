@@ -234,8 +234,9 @@ module.exports = async function (args, context = epochtal) {
               break;
             }
           }
-          if (everyoneReady) {
+          if (everyoneReady && dataEntry.state !== LOBBY_INGAME) {
             dataEntry.state = LOBBY_INGAME;
+            const mapFile = dataEntry.context.data.map.file;
             await events(["send", eventName, { type: "lobby_start", map: mapFile }], context);
           }
 

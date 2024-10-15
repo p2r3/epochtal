@@ -99,7 +99,7 @@ function processConsoleOutput () {
     }
 
     // Process map transition event
-    if (line.indexOf("DEFAULT_WRITE_PATH") !== -1 && line.indexOf(runMap) === -1) {
+    if (line.indexOf("DEFAULT_WRITE_PATH") !== -1 && line.indexOf(runMap.split("/").pop()) === -1) {
       // Notice that we don't actually request a new time report
       // Instead, we tell it to treat the last one (start of map load) as a map finish event
       expectReport = 3;
