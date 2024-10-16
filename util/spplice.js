@@ -126,7 +126,10 @@ module.exports = async function (args, context = epochtal) {
         description,
         icon: iconLink,
         file: archiveLink,
-        weight: weight || 100
+        weight: weight || 100,
+        // Ensures Spplice 3 cache is invalidated on every change
+        version: Date.now().toString(),
+        args: []
       });
 
       // Save the index to the file if it exists
