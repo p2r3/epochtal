@@ -284,7 +284,8 @@ module.exports = async function (args, request) {
       const user = await api_users(["whoami"], request);
       if (!user) return "ERR_LOGIN";
 
-      await leaderboard(["remove", category, user.steamid]);
+      // Remove the run, but don't purge from weeklog
+      await leaderboard(["remove", category, user.steamid, false]);
 
       // Return SUCCESS to the user
       return "SUCCESS";
