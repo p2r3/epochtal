@@ -143,7 +143,7 @@ async function pointsFromSteamID (steamid, context = epochtal) {
  */
 async function calculatePointsDelta (context = epochtal) {
 
-  // Get a clone of all final leaderboards
+  // Get all final leaderboards
   const allBoards = context.data.leaderboard;
   // Get a reconstruction of the week log as a leaderboard
   const reconstructed = await weeklog(["reconstruct"], context);
