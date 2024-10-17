@@ -57,7 +57,7 @@ function parseLog (buffer, categoryList, forcePurge = false) {
 
       for (let j = log.length - 1; j >= 0; j --) {
         // look for the last run by the same user in the same category and remove it
-        if (log[j].steamid !== entry.steamid || log[j].category !== entry.category) {
+        if (log[j].steamid === entry.steamid && log[j].category === entry.category) {
           log.splice(j, 1);
           break;
         }
