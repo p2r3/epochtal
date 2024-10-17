@@ -50,21 +50,14 @@ function parseLog (buffer, categoryList) {
     if (entry.time === 0) {
 
       // the portal count byte denotes whether to purge the run from the output entirely
-      const purge = entry.portals === 1;
+      if (entry.portals === 0) continue;
 
       for (let j = log.length - 1; j >= 0; j --) {
-        // look for the last run by the same user in the same category
-        if (log[j].steamid !== entry.steamid || log[j].category !== entry.category) continue;
-
-        if (purge) {
-          // if we're purging this run, just splice it from the output
+        // look for the last run by the same user in the same category and remove it
+        if (log[j].steamid !== entry.steamid || log[j].category !== entry.category) {
           log.splice(j, 1);
-        } else {
-          // otherwise, set the run time and portals to zero
-          log[j].time = 0, log[j].portals = 0;
+          break;
         }
-
-        break;
       }
 
       continue;
