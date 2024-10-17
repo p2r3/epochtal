@@ -211,6 +211,7 @@ module.exports = async function (args, context = epochtal) {
     case "reconstruct": {
 
       const categoryList = await categories(["list"], context);
+      const categoryData = {};
       const date = (await config(["get", "date"], context));
       const buffer = new Uint8Array(await file.arrayBuffer());
 
@@ -221,6 +222,7 @@ module.exports = async function (args, context = epochtal) {
       const lb = {};
       for (let i = 0; i < categoryList.length; i ++) {
         lb[categoryList[i]] = [];
+        categoryData[categoryList[i]] = await categories(["get", categoryList[i]], context);
       }
 
       // Reconstruct each entry into the leaderboard in reverse chronological order
@@ -243,12 +245,8 @@ module.exports = async function (args, context = epochtal) {
 
         let inserted = false;
 
-        // > The weeklog doesn't contain category data, so we don't know if a category is based in portals
-        // > or not. Therefore, unfortunately, 'lp' is hardcoded to be least portals
-        // - PancakeTAS
-
-        // Insert 'lp' data into the leaderboard
-        if (curr.category === "lp") {
+        // Insert portals-first run into the leaderboard
+        if (categoryData[curr.category].portals) {
 
           newRun.segmented = false;
 
