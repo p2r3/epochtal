@@ -9,9 +9,10 @@ const config = require("./config.js");
  *
  * @param {Uint8Array} buffer Buffer containing weeklog data
  * @param {string[]} categoryList  List of categories
+ * @param {boolean} forcePurge Whether to treat all deletion markers as purges (false by default)
  * @returns {object[]} Array of objects representing weeklog entries
  */
-function parseLog (buffer, categoryList) {
+function parseLog (buffer, categoryList, forcePurge = false) {
 
   const log = [];
 
@@ -50,7 +51,7 @@ function parseLog (buffer, categoryList) {
     if (entry.time === 0) {
 
       // the portal count byte denotes whether to purge the run from the output entirely
-      if (entry.portals === 0) continue;
+      if (!forcePurge && entry.portals === 0) continue;
 
       for (let j = log.length - 1; j >= 0; j --) {
         // look for the last run by the same user in the same category and remove it
