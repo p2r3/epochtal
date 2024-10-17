@@ -325,6 +325,4 @@ module.exports = async function (args, context = epochtal) {
 
   }
 
-  throw new UtilError("ERR_COMMAND", args, context);
-
 };
