@@ -53,7 +53,7 @@ function parseLog (buffer, categoryList, forcePurge = false) {
     if (entry.time === 0) {
 
       // the portal count byte denotes whether to purge the run from the output entirely
-      const purge = entry.portals === 0;
+      const purge = entry.portals === 1;
       // if we're not purging, just ignore this marker and do nothing
       if (!forcePurge && !purge) continue;
 
