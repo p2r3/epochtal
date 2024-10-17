@@ -143,13 +143,17 @@ async function pointsFromSteamID (steamid, context = epochtal) {
  */
 async function calculatePointsDelta (context = epochtal) {
 
-  const leaderboard = await weeklog(["reconstruct"], context);
+  // Get a clone of all final leaderboards
+  const allBoards = context.data.leaderboard;
+  // Get a reconstruction of the week log as a leaderboard
+  const reconstructed = await weeklog(["reconstruct"], context);
+
   const catlist = await categories(["list"], context);
   const partners = context.data.week.partners;
   const catDeltaElo = {};
 
-  // For all categories in reconstructed leaderboard
-  for (const catname in leaderboard) {
+  // For all categories with at least one submission
+  for (const catname in allBoards) {
 
     // Ensure the category is in the list of active categories at the conclusion of the week
     if (!catlist.includes(catname)) continue;
@@ -158,7 +162,43 @@ async function calculatePointsDelta (context = epochtal) {
     const cat = await categories(["get", catname], context);
     if (!cat.points) continue;
 
-    const lb = leaderboard[catname];
+    // Perform a deep copy of the relevant leaderboard
+    const lb = structuredClone(allBoards[catname]);
+
+    // Add any player-removed runs back to the cloned leaderboard
+    for (const run of reconstructed[catname]) {
+      const steamid = run.steamid;
+
+      // Check if this runner (or pair) is missing from the final leaderboard
+      const exists = allBoards[catname].some(curr => {
+        if (curr.steamid === steamid || curr.partner === steamid) return true;
+        if (cat.coop && partners && partners[curr.steamid] === steamid) return true;
+        return false;
+      });
+      if (exists) continue;
+
+      let insert = null;
+
+      for (let i = 0; i < lb.length; i ++) {
+        if (cat.portals) {
+          // This will treat all deleted LP runs as segmented. It's not an ideal solution, but
+          // there's no such flag in log entries. Arguably, a punishment for removing the run.
+          if (lb[i].portals > run.portals || (lb[i].segmented && lb[i].portals === run.portals && lb[i].time > run.time)) {
+            insert = i;
+            break;
+          }
+        } else if (lb[i].time > run.time) {
+          insert = i;
+          break;
+        }
+      }
+
+      // Insert the run in the sorted position, *unless it's a world record*
+      // If you're deleting a WR, chances are it's an accidental submission
+      if (insert === null) lb.push(run);
+      else if (insert !== 0) lb.splice(insert, 0, run);
+
+    }
 
     catDeltaElo[catname] = {};
     const deltaElo = catDeltaElo[catname];
