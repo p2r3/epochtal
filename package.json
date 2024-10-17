@@ -2,6 +2,11 @@
   "name": "repochtal",
   "module": "main.js",
   "type": "module",
+  "scripts": {
+    "db:sync": "tsx node_modules/typeorm/cli.js schema:sync -d ormconfig.ts",
+    "db:createMigration": "tsx node_modules/typeorm/cli.js migration:create",
+    "db:runMigrations": "tsx node_modules/typeorm/cli.js migration:run -d ormconfig.ts"
+  },
   "devDependencies": {
     "@eslint/js": "^9.8.0",
     "@types/bun": "latest",
@@ -18,6 +23,10 @@
     "dotenv": "^16.4.5",
     "jsonwebtoken": "^9.0.2",
     "node-schedule": "^2.1.1",
-    "openid": "^2.0.11"
+    "openid": "^2.0.11",
+    "pg": "^8.13.0",
+    "reflect-metadata": "^0.2.2",
+    "tsx": "^4.19.1",
+    "typeorm": "^0.3.20"
   }
 }
