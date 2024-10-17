@@ -27,7 +27,9 @@ function parseLog (buffer, categoryList, forcePurge = false) {
     for (let j = 0; j < 8; j ++) {
       steamid += BigInt(buffer[curr + j]) * BigInt(Math.pow(256, 7 - j));
     }
+    // convert the acquired number to a valid steamid string
     entry.steamid = steamid.toString();
+    while (entry.steamid.length < 17) entry.steamid = "0" + entry.steamid;
 
     // 1 byte - category index
     entry.category = categoryList[buffer[curr + 8]];
