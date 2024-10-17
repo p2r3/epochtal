@@ -74,6 +74,9 @@ module.exports = async function (args, context = epochtal) {
 
       if (lb === undefined) throw new UtilError("ERR_CATEGORY", args, context);
 
+      // Whether the run should be purged from the weeklog (true by default)
+      const purge = args[3] === undefined ? true : args[3];
+
       // Find the run to remove
       const idx = lb.findIndex(function (curr) {
         return curr.steamid === steamid;
@@ -91,7 +94,7 @@ module.exports = async function (args, context = epochtal) {
       if (file) Bun.write(file, JSON.stringify(data));
 
       // Log the removal
-      await weeklog(["add", steamid, category, 0, 0], context);
+      await weeklog(["add", steamid, category, 0, purge ? 1 : 0], context);
 
       return "SUCCESS";
 

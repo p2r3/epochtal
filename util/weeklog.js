@@ -46,22 +46,31 @@ function parseLog (buffer, categoryList) {
       entry.timestamp += buffer[curr + 14 + j] * Math.pow(256, 2 - j);
     }
 
-    // this pattern marks the removal of an entry
-    if (entry.time === 0 && entry.portals === 0) {
+    // a time of zero logs the removal of the previous entry
+    if (entry.time === 0) {
+
+      // the portal count byte denotes whether to purge the run from the output entirely
+      const purge = entry.portals === 1;
 
       for (let j = log.length - 1; j >= 0; j --) {
-        // look for the last run by the same user in the same category and remove it
-        if (log[j].steamid === entry.steamid && log[j].category === entry.category) {
+        // look for the last run by the same user in the same category
+        if (log[j].steamid !== entry.steamid || log[j].category !== entry.category) continue;
+
+        if (purge) {
+          // if we're purging this run, just splice it from the output
           log.splice(j, 1);
-          break;
+        } else {
+          // otherwise, set the run time and portals to zero
+          log[j].time = 0, log[j].portals = 0;
         }
+
+        break;
       }
 
-    } else {
-
-      log.push(entry);
-
+      continue;
     }
+
+    log.push(entry);
 
   }
 
@@ -224,8 +233,11 @@ module.exports = async function (args, context = epochtal) {
       // Reconstruct each entry into the leaderboard in reverse chronological order
       for (let i = log.length - 1; i >= 0; i --) {
 
-        // Skip if previous entry was already added
         const curr = log[i];
+
+        // Skip if this is a softly removed run
+        if (curr.time === 0 && curr.portals === 0) continue;
+        // Skip if previous entry was already added
         if (lb[curr.category].find(entry => entry.steamid === curr.steamid)) continue;
 
         const newRun = {
