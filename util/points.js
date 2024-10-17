@@ -1,5 +1,5 @@
 const UtilError = require("./error.js");
-const leaderboard = require("./leaderboard.js");
+const weeklog = require("./weeklog.js");
 const categories = require("./categories.js");
 const archive = require("./archive.js");
 const profiledata = require("./profiledata.js");
@@ -143,23 +143,22 @@ async function pointsFromSteamID (steamid, context = epochtal) {
  */
 async function calculatePointsDelta (context = epochtal) {
 
-  const boards = await leaderboard(["list"], context);
+  const leaderboard = await weeklog(["reconstruct"], context);
   const catlist = await categories(["list"], context);
   const partners = context.data.week.partners;
   const catDeltaElo = {};
 
-  // For each board (category with at least 1 run)
-  for (let i = 0; i < boards.length; i ++) {
+  // For all categories in reconstructed leaderboard
+  for (const catname in leaderboard) {
 
     // Ensure the category is in the list of active categories at the conclusion of the week
-    const catname = boards[i];
     if (!catlist.includes(catname)) continue;
 
     // Ensure the category is scored
     const cat = await categories(["get", catname], context);
     if (!cat.points) continue;
 
-    const lb = await leaderboard(["get", catname], context);
+    const lb = leaderboard[catname];
 
     catDeltaElo[catname] = {};
     const deltaElo = catDeltaElo[catname];
