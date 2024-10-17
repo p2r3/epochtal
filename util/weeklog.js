@@ -53,7 +53,9 @@ function parseLog (buffer, categoryList, forcePurge = false) {
     if (entry.time === 0) {
 
       // the portal count byte denotes whether to purge the run from the output entirely
-      if (!forcePurge && entry.portals === 0) continue;
+      const purge = entry.portals === 0;
+      // if we're not purging, just ignore this marker and do nothing
+      if (!forcePurge && !purge) continue;
 
       for (let j = log.length - 1; j >= 0; j --) {
         // look for the last run by the same user in the same category and remove it
@@ -63,10 +65,11 @@ function parseLog (buffer, categoryList, forcePurge = false) {
         }
       }
 
-      continue;
-    }
+    } else {
 
-    log.push(entry);
+      log.push(entry);
+
+    }
 
   }
 
