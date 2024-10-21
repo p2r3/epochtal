@@ -135,7 +135,7 @@ async function setup () {
   await categories(["add", "lp", "Least Portals", true, false, false, "any", true]);
   await categories(["add", "ppnf", "Portal Placement Never Fail", false, false, false, "demo", false]);
   await categories(["add", "tas", "Tool Assisted Speedrun", false, false, false, "any", false]);
-  await categories(["add", "meme", "Meme", false, false, false, "any", false]);
+  await categories(["add", "meme", "Meme", false, false, false, "video", false]);
   await categories(["add", "coop", "Co-op Mode", false, true, false, "demo", true]);
 
   // Delete first archive
