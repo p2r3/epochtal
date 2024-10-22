@@ -31,6 +31,16 @@ do { // Attempt connection with the game's console
 
 console.log("Connected to Portal 2 console.");
 
+// Prevent JS API timeout from firing
+game.send(gameSocket, "alias js_test_fail\n");
+
+// Check if we can access the API for timestamps
+if (download.string(HTTP_ADDRESS + "/api/timestamp/get")) {
+  game.send(gameSocket, "echo Server timestamp test successful.\n");
+} else {
+  game.send(gameSocket, "disconnect \"Server timestamp test failed, please restart the Spplice package. Demos recorded during this session will not be valid for submission to scored categories.\"\n");
+}
+
 // Keep track of co-op sync pings/pongs
 var pongIgnore = 0;
 // Whether an attempt has been made to provide a WebSocket token
