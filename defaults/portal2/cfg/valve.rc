@@ -30,4 +30,8 @@ con_drawnotify 0
 // Alias level restart
 sar_alias do_reset restart_level
 
+// Set a timeout warning for the JS API
+alias js_test_fail "exec epochtal_js_timeout"
+hwait 60 js_test_fail
+
 startupmenu
