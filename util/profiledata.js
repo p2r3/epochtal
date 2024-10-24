@@ -64,8 +64,8 @@ module.exports = async function (args, context = epochtal) {
         banned: false,
         avatar: avatar,
         categories: [],
-        statistics: [],
-        weeks: []
+        statistics: {},
+        weeks: { total: [] }
       };
       profiles[steamid] = profile;
 
