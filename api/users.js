@@ -39,7 +39,7 @@ const serverUser = {
   epochtal: {
     name: "server",
     banned: false,
-    points: 999,
+    points: { main: 999 },
     admin: true
   }
 };

@@ -144,106 +144,100 @@ var profilePageInit = async function () {
   }
   await fetchProfileLog();
 
-  const graphTypes = ["points over time", "participation"];
-  window.selectedGraphType = 0;
+  // Generate a list of available graph names
+  // These names are also the primary index for graphs
+  const graphNames = ["total participation"];
+  for (const category in profileUserData.statistics) {
+    // Skip categories with less than 10 runs
+    if (profileUserData.statistics[category].length <= 10) continue;
+    graphNames.unshift(`points in ${category}`);
+  }
 
   // Generate the graph
-  window.generateGraph = async function () {
+  window.generateGraph = async function (graphName) {
 
-    graphLegendText.innerHTML = graphTypes[selectedGraphType];
+    graphLegendText.innerHTML = graphName;
 
     // Setup graph type dropdown
     let dropdownOutput = "";
-    for (let i = 0; i < graphTypes.length; i ++) {
-      if (i === selectedGraphType) continue;
-      dropdownOutput += `<p onclick="selectedGraphType=${i};generateGraph()">${graphTypes[i]}</p>`
+    for (const name of graphNames) {
+      if (name === graphName) continue;
+      dropdownOutput += `<p onclick="generateGraph('${name}')">${name}</p>`;
     }
     graphLegendDropdown.innerHTML = dropdownOutput;
 
     // Fill the graph with data
     let data, startOffset = null, hiddenUntil = null;
-    switch (graphTypes[selectedGraphType]) {
 
-      case "points over time": {
+    if (graphName.startsWith("points in ")) {
 
-        const { weeks, statistics } = profileUserData;
+      const category = graphName.slice(10);
+      const weeks = profileUserData.weeks[category];
+      const statistics = profileUserData.statistics[category];
 
-        data = new Array(weeks[weeks.length - 1]).fill(1000);
-        endOffset = 0;
+      data = new Array(weeks[weeks.length - 1]).fill(1000);
+      endOffset = 0;
 
-        // Calculate the total points for each week
-        let totalPoints = 1000, lastDataPoint = 1000, weeksIn = 0, runsIn = 0;
-        for (let i = weeks[0] - 1; i < data.length; i ++) {
+      // Calculate the total points for each week
+      let totalPoints = 1000, lastDataPoint = 1000, runsIn = 0;
+      for (let i = weeks[0] - 1; i < data.length; i ++) {
 
-          // Copy the last data point if the week is not in the statistics
-          if (i + 1 !== weeks[weeksIn]) {
-            data[i] = lastDataPoint;
-            continue;
-          }
-
-          // Calculate the data point for this week
-          const currDataPoint = statistics[weeksIn];
-          for (let i = 0; i < currDataPoint.length; i ++) {
-            totalPoints += currDataPoint[i];
-            runsIn ++;
-          }
-
-          // Only show the data point if there are at least 10 runs
-          if (runsIn >= 10) {
-            if (hiddenUntil === null) hiddenUntil = i;
-            if (totalPoints < 0) lastDataPoint = -100 / totalPoints;
-            else lastDataPoint = totalPoints + 100;
-          }
+        // Copy the last data point if the week is not in the statistics
+        if (i + 1 !== weeks[runsIn]) {
           data[i] = lastDataPoint;
-
-          weeksIn ++;
-
+          continue;
         }
 
-        for (let i = weeks[0] - 1; i < hiddenUntil; i ++) {
-          data[i] = data[hiddenUntil];
-        }
-        startOffset = weeks[0] - 1;
-        hiddenUntil -= startOffset;
-        data = data.slice(startOffset);
+        // Add the points from this week
+        totalPoints += statistics[runsIn];
+        runsIn ++;
 
-        break;
+        // Only show the data point if there are at least 10 runs
+        if (runsIn >= 10) {
+          if (hiddenUntil === null) hiddenUntil = i;
+          if (totalPoints < 0) lastDataPoint = -100 / totalPoints;
+          else lastDataPoint = totalPoints + 100;
+        }
+        data[i] = lastDataPoint;
 
       }
 
-      case "participation": {
+      for (let i = weeks[0] - 1; i < hiddenUntil; i ++) {
+        data[i] = data[hiddenUntil];
+      }
+      startOffset = weeks[0] - 1;
+      hiddenUntil -= startOffset;
+      data = data.slice(startOffset);
 
-        // Find the first and last week
-        let first = Infinity, last = -Infinity;
-        for (const week in leaderboards) {
-          const weeknum = Number(week);
-          if (weeknum < first) first = weeknum;
-          if (weeknum > last) last = weeknum;
+    } else {
+
+      // Find the first and last week
+      let first = Infinity, last = -Infinity;
+      for (const week in leaderboards) {
+        const weeknum = Number(week);
+        if (weeknum < first) first = weeknum;
+        if (weeknum > last) last = weeknum;
+      }
+
+      data = new Array(Math.max(last, 0)).fill(0);
+
+      // For each week, count the number of submissions
+      for (let i = first - 1; i <= last; i ++) {
+
+        if (!(i in leaderboards)) continue;
+
+        // Count the number of submissions in this week
+        let submissions = 0;
+        for (const category in leaderboards[i]) {
+          submissions += leaderboards[i][category].length;
         }
-
-        data = new Array(Math.max(last, 0)).fill(0);
-
-        // For each week, count the number of submissions
-        for (let i = first - 1; i <= last; i ++) {
-
-          if (!(i in leaderboards)) continue;
-
-          // Count the number of submissions in this week
-          let submissions = 0;
-          for (const category in leaderboards[i]) {
-            submissions += leaderboards[i][category].length;
-          }
-          if (startOffset === null && submissions !== 0) startOffset = i;
-          data[i] = submissions;
-
-        }
-
-        // Slice the data to start from the first week with submissions
-        data = data.slice(startOffset);
-
-        break;
+        if (startOffset === null && submissions !== 0) startOffset = i;
+        data[i] = submissions;
 
       }
+
+      // Slice the data to start from the first week with submissions
+      data = data.slice(startOffset);
 
     }
 
@@ -307,10 +301,10 @@ var profilePageInit = async function () {
 
       // Display the index in hoverInfo
       const dataPoint = Math.round(data[index]);
-      if (selectedGraphType === 0) {
+      if (graphName !== "total participation") {
         if (index < hiddenUntil) hoverInfo.innerHTML = `Points hidden on Week ${startOffset + index + 1}`;
         else hoverInfo.innerHTML = `${dataPoint} Point${dataPoint === 1 ? "" : "s"} on Week ${startOffset + index + 1}`;
-      } else if (selectedGraphType === 1) {
+      } else {
         hoverInfo.innerHTML = `${dataPoint} Submission${dataPoint === 1 ? "" : "s"} on Week ${startOffset + index + 1}`;
       }
 
@@ -334,7 +328,7 @@ var profilePageInit = async function () {
     });
 
   }
-  generateGraph();
+  generateGraph("points in main");
 
   // Calculate the number of submissions in each category
   const categorySubmissions = [];
@@ -363,13 +357,17 @@ var profilePageInit = async function () {
     return b.submissions - a.submissions;
   });
 
-  // Calculate the rank of the user
-  let rank = 1;
-  for (const steamid in users) {
-    const user = users[steamid];
-    if (user === profileUser) continue;
-    if (user.runs < 10) continue;
-    if (user.points > profileUser.points) rank ++;
+  // Calculate the rank of the user per category
+  let rank = {};
+  for (const cat in profileUser.points) {
+    rank[cat] = 1;
+    for (const steamid in users) {
+
+      const user = users[steamid];
+      if (user === profileUser) continue;
+      if (user.points[cat] > profileUser.points[cat]) rank[cat] ++;
+
+    }
   }
 
   const statsText = document.querySelector("#profile-stats-text");
@@ -386,15 +384,19 @@ var profilePageInit = async function () {
 
     let scoredRuns = 0;
     const { statistics } = profileUserData;
-    for (let i = 0; i < statistics.length; i ++) {
-      scoredRuns += statistics[i].length;
+    for (const cat in statistics) {
+      scoredRuns += statistics[cat].length;
+    }
+
+    let pointsString = "";
+    for (const cat in statistics) {
+      pointsString += `&nbsp;•&nbsp;&nbsp;${profileUser.points[cat] === null ? `Not enough <b>${cat}</b> runs` : `<b>${profileUser.points[cat].toFixed(2)}</b> points in <b>${cat}</b> - rank #${rank[cat]}`}<br>`;
     }
 
     let statsTextOutput = `
-      <h3>Rank #${rank} out of ${Object.keys(users).length} players</h3>
-      &nbsp;•&nbsp;&nbsp;${profileUser.points === null ? "Points hidden - not enough runs" : `<b>${profileUser.points.toFixed(2)}</b> points`}<br>
-      &nbsp;•&nbsp;&nbsp;Joined on week ${startedWeek}, last submitted on week ${endedWeek}<br>
+      ${pointsString}
       <br>
+      &nbsp;•&nbsp;&nbsp;Joined on week ${startedWeek}, last submitted on week ${endedWeek}<br>
       &nbsp;•&nbsp;&nbsp;${scoredRuns} Scored Runs<br>
       &nbsp;•&nbsp;&nbsp;${profileLog.length} Total Submissions<br>
       <br>

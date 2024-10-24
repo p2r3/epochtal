@@ -73,7 +73,7 @@ module.exports = async function (args, context = epochtal) {
 
       users[steamid] = {
         name: name,
-        points: null
+        points: {}
       };
 
       if (file) Bun.write(file, JSON.stringify(users));

@@ -430,11 +430,11 @@ input:checked+.slider:before {
 
 #players-search-icon, #lobby-search-icon {
   position: absolute;
-  padding: 11px 15px;
+  padding: 13px 15px;
   pointer-events: none;
 }
 #players-search, #lobby-search {
-  padding: 7px 15px 7px 40px;
+  padding: 10px 15px 10px 40px;
   text-align: left;
 }
 

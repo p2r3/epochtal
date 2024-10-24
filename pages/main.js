@@ -148,20 +148,29 @@ var homepageInit = async function () {
 
   const leaderboardCategorySelect = document.querySelector("#leaderboard-category-select");
   const leaderboardArchiveSelect = document.querySelector("#leaderboard-archive-select");
+  const playersCategorySelect = document.querySelector("#players-category-select");
 
   /**
-   * Updates the category select dropdown
+   * Updates the category select dropdowns
    */
   function updateCategorySelect () {
 
-    let output = "";
+    let outputLeaderboard = "";
+    let outputPlayers = "";
+
     for (let i = 0; i < config.categories.length; i ++) {
 
       const category = config.categories[i];
-      output += `<option value="${category.name}" ${i === 0 ? 'selected=""' : ""}>${category.title}</option>`;
+      const curr = `<option value="${category.name}" ${i === 0 ? 'selected=""' : ""}>${category.title}</option>`;
+
+      outputLeaderboard += curr;
+      // The global player leaderboard dropdown only includes scored categories
+      if (category.points) outputPlayers += curr;
 
     }
-    leaderboardCategorySelect.innerHTML = output;
+
+    leaderboardCategorySelect.innerHTML = outputLeaderboard;
+    playersCategorySelect.innerHTML = outputPlayers;
 
   }
   updateCategorySelect();
@@ -793,42 +802,49 @@ var homepageInit = async function () {
   const playersContainer = document.querySelector("#players-container");
   const playersSearch = document.querySelector("#players-search");
 
-  // Sort users by points
-  const sortedUsers = [];
-  for (const steamid in users) {
-    const user = JSON.parse(JSON.stringify(users[steamid]));
-    user.steamid = steamid;
-    if (user.points === null) user.points = -Infinity;
-    sortedUsers.push(user);
-  }
-  sortedUsers.sort((a, b) => b.points - a.points);
+  // Display global players leaderboard for the given category
+  function displayPlayersLeaderboard (category) {
 
-  // Display global players leaderboard
-  let output = "", placement = 1;
-  for (let i = 0; i < sortedUsers.length; i ++) {
+    playersCategorySelect.value = category;
 
-    const user = sortedUsers[i];
-
-    const username = sanitizeStringHTML(user.name);
-
-    if (i !== 0 && user.points !== sortedUsers[i - 1].points) {
-      placement ++;
+    // Sort users by points
+    const sortedUsers = [];
+    for (const steamid in users) {
+      const user = JSON.parse(JSON.stringify(users[steamid]));
+      user.steamid = steamid;
+      if (typeof user.points[category] !== "number") user.points[category] = -Infinity;
+      sortedUsers.push(user);
     }
+    sortedUsers.sort((a, b) => b.points[category] - a.points[category]);
 
-    let pointsString = "Points hidden";
-    const outputPoints = Math.round(user.points);
-    if (user.points !== -Infinity) pointsString = `${outputPoints} point${outputPoints === 1 ? "" : "s"}`;
+    let output = "", placement = 1;
+    for (let i = 0; i < sortedUsers.length; i ++) {
 
-    output += `<a href="${window.location.protocol}//${window.location.host}/profile/#${user.steamid}" target="_blank" style="color:white;text-decoration:none"><div class="lb-entry lb-rank${placement}">
-      <p class="lb-text">${username}</p>
-      <p class="lb-text font-light">${pointsString}</p>
-    </div></a>`;
+      const user = sortedUsers[i];
+
+      const username = sanitizeStringHTML(user.name);
+
+      if (i !== 0 && user.points[category] !== sortedUsers[i - 1].points[category]) {
+        placement ++;
+      }
+
+      let pointsString = "Points hidden";
+      const outputPoints = Math.round(user.points[category]);
+      if (user.points[category] !== -Infinity) pointsString = `${outputPoints} point${outputPoints === 1 ? "" : "s"}`;
+
+      output += `<a href="${window.location.protocol}//${window.location.host}/profile/#${user.steamid}" target="_blank" style="color:white;text-decoration:none"><div class="lb-entry lb-rank${placement}">
+        <p class="lb-text">${username}</p>
+        <p class="lb-text font-light">${pointsString}</p>
+      </div></a>`;
+
+    }
+    playersContainer.innerHTML = output;
 
   }
-  playersContainer.innerHTML = output;
+  displayPlayersLeaderboard("main");
 
   // Handle player search
-  playersSearch.oninput = function () {
+  function updatePlayerSearch () {
 
     const query = playersSearch.value.trim().toLowerCase();
     const entries = playersContainer.getElementsByClassName("lb-entry");
@@ -845,6 +861,15 @@ var homepageInit = async function () {
 
     }
 
+  }
+
+  // Update search filter on input
+  playersSearch.oninput = updatePlayerSearch;
+
+  // Re-sort players leaderboard when category changes
+  playersCategorySelect.onchange = function () {
+    displayPlayersLeaderboard(playersCategorySelect.value);
+    updatePlayerSearch();
   };
 
   const powerSavingSwitch = document.querySelector("#power-saving");
