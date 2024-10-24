@@ -69,8 +69,8 @@ function calculateEloDelta (playerElo, opponentElo, result, kFactor = 32) {
  * Unlike display points, this does not include the lower bound,
  * but still includes the 1000 base points.
  *
- * @param {Number[][]} statistics The user's statistics
- * @returns {Number} The total points
+ * @param {Number[]} statistics The user's statistics for the respective category
+ * @returns {Number} The total points for the respective category
  */
 function calculateTotalPoints (statistics) {
 
@@ -78,9 +78,7 @@ function calculateTotalPoints (statistics) {
 
   // Calculate the total points
   for (let i = 0; i < statistics.length; i ++) {
-    for (let j = 0; j < statistics[i].length; j ++) {
-      totalPoints += statistics[i][j];
-    }
+    totalPoints += statistics[i];
   }
 
   return totalPoints;
@@ -88,12 +86,12 @@ function calculateTotalPoints (statistics) {
 }
 
 /**
- * Calculate the display points for a user based on their statistics.
+ * Calculate the display points for a user based on their statistics in a category.
  * Display points are all of the players elo points added together with additionally
  * offset and lower bound to increase the appeal of the visual representation.
  *
- * @param {Number[][]} statistics Elo points for each participation
- * @returns {Number} The display points
+ * @param {Number[]} statistics Elo points for each participation in the respective category
+ * @returns {Number} The display points for the respective category
  */
 function calculateDisplayPoints (statistics) {
 
@@ -102,10 +100,8 @@ function calculateDisplayPoints (statistics) {
 
   // Calculate the total points and runs
   for (let i = 0; i < statistics.length; i ++) {
-    for (let j = 0; j < statistics[i].length; j ++) {
-      runs ++;
-      totalPoints += statistics[i][j];
-    }
+    runs ++;
+    totalPoints += statistics[i];
   }
 
   // If the user has less than 10 runs, return null
@@ -123,20 +119,22 @@ function calculateDisplayPoints (statistics) {
  * Grab a user's total elo to this point as stored in their profile data.
  *
  * @param {string} steamid The user's steamid
+ * @param {string} category The name of the category for which to calculate Elo
  * @param {object} context The context object, defaults to epochtal
  * @returns {number} The user's total elo
  */
-async function pointsFromSteamID (steamid, context = epochtal) {
+async function pointsFromSteamID (steamid, category, context = epochtal) {
 
   const profile = await profiledata(["get", steamid], context);
-  return calculateTotalPoints(profile.statistics);
+  if (!(category in profile.statistics)) profile.statistics[category] = [];
+  return calculateTotalPoints(profile.statistics[category]);
 
 }
 
 /**
  * Calculate the elo acquired or lost for each player in this week.
  * Note: Despite only returning the elo delta, the calculation itself is
- * based on the elo already found in the profile data (see pointsFromSteamID).
+ * based on the elo already found in the profile data (see pointsFromSteamID)., catname
  *
  * @param {unknown} context The context object, defaults to epochtal
  * @returns {object} The elo delta for each player
@@ -227,8 +225,8 @@ async function calculatePointsDelta (context = epochtal) {
           if (!(opponentPartner in deltaElo)) deltaElo[opponentPartner] = 0;
 
           // Calculate elo averages between the two players and their partners
-          const playerAverage = (await pointsFromSteamID(player, context) + await pointsFromSteamID(playerPartner, context)) / 2;
-          const opponentAverage = (await pointsFromSteamID(opponent, context) + await pointsFromSteamID(opponentPartner, context)) / 2;
+          const playerAverage = (await pointsFromSteamID(player, catname, context) + await pointsFromSteamID(playerPartner, catname, context)) / 2;
+          const opponentAverage = (await pointsFromSteamID(opponent, catname, context) + await pointsFromSteamID(opponentPartner, catname, context)) / 2;
 
           // Run the elo calculation
           const elo = calculateEloDelta(playerAverage, opponentAverage, result);
@@ -241,7 +239,7 @@ async function calculatePointsDelta (context = epochtal) {
         } else {
 
           // Run the elo calculation
-          const elo = calculateEloDelta(await pointsFromSteamID(player), await pointsFromSteamID(opponent), result);
+          const elo = calculateEloDelta(await pointsFromSteamID(player, catname), await pointsFromSteamID(opponent, catname), result);
 
           deltaElo[player] += elo.player;
           deltaElo[opponent] += elo.opponent;
@@ -253,17 +251,8 @@ async function calculatePointsDelta (context = epochtal) {
 
   }
 
-  const output = {};
-
-  // Copy the category delta elo into the output object
-  for (const cat in catDeltaElo) {
-    for (const steamid in catDeltaElo[cat]) {
-      if (!(steamid in output)) output[steamid] = [];
-      output[steamid].push(catDeltaElo[cat][steamid]);
-    }
-  }
-
-  return output;
+  // Return the point deltas separated by category
+  return catDeltaElo;
 
 }
 
@@ -282,25 +271,30 @@ async function calculatePointsDelta (context = epochtal) {
  */
 module.exports = async function (args, context = epochtal) {
 
-  const [command] = args;
+  const [command, category] = args;
 
   const file = context.file.users;
   const users = context.data.users;
+
+  const categoryList = await categories(["list"], context);
 
   switch (command) {
 
     case "user": {
 
+      // Ensure a valid category is provided
+      if (!categoryList.includes(category)) throw new UtilError("ERR_CATEGORY", args, context);
+
       // Ensure user is provided
-      const steamid = args[1];
+      const steamid = args[2];
       if (!steamid) throw new UtilError("ERR_ARGS", args, context);
 
       const profile = await profiledata(["get", steamid], context);
 
-      // Return total and display points for specified user, for all weeks
+      // Return total and display points for specified user in the given category for all weeks
       return {
-        total: calculateTotalPoints(profile.statistics),
-        display: calculateDisplayPoints(profile.statistics)
+        total: calculateTotalPoints(profile.statistics[category]),
+        display: calculateDisplayPoints(profile.statistics[category])
       };
 
     }
@@ -313,21 +307,34 @@ module.exports = async function (args, context = epochtal) {
 
     case "award": {
 
-      // Calculate the points delta for this week
-      const deltaElo = await calculatePointsDelta(context);
+      // Calculate the points delta for each category in this week
+      const catDeltaElo = await calculatePointsDelta(context);
+
+      // Get the week number for the active week
+      const weekNumber = context.data.week.number;
 
       // Award the points to each user
-      for (const steamid in deltaElo) {
+      for (const cat in catDeltaElo) {
+        for (const steamid in catDeltaElo[cat]) {
 
-        const profile = await profiledata(["get", steamid], context);
-        profile.statistics.push(deltaElo[steamid]);
-        profile.weeks.push(context.data.week.number);
+          const profile = await profiledata(["get", steamid], context);
 
-        // Recalculate the display points for the user
-        users[steamid].points = calculateDisplayPoints(profile.statistics);
+          if (!(cat in profile.statistics)) profile.statistics[cat] = [];
+          if (!(cat in profile.weeks)) profile.weeks[cat] = [];
 
-        profiledata(["flush", steamid], context);
+          profile.statistics[cat].push(catDeltaElo[cat][steamid]);
 
+          profile.weeks[cat].push(weekNumber);
+          if (!profile.weeks.total.includes(weekNumber)) {
+            profile.weeks.total.push(weekNumber);
+          }
+
+          // Recalculate the display points for the user
+          users[steamid].points[cat] = calculateDisplayPoints(profile.statistics[cat]);
+
+          profiledata(["flush", steamid], context);
+
+        }
       }
 
       // Write the changes to the users file if it exists
@@ -342,8 +349,8 @@ module.exports = async function (args, context = epochtal) {
       // Reset all user statistics
       for (const steamid in users) {
         const profile = await profiledata(["get", steamid], context);
-        profile.statistics = [];
-        profile.weeks = [];
+        profile.statistics = {};
+        profile.weeks = { total: [] };
       }
 
       // Calculate the points delta for each week and add it to the user's statistics
@@ -351,23 +358,36 @@ module.exports = async function (args, context = epochtal) {
       for (const week of archiveList) {
 
         const archiveContext = await archive(["get", week], context);
-        const deltaElo = await calculatePointsDelta(archiveContext);
+        const catDeltaElo = await calculatePointsDelta(archiveContext);
+        const weekNumber = archiveContext.data.week.number;
 
-        for (const steamid in deltaElo) {
+        for (const cat in catDeltaElo) {
+          for (const steamid in catDeltaElo[cat]) {
 
-          const profile = await profiledata(["get", steamid], context);
+            const profile = await profiledata(["get", steamid], context);
 
-          profile.statistics.push(deltaElo[steamid]);
-          profile.weeks.push(archiveContext.data.week.number);
+            if (!(cat in profile.statistics)) profile.statistics[cat] = [];
+            if (!(cat in profile.weeks)) profile.weeks[cat] = [];
 
+            profile.statistics[cat].push(catDeltaElo[cat][steamid]);
+
+            profile.weeks[cat].push(weekNumber);
+            if (!profile.weeks.total.includes(weekNumber)) {
+              profile.weeks.total.push(weekNumber);
+            }
+
+          }
         }
 
       }
 
-      // Calculate the display points for each user
+      // Calculate the display points for each user in each category
       for (const steamid in users) {
         const profile = await profiledata(["get", steamid], context);
-        users[steamid].points = calculateDisplayPoints(profile.statistics);
+        users[steamid].points = {};
+        for (const cat in profile.statistics) {
+          users[steamid].points[cat] = calculateDisplayPoints(profile.statistics[cat]);
+        }
         await profiledata(["flush", steamid], context);
       }
 
