@@ -154,7 +154,7 @@ async function buildFiles (context) {
   // Copy all game file "defaults" to output path
   fs.cpSync(defaults, portal2, { recursive: true });
   // Write map command and script to epochtal_map
-  await Bun.write(`${portal2}/cfg/epochtal_map.cfg`, `map ${mapPaths[0]}`);
+  await Bun.write(`${portal2}/cfg/epochtal_map.cfg`, `map "${mapPaths[0]}"`);
   await Bun.write(`${portal2}/scripts/vscripts/epochtal_map.nut`, `::epochtal_map <- ["${mapPaths.join('", "')}"]`);
   // Write current week number to epochtal_week.cfg as an svar
   await Bun.write(`${portal2}/cfg/epochtal_week.cfg`, `svar_set epochtal_week ${week.number}`);

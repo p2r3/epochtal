@@ -46,7 +46,7 @@ ppmod.onauto(async(function () {
   local isLobby = index == -1 && isWorkshop;
 
   if (index == -1 && !isWorkshop) {
-    SendToConsole("changelevel " + epochtal_map[0]);
+    SendToConsole("changelevel \"" + epochtal_map[0] + "\"");
     throw "Not on tournament map!";
   }
 
@@ -220,7 +220,7 @@ ppmod.onauto(async(function () {
         return true;
       }
 
-      SendToConsole("changelevel " + epochtal_map[index + 1]);
+      SendToConsole("changelevel \"" + epochtal_map[index + 1] + "\"");
       return false;
 
     });
@@ -228,7 +228,10 @@ ppmod.onauto(async(function () {
     // Allow the player to skip the map by pressing the co-op ping key
     // We make this a console command on purpose, so that it can be easily detected if needed
     if (index + 1 < epochtal_map.len()) {
-      SendToConsole("alias +mouse_menu \"changelevel "+ epochtal_map[index + 1] +"\"");
+      ::epochtalSkipMap <- function ():(index) {
+        SendToConsole("changelevel \"" + epochtal_map[index + 1] + "\"");
+      };
+      SendToConsole("alias +mouse_menu \"script ::epochtalSkipMap()\"");
     }
 
     // If this is the first map, teach the player about the map skip key
