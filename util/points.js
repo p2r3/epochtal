@@ -134,7 +134,7 @@ async function pointsFromSteamID (steamid, category, context = epochtal) {
 /**
  * Calculate the elo acquired or lost for each player in this week.
  * Note: Despite only returning the elo delta, the calculation itself is
- * based on the elo already found in the profile data (see pointsFromSteamID)., catname
+ * based on the elo already found in the profile data (see pointsFromSteamID).
  *
  * @param {unknown} context The context object, defaults to epochtal
  * @returns {object} The elo delta for each player
