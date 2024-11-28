@@ -226,6 +226,9 @@ module.exports = async function (args, request) {
       const newPath = `${epochtal.file.demos}/${data.steamid}_${category}.dem`;
       fs.renameSync(path, newPath);
       await $`xz -zf9e ${newPath}`.quiet();
+      // Check if a link file already exists for this user and remove it
+      const oldPath = `${epochtal.file.demos}/${data.steamid}_${category}.link`;
+      if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
 
       // Push the run to the discord
       discordUpdate(user.steamid, categoryData.name);
@@ -266,6 +269,9 @@ module.exports = async function (args, request) {
       // Write the link to the demos directory
       const newPath = `${epochtal.file.demos}/${data.steamid}_${category}.link`;
       await Bun.write(newPath, link);
+      // Check if a demo file already exists for this user and remove it
+      const oldPath = `${epochtal.file.demos}/${data.steamid}_${category}.dem.xz`;
+      if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
 
       // Push the run to the discord
       discordUpdate(user.steamid, categoryData.name);
