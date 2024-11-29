@@ -186,6 +186,11 @@ function processServerEvent (data) {
       return;
     }
 
+    // Handle requests for console commands
+    case "cmd": {
+      return game.send(gameSocket, data.value);
+    }
+
   }
 
 }
