@@ -90,6 +90,16 @@ const controllerInit = async function () {
 
   };
 
+  // Generates and copies a token for the game client
+  window.copyToken = async function () {
+
+    const token = await (await fetch(`/api/events/auth/streamController`)).json();
+    navigator.clipboard.writeText(`echo ws:${token}`);
+
+    return showPopup("Token copied", "A new token has been copied to your clipboard. It is valid for 30 seconds, starting now.");
+
+  };
+
   const leaderboardContainer = document.querySelector("#controller-leaderboard");
   /**
    * Sets up or updates the leaderboard display
