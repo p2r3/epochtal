@@ -19,28 +19,13 @@ const controllerInit = async function () {
   setInterval(() => controllerSocket.send("{}"), 30000);
 
   /**
-   * Sends WebSocket events to the stream controller event topic, which both the UI and controller listen to
+   * Sends WebSocket events to the stream controller event topic, which the UI, game, and controller listen to
    * @param {unknown} data Data to send, converted to a JSON string
    */
   window.sendToController = async function (data) {
 
     const dataString = encodeURIComponent(JSON.stringify(data));
     await fetch(`/util/events/send/streamController/${dataString}`, { method: "POST" });
-
-  };
-
-  /**
-   * Sends WebSocket events to the connected user's client
-   *
-   * @param {string} type Type of event, currently only "cmd" is expected
-   * @param {string} value Data to send, currently expected to be a concommand
-   */
-  window.sendToGame = async function (type, value) {
-
-    const data = encodeURIComponent(JSON.stringify({ type, value }));
-    const response = await (await fetch(`/util/events/send/"game_${whoami.steamid}"/${data}`, { method: "POST" })).json();
-
-    if (response.startsWith("Error: ")) throw response;
 
   };
 
@@ -67,7 +52,7 @@ const controllerInit = async function () {
     window.playSelectedRun = async function () {
 
       if (proof === "demo") {
-        await sendToGame("cmd", `playdemo tournament/${steamid}_${category}`);
+        window.sendToController({ type: "cmd", value: `playdemo tournament/${steamid}_${category}` });
         window.sendToController({ action: "play" });
       } else {
         const link = await (await fetch(`/api/proof/download/"${steamid}"/${category}`)).text();
@@ -97,7 +82,7 @@ const controllerInit = async function () {
   window.returnToLeaderboard = async function () {
 
     window.sendToController({ action: "start" });
-    await sendToGame("cmd", "stopdemo");
+    window.sendToController({ type: "cmd", value: "stopdemo" });
 
     // Disable the "Play Selected Run" button
     playRunButton.style.pointerEvents = "none";
