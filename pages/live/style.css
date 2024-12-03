@@ -68,6 +68,14 @@
   right: 0;
 }
 
+#lobby-settings-map-list {
+  overflow-y: scroll;
+  max-height: 256px;
+}
+.lobby-settings-map-entry {
+  margin-bottom: 10px;
+}
+
 .lobby-player {
   position: relative;
   width: 80%;

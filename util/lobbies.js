@@ -540,6 +540,10 @@ module.exports = async function (args, context = epochtal) {
           }
         }
         if (nobodyReady) {
+          // Broadcast the lobby state change to clients
+          if (dataEntry.state === LOBBY_INGAME) {
+            await events(["send", eventName, { type: "lobby_finish" }], context);
+          }
           dataEntry.state = LOBBY_IDLE;
         }
 
