@@ -3,6 +3,7 @@ var avatarCache = {};
 var lobbySocket = null;
 var readyState = false;
 var amHost = false;
+var localMapQueue = [];
 
 const lobbyPlayersList = document.querySelector("#lobby-players-list");
 
@@ -315,6 +316,18 @@ async function lobbyEventHandler (event) {
       return;
     }
 
+    case "lobby_finish": {
+
+      // Handle game finishing
+      // Switch to the next map in the local queue
+      if (amHost && localMapQueue.length > 0) {
+        requestLobbyMapChange(localMapQueue.shift());
+        updateLobbyMap();
+      }
+
+      return;
+    }
+
     case "lobby_download_start": {
 
       // Handle a player starting to download the map
@@ -512,50 +525,100 @@ async function lobbyInit () {
 
   }
 
+  // Requests a map change from API with the given workshop link
+  window.requestLobbyMapChange = async function (link) {
+
+    // Get map ID from workshop link
+    const mapid = link.trim().toLowerCase().split("https://steamcommunity.com/sharedfiles/filedetails/?id=").pop().split("&")[0];
+    const request = await fetch(`/api/lobbies/map/${lobbyid}/"${mapid}"`);
+
+    let requestData;
+    try {
+      requestData = await request.json();
+    } catch (e) {
+      return showPopup("Unknown error", "The server returned an unexpected response. Error code: " + request.status, POPUP_ERROR);
+    }
+
+    switch (requestData) {
+      case "SUCCESS":
+        showPopup("Success", "The lobby map has been successfully updated.");
+        return;
+
+      case "ERR_LOGIN": return showPopup("Not logged in", "Please log in via Steam before editing lobby details.", POPUP_ERROR);
+      case "ERR_STEAMID": return showPopup("Unrecognized user", "Your SteamID is not present in the users database. WTF?", POPUP_ERROR);
+      case "ERR_LOBBYID": return showPopup("Lobby not found", "An open lobby with this ID does not exist.", POPUP_ERROR);
+      case "ERR_INGAME": return showPopup("Game started", "The game has started, you cannot change the lobby map.", POPUP_ERROR);
+      case "ERR_PERMS": return showPopup("Permission denied", "You do not have permission to perform this action.", POPUP_ERROR);
+      case "ERR_MAPID": return showPopup("Invalid map", "The string you provided does not name a valid workshop or campaign map.", POPUP_ERROR);
+      case "ERR_STEAMAPI": return showPopup("Missing map info", "Failed to retrieve map details. Is this the right link?", POPUP_ERROR);
+      case "ERR_WEEKMAP": return showPopup("Active Epochtal map", "You may not play the currently active weekly tournament map in lobbies.", POPUP_ERROR);
+
+      default: return showPopup("Unknown error", "The server returned an unexpected response: " + requestData, POPUP_ERROR);
+    }
+
+  };
+
+  // Prompts the user to select a map (or maps) for the lobby
   window.selectLobbyMap = function () {
 
     // Prompt for a workshop map link
     showPopup("Select a map", `<p>Enter a workshop link, or a map name from the single-player campaign.</p>
-      <input type="text" placeholder="Workshop Link" id="lobby-settings-map-input"></input>
+      <div id="lobby-settings-map-list">
+        <input type="text" placeholder="Workshop Link" class="lobby-settings-map-input"></input>
+        <i class="fa-solid fa-plus" onmouseover="showTooltip('Add another map to queue')" onmouseleave="hideTooltip()" onclick="addMapInput()" style="cursor:pointer"></i></a>
+      </div>
     `, POPUP_INFO, true);
 
+    // Reconstruct list from map queue array
+    for (const link of localMapQueue) {
+      addMapInput(link);
+    }
+
     popupOnOkay = async function () {
-
-      // Get mapid from link
-      const input = document.querySelector("#lobby-settings-map-input");
-      const mapid = input.value.trim().toLowerCase().split("https://steamcommunity.com/sharedfiles/filedetails/?id=").pop().split("?")[0];
-
       hidePopup();
 
-      // Request map change from API
-      const request = await fetch(`/api/lobbies/map/${lobbyid}/"${mapid}"`);
-      let requestData;
-      try {
-        requestData = await request.json();
-      } catch (e) {
-        return showPopup("Unknown error", "The server returned an unexpected response. Error code: " + request.status, POPUP_ERROR);
-      }
+      // Get all link input fields
+      const inputs = document.querySelectorAll(".lobby-settings-map-input");
 
-      switch (requestData) {
-        case "SUCCESS":
-          showPopup("Success", "The lobby map has been successfully updated.");
-          return;
+      // Update the current map to the first input
+      requestLobbyMapChange(inputs[0].value);
 
-        case "ERR_LOGIN": return showPopup("Not logged in", "Please log in via Steam before editing lobby details.", POPUP_ERROR);
-        case "ERR_STEAMID": return showPopup("Unrecognized user", "Your SteamID is not present in the users database. WTF?", POPUP_ERROR);
-        case "ERR_LOBBYID": return showPopup("Lobby not found", "An open lobby with this ID does not exist.", POPUP_ERROR);
-        case "ERR_INGAME": return showPopup("Game started", "The game has started, you cannot change the lobby map.", POPUP_ERROR);
-        case "ERR_PERMS": return showPopup("Permission denied", "You do not have permission to perform this action.", POPUP_ERROR);
-        case "ERR_MAPID": return showPopup("Invalid map", "The string you provided does not name a valid workshop or campaign map.", POPUP_ERROR);
-        case "ERR_STEAMAPI": return showPopup("Missing map info", "Failed to retrieve map details. Is this the right link?", POPUP_ERROR);
-        case "ERR_WEEKMAP": return showPopup("Active Epochtal map", "You may not play the currently active weekly tournament map in lobbies.", POPUP_ERROR);
-
-        default: return showPopup("Unknown error", "The server returned an unexpected response: " + requestData, POPUP_ERROR);
+      // Push the rest of the maps to the local map queue
+      localMapQueue = [];
+      for (let i = 1; i < inputs.length; i ++) {
+        localMapQueue.push(inputs[i].value);
       }
 
     };
 
   }
+
+  // Adds an aditional map link input field to the popup window
+  window.addMapInput = function (value = "") {
+    hideTooltip();
+
+    // Get the current map link list list
+    const mapList = document.querySelector("#lobby-settings-map-list");
+
+    // Create a new entry with a "remove" button
+    const entry = document.createElement("div");
+    entry.className = "lobby-settings-map-entry";
+    entry.innerHTML = `
+      <input type="text" placeholder="Workshop Link" class="lobby-settings-map-input"></input>
+      <i class="fa-solid fa-minus lobby-settings-map-remove" onmouseover="showTooltip('Remove map from queue')" onmouseleave="hideTooltip()" onclick="event.target.parentElement.remove()" style="cursor:pointer"></i></a>
+    `;
+    // Prepend it to the list
+    mapList.prepend(entry);
+    mapList.scrollTop = mapList.scrollHeight;
+
+    // Move all input values up by one to mimic appending an element
+    const inputs = document.querySelectorAll(".lobby-settings-map-input");
+    for (let i = 0; i < inputs.length - 1; i ++) {
+      inputs[i].value = inputs[i + 1].value;
+    }
+    inputs[inputs.length - 1].value = value;
+
+  };
 
   /**
    * Fetches the lobby event token and copies it to clipboard.
