@@ -139,3 +139,8 @@
 #lobby-ready-button {
   transition: opacity 0.2s;
 }
+
+#lobby-forcestart-button {
+  display: none;
+  color: rgb(255, 80, 80);
+}
