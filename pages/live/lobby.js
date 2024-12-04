@@ -179,6 +179,11 @@ function updateLobbyHost () {
   if (amHost) mapButton.style.display = "";
   else mapButton.style.display = "none";
 
+  // Hide the force start button for non-hosts
+  const forceStartButton = document.querySelector("#lobby-forcestart-button");
+  if (amHost) forceStartButton.style.display = "inline";
+  else forceStartButton.style.display = "none";
+
 };
 
 var eventHandlerConnected = false;
@@ -731,6 +736,46 @@ async function lobbyInit () {
       case "ERR_STEAMID": return showPopup("Unrecognized user", "The user you've selected does not exist or is not part of this lobby.", POPUP_ERROR);
       case "ERR_LOBBYID": return showPopup("Lobby not found", "An open lobby with this ID does not exist.", POPUP_ERROR);
       case "ERR_PERMS": return showPopup("Permission denied", "You do not have permission to perform this action.", POPUP_ERROR);
+
+      default: return showPopup("Unknown error", "The server returned an unexpected response: " + requestData, POPUP_ERROR);
+    }
+
+  };
+
+  window.forceStart = async function () {
+
+    // If no map is selected, throw early
+    if (!readyState && !lobby.data.context.map) {
+      return showPopup("No map selected", "Please select a map for the lobby.", POPUP_ERROR);
+    }
+
+    // This might take a while, prevent the user from spamming the button
+    lobbyReadyButton.style.opacity = 0.5;
+    lobbyReadyButton.style.pointerEvents = "none";
+
+    // Request force start from API
+    const request = await fetch(`/api/lobbies/start/${lobbyid}`);
+
+    // Restore the button once the request finishes
+    lobbyReadyButton.style.opacity = 1.0;
+    lobbyReadyButton.style.pointerEvents = "auto";
+
+    let requestData;
+    try {
+      requestData = await request.json();
+    } catch (e) {
+      return showPopup("Unknown error", "The server returned an unexpected response. Error code: " + request.status, POPUP_ERROR);
+    }
+
+    switch (requestData) {
+      case "SUCCESS": return;
+
+      case "ERR_LOGIN": return showPopup("Not logged in", "Please log in via Steam before editing lobby details.", POPUP_ERROR);
+      case "ERR_STEAMID": return showPopup("Unrecognized user", "Your SteamID is not present in the users database. WTF?", POPUP_ERROR);
+      case "ERR_LOBBYID": return showPopup("Lobby not found", "An open lobby with this ID does not exist.", POPUP_ERROR);
+      case "ERR_PERMS": return showPopup("Permission denied", "You do not have permission to perform this action.", POPUP_ERROR);
+      case "ERR_NOMAP": return showPopup("No map selected", "Please select a map for the lobby.", POPUP_ERROR);
+      case "ERR_INGAME": return showPopup("Game started", "The game has already started.", POPUP_ERROR);
 
       default: return showPopup("Unknown error", "The server returned an unexpected response: " + requestData, POPUP_ERROR);
     }

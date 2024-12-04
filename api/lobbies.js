@@ -45,6 +45,7 @@ async function checkUserPerms (request, lobbyid, checkHost = false) {
  * - `ready`: Set the player's ready state
  * - `host`: Transfer the host role to the specified player
  * - `kick`: Remove the specified player from the lobby
+ * - `start`: Force start the game
  *
  * @param {string[]} args The arguments for the api request
  * @param {HttpRequest} request The http request object
@@ -222,6 +223,17 @@ module.exports = async function (args, request) {
 
       // Force the specified player to leave
       return lobbies(["leave", lobbyid, steamid]);
+
+    }
+
+    case "start": {
+
+      // Check if the player is the host of this lobby
+      const permsCheck = await checkUserPerms(request, lobbyid, true);
+      if (typeof permsCheck === "string") return permsCheck;
+
+      // Force start the game
+      return lobbies(["start", lobbyid]);
 
     }
 

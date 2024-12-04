@@ -56,6 +56,7 @@ function createLobbyContext (name) {
  * - `ready`: Set the ready state of the specified player
  * - `host`: Transfer the host role to the specified player
  * - `leave`: Remove the specified player from the lobby
+ * - `start`: Force start the game
  *
  * @param {string[]} args The arguments for the call
  * @param {unknown} context The context on which to execute the call (defaults to epochtal)
@@ -617,6 +618,31 @@ module.exports = async function (args, context = epochtal) {
 
       // Write the lobbies to file if it exists
       if (file) Bun.write(file, JSON.stringify(lobbies));
+
+      return "SUCCESS";
+
+    }
+
+    case "start": {
+
+      const listEntry = lobbies.list[lobbyid];
+      const dataEntry = lobbies.data[lobbyid];
+      const eventName = "lobby_" + lobbyid;
+
+      // Ensure the lobby exists
+      if (!listEntry || !dataEntry) throw new UtilError("ERR_LOBBYID", args, context);
+
+      // Don't proceed if we're already in-game
+      if (dataEntry.state === LOBBY_INGAME) throw new UtilError("ERR_INGAME", args, context);
+
+      // Make sure the lobby has a map
+      if (dataEntry.context.data.map === null) throw new UtilError("ERR_NOMAP", args, context);
+      const mapFile = dataEntry.context.data.map.file;
+
+      // Change the lobby state
+      dataEntry.state = LOBBY_INGAME;
+      // Broadcast game start to clients
+      await events(["send", eventName, { type: "lobby_start", map: mapFile }], context);
 
       return "SUCCESS";
 
