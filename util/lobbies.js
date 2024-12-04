@@ -52,6 +52,10 @@ function createLobbyContext (name) {
  * - `join`: Join a lobby
  * - `rename`: Rename a lobby
  * - `password`: Set a lobby password
+ * - `map`: Set the active lobby map
+ * - `ready`: Set the ready state of the specified player
+ * - `host`: Transfer the host role to the specified player
+ * - `leave`: Remove the specified player from the lobby
  *
  * @param {string[]} args The arguments for the call
  * @param {unknown} context The context on which to execute the call (defaults to epochtal)
