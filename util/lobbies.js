@@ -52,6 +52,7 @@ function createLobbyContext (name) {
  * - `join`: Join a lobby
  * - `rename`: Rename a lobby
  * - `password`: Set a lobby password
+ * - `maxplayers`: Set the maximum player count of the lobby
  * - `map`: Set the active lobby map
  * - `ready`: Set the ready state of the specified player
  * - `host`: Transfer the host role to the specified player
@@ -119,6 +120,7 @@ module.exports = async function (args, context = epochtal) {
       const dataEntry = {
         password: password ? hashedPassword : false,
         players: {},
+        maxplayers: null,
         host: undefined,
         state: LOBBY_IDLE,
         context: createLobbyContext(cleanName)
@@ -234,6 +236,7 @@ module.exports = async function (args, context = epochtal) {
 
       if (!listEntry || !dataEntry) throw new UtilError("ERR_LOBBYID", args, context);
       if (dataEntry.password && !(await Bun.password.verify(password, dataEntry.password))) throw new UtilError("ERR_PASSWORD", args, context);
+      if (dataEntry.maxplayers !== null && listEntry.players.length >= dataEntry.maxplayers) throw new UtilError("ERR_FULL", args, context);
 
       // If the player is already in the lobby, pretend the join was successful
       if (listEntry.players.includes(steamid)) return "SUCCESS";
@@ -297,6 +300,32 @@ module.exports = async function (args, context = epochtal) {
       // Set the lobby password
       const hashedPassword = password && await Bun.password.hash(password);
       dataEntry.password = password ? hashedPassword : false;
+
+      // Write the lobbies to file if it exists
+      if (file) Bun.write(file, JSON.stringify(lobbies));
+
+      return "SUCCESS";
+
+    }
+
+    case "maxplayers": {
+
+      const maxplayers = parseInt(args[2]);
+
+      const listEntry = lobbies.list[lobbyid];
+      const dataEntry = lobbies.data[lobbyid];
+      const eventName = "lobby_" + lobbyid;
+
+      // Ensure the lobby exists
+      if (!listEntry || !dataEntry) throw new UtilError("ERR_LOBBYID", args, context);
+
+      // If no value (or an invalid value) is provided, remove lobby size restrictions
+      if (!maxplayers || maxplayers < 1 || isNaN(maxplayers)) dataEntry.maxplayers = null;
+      // Otherwise, update the max player count
+      else dataEntry.maxplayers = maxplayers;
+
+      // Broadcast the size change
+      await events(["send", eventName, { type: "lobby_maxplayers", maxplayers: dataEntry.maxplayers }], context);
 
       // Write the lobbies to file if it exists
       if (file) Bun.write(file, JSON.stringify(lobbies));
