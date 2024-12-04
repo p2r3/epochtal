@@ -429,7 +429,7 @@ async function lobbyInit () {
   lobbySocket.addEventListener("message", lobbyEventHandler);
 
   // Prompt game client authentication
-  if (!("promptedGameAuth") in window) {
+  if (!("promptedGameAuth" in window)) {
     showPopup(
       "Connect with Portal 2",
       `To connect your game client, start the "Epochtal Live" Spplice package, <a href="javascript:copyEventToken()">click here</a> to copy your lobby token, then paste that into your console.`
