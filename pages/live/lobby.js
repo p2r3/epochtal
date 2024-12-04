@@ -3,6 +3,7 @@ var avatarCache = {};
 var lobbySocket = null;
 var readyState = false;
 var amHost = false;
+var localMapQueue = [];
 
 const lobbyPlayersList = document.querySelector("#lobby-players-list");
 
@@ -81,6 +82,12 @@ async function updatePlayerList () {
 
     output += `
 <div class="lobby-player">
+  ${(amHost && !isHost) ? `<i
+    class="fa-solid fa-xmark lobby-player-kick"
+    onmouseover="showTooltip('Kick player')"
+    onmouseleave="hideTooltip()"
+    onclick="kickPlayer('${steamid}')"
+  ></i>` : ""}
   <img
     src="${avatar}"
     class="lobby-player-avatar ${isHost ? "lobby-host-avatar" : (amHost ? "pointer" : "")}"
@@ -172,6 +179,11 @@ function updateLobbyHost () {
   if (amHost) mapButton.style.display = "";
   else mapButton.style.display = "none";
 
+  // Hide the force start button for non-hosts
+  const forceStartButton = document.querySelector("#lobby-forcestart-button");
+  if (amHost) forceStartButton.style.display = "inline";
+  else forceStartButton.style.display = "none";
+
 };
 
 var eventHandlerConnected = false;
@@ -204,6 +216,12 @@ async function lobbyEventHandler (event) {
       // Handle player leaving the lobby
       const { steamid } = data;
 
+      // If we've been kicked, return to lobby list page
+      if (steamid === whoami.steamid) {
+        window.location.href = "/live/#kicked";
+        return;
+      }
+
       const index = lobby.listEntry.players.indexOf(steamid);
       if (index === -1) return;
 
@@ -235,6 +253,22 @@ async function lobbyEventHandler (event) {
       lobby.data.host = steamid;
       updatePlayerList();
       updateLobbyHost();
+
+      return;
+    }
+
+    case "lobby_maxplayers": {
+
+      // Update the lobby size in the UI
+      lobby.data.maxplayers = data.maxplayers;
+
+      const lobbyPlayerCountText = document.querySelector("#lobby-playercount");
+
+      if (lobby.data.maxplayers !== null) {
+        lobbyPlayerCountText.textContent = `(${lobby.listEntry.players.length} / ${lobby.data.maxplayers})`;
+      } else {
+        lobbyPlayerCountText.textContent = `(${lobby.listEntry.players.length})`;
+      }
 
       return;
     }
@@ -315,6 +349,18 @@ async function lobbyEventHandler (event) {
       return;
     }
 
+    case "lobby_finish": {
+
+      // Handle game finishing
+      // Switch to the next map in the local queue
+      if (amHost && localMapQueue.length > 0) {
+        requestLobbyMapChange(localMapQueue.shift());
+        updateLobbyMap();
+      }
+
+      return;
+    }
+
     case "lobby_download_start": {
 
       // Handle a player starting to download the map
@@ -387,6 +433,7 @@ async function lobbyInit () {
 
   const lobbyNameText = document.querySelector("#lobby-name");
   const lobbyModeText = document.querySelector("#lobby-mode");
+  const lobbyPlayerCountText = document.querySelector("#lobby-playercount");
 
   // Display the lobby name and mode
   let modeString;
@@ -397,6 +444,11 @@ async function lobbyInit () {
 
   lobbyNameText.textContent = lobby.listEntry.name;
   lobbyModeText.innerHTML = "&nbsp;- " + modeString;
+  if (lobby.data.maxplayers !== null) {
+    lobbyPlayerCountText.textContent = `(${lobby.listEntry.players.length} / ${lobby.data.maxplayers})`;
+  } else {
+    lobbyPlayerCountText.textContent = `(${lobby.listEntry.players.length})`;
+  }
 
   // Update the player list and map display
   updatePlayerList();
@@ -416,7 +468,7 @@ async function lobbyInit () {
   lobbySocket.addEventListener("message", lobbyEventHandler);
 
   // Prompt game client authentication
-  if (!("promptedGameAuth") in window) {
+  if (!("promptedGameAuth" in window)) {
     showPopup(
       "Connect with Portal 2",
       `To connect your game client, start the "Epochtal Live" Spplice package, <a href="javascript:copyEventToken()">click here</a> to copy your lobby token, then paste that into your console.`
@@ -512,23 +564,36 @@ async function lobbyInit () {
 
   }
 
-  window.selectLobbyMap = function () {
+  // Handle the lobby change size button
+  window.changeLobbyMaxplayers = function () {
 
-    // Prompt for a workshop map link
-    showPopup("Select a map", `<p>Enter a workshop link, or a map name from the single-player campaign.</p>
-      <input type="text" placeholder="Workshop Link" id="lobby-settings-map-input"></input>
+    // Exit early if we don't have host permissions
+    if (!amHost) return;
+
+    // Display a popup to change the lobby password
+    showPopup("Change lobby size", `
+      Enter a new maximum player count for this lobby, or leave it blank to unrestrict the size.
+      If the new maximum is smaller than the current player count, existing players will not be kicked.<br><br>
+      <input id="new-lobby-maxplayers" type="text" placeholder="Max player count" style="margin-top:5px"></input>
     `, POPUP_INFO, true);
 
     popupOnOkay = async function () {
-
-      // Get mapid from link
-      const input = document.querySelector("#lobby-settings-map-input");
-      const mapid = input.value.trim().toLowerCase().split("https://steamcommunity.com/sharedfiles/filedetails/?id=").pop().split("?")[0];
-
       hidePopup();
 
-      // Request map change from API
-      const request = await fetch(`/api/lobbies/map/${lobbyid}/"${mapid}"`);
+      const inputValue = document.querySelector("#new-lobby-maxplayers").value.trim();
+      const newMaxplayers = parseInt(inputValue);
+
+      /**
+       * Validate the user's input. A similar type of check is replicated
+       * on the server side, where invalid input unrestricts lobby size,
+       * equivalent to leaving the input field blank here.
+       */
+      if (inputValue && (newMaxplayers < 1 || isNaN(newMaxplayers))) {
+        return showPopup("Invalid input", "Please enter a number larger than zero.", POPUP_ERROR);
+      }
+
+      // Fetch the api to change the lobby password
+      const request = await fetch(`/api/lobbies/maxplayers/${lobbyid}/${newMaxplayers}`);
       let requestData;
       try {
         requestData = await request.json();
@@ -538,17 +603,12 @@ async function lobbyInit () {
 
       switch (requestData) {
         case "SUCCESS":
-          showPopup("Success", "The lobby map has been successfully updated.");
-          return;
+          return showPopup("Success", "The lobby size has been successfully updated.");
 
         case "ERR_LOGIN": return showPopup("Not logged in", "Please log in via Steam before editing lobby details.", POPUP_ERROR);
         case "ERR_STEAMID": return showPopup("Unrecognized user", "Your SteamID is not present in the users database. WTF?", POPUP_ERROR);
         case "ERR_LOBBYID": return showPopup("Lobby not found", "An open lobby with this ID does not exist.", POPUP_ERROR);
-        case "ERR_INGAME": return showPopup("Game started", "The game has started, you cannot change the lobby map.", POPUP_ERROR);
         case "ERR_PERMS": return showPopup("Permission denied", "You do not have permission to perform this action.", POPUP_ERROR);
-        case "ERR_MAPID": return showPopup("Invalid map", "The string you provided does not name a valid workshop or campaign map.", POPUP_ERROR);
-        case "ERR_STEAMAPI": return showPopup("Missing map info", "Failed to retrieve map details. Is this the right link?", POPUP_ERROR);
-        case "ERR_WEEKMAP": return showPopup("Active Epochtal map", "You may not play the currently active weekly tournament map in lobbies.", POPUP_ERROR);
 
         default: return showPopup("Unknown error", "The server returned an unexpected response: " + requestData, POPUP_ERROR);
       }
@@ -556,6 +616,101 @@ async function lobbyInit () {
     };
 
   }
+
+  // Requests a map change from API with the given workshop link
+  window.requestLobbyMapChange = async function (link) {
+
+    // Get map ID from workshop link
+    const mapid = link.trim().toLowerCase().split("https://steamcommunity.com/sharedfiles/filedetails/?id=").pop().split("&")[0];
+    const request = await fetch(`/api/lobbies/map/${lobbyid}/"${mapid}"`);
+
+    let requestData;
+    try {
+      requestData = await request.json();
+    } catch (e) {
+      return showPopup("Unknown error", "The server returned an unexpected response. Error code: " + request.status, POPUP_ERROR);
+    }
+
+    switch (requestData) {
+      case "SUCCESS":
+        showPopup("Success", "The lobby map has been successfully updated.");
+        return;
+
+      case "ERR_LOGIN": return showPopup("Not logged in", "Please log in via Steam before editing lobby details.", POPUP_ERROR);
+      case "ERR_STEAMID": return showPopup("Unrecognized user", "Your SteamID is not present in the users database. WTF?", POPUP_ERROR);
+      case "ERR_LOBBYID": return showPopup("Lobby not found", "An open lobby with this ID does not exist.", POPUP_ERROR);
+      case "ERR_INGAME": return showPopup("Game started", "The game has started, you cannot change the lobby map.", POPUP_ERROR);
+      case "ERR_PERMS": return showPopup("Permission denied", "You do not have permission to perform this action.", POPUP_ERROR);
+      case "ERR_MAPID": return showPopup("Invalid map", "The string you provided does not name a valid workshop or campaign map.", POPUP_ERROR);
+      case "ERR_STEAMAPI": return showPopup("Missing map info", "Failed to retrieve map details. Is this the right link?", POPUP_ERROR);
+      case "ERR_WEEKMAP": return showPopup("Active Epochtal map", "You may not play the currently active weekly tournament map in lobbies.", POPUP_ERROR);
+
+      default: return showPopup("Unknown error", "The server returned an unexpected response: " + requestData, POPUP_ERROR);
+    }
+
+  };
+
+  // Prompts the user to select a map (or maps) for the lobby
+  window.selectLobbyMap = function () {
+
+    // Prompt for a workshop map link
+    showPopup("Select a map", `<p>Enter a workshop link, or a map name from the single-player campaign.</p>
+      <div id="lobby-settings-map-list">
+        <input type="text" placeholder="Workshop Link" class="lobby-settings-map-input"></input>
+        <i class="fa-solid fa-plus" onmouseover="showTooltip('Add another map to queue')" onmouseleave="hideTooltip()" onclick="addMapInput()" style="cursor:pointer"></i></a>
+      </div>
+    `, POPUP_INFO, true);
+
+    // Reconstruct list from map queue array
+    for (const link of localMapQueue) {
+      addMapInput(link);
+    }
+
+    popupOnOkay = async function () {
+      hidePopup();
+
+      // Get all link input fields
+      const inputs = document.querySelectorAll(".lobby-settings-map-input");
+
+      // Update the current map to the first input
+      requestLobbyMapChange(inputs[0].value);
+
+      // Push the rest of the maps to the local map queue
+      localMapQueue = [];
+      for (let i = 1; i < inputs.length; i ++) {
+        localMapQueue.push(inputs[i].value);
+      }
+
+    };
+
+  }
+
+  // Adds an aditional map link input field to the popup window
+  window.addMapInput = function (value = "") {
+    hideTooltip();
+
+    // Get the current map link list list
+    const mapList = document.querySelector("#lobby-settings-map-list");
+
+    // Create a new entry with a "remove" button
+    const entry = document.createElement("div");
+    entry.className = "lobby-settings-map-entry";
+    entry.innerHTML = `
+      <input type="text" placeholder="Workshop Link" class="lobby-settings-map-input"></input>
+      <i class="fa-solid fa-minus lobby-settings-map-remove" onmouseover="showTooltip('Remove map from queue')" onmouseleave="hideTooltip()" onclick="event.target.parentElement.remove()" style="cursor:pointer"></i></a>
+    `;
+    // Prepend it to the list
+    mapList.prepend(entry);
+    mapList.scrollTop = mapList.scrollHeight;
+
+    // Move all input values up by one to mimic appending an element
+    const inputs = document.querySelectorAll(".lobby-settings-map-input");
+    for (let i = 0; i < inputs.length - 1; i ++) {
+      inputs[i].value = inputs[i + 1].value;
+    }
+    inputs[inputs.length - 1].value = value;
+
+  };
 
   /**
    * Fetches the lobby event token and copies it to clipboard.
@@ -631,6 +786,71 @@ async function lobbyInit () {
       case "ERR_STEAMID": return showPopup("Unrecognized user", "The user you've selected does not exist or is not part of this lobby.", POPUP_ERROR);
       case "ERR_LOBBYID": return showPopup("Lobby not found", "An open lobby with this ID does not exist.", POPUP_ERROR);
       case "ERR_PERMS": return showPopup("Permission denied", "You do not have permission to perform this action.", POPUP_ERROR);
+
+      default: return showPopup("Unknown error", "The server returned an unexpected response: " + requestData, POPUP_ERROR);
+    }
+
+  };
+
+  window.kickPlayer = async function (steamid) {
+
+    // Request player kick from API
+    const request = await fetch(`/api/lobbies/kick/${lobbyid}/"${steamid}"`);
+
+    let requestData;
+    try {
+      requestData = await request.json();
+    } catch (e) {
+      return showPopup("Unknown error", "The server returned an unexpected response. Error code: " + request.status, POPUP_ERROR);
+    }
+
+    switch (requestData) {
+      case "SUCCESS": return;
+
+      case "ERR_LOGIN": return showPopup("Not logged in", "Please log in via Steam before editing lobby details.", POPUP_ERROR);
+      case "ERR_STEAMID": return showPopup("Unrecognized user", "The user you've selected does not exist or is not part of this lobby.", POPUP_ERROR);
+      case "ERR_LOBBYID": return showPopup("Lobby not found", "An open lobby with this ID does not exist.", POPUP_ERROR);
+      case "ERR_PERMS": return showPopup("Permission denied", "You do not have permission to perform this action.", POPUP_ERROR);
+
+      default: return showPopup("Unknown error", "The server returned an unexpected response: " + requestData, POPUP_ERROR);
+    }
+
+  };
+
+  window.forceStart = async function () {
+
+    // If no map is selected, throw early
+    if (!readyState && !lobby.data.context.map) {
+      return showPopup("No map selected", "Please select a map for the lobby.", POPUP_ERROR);
+    }
+
+    // This might take a while, prevent the user from spamming the button
+    lobbyReadyButton.style.opacity = 0.5;
+    lobbyReadyButton.style.pointerEvents = "none";
+
+    // Request force start from API
+    const request = await fetch(`/api/lobbies/start/${lobbyid}`);
+
+    // Restore the button once the request finishes
+    lobbyReadyButton.style.opacity = 1.0;
+    lobbyReadyButton.style.pointerEvents = "auto";
+
+    let requestData;
+    try {
+      requestData = await request.json();
+    } catch (e) {
+      return showPopup("Unknown error", "The server returned an unexpected response. Error code: " + request.status, POPUP_ERROR);
+    }
+
+    switch (requestData) {
+      case "SUCCESS": return;
+
+      case "ERR_LOGIN": return showPopup("Not logged in", "Please log in via Steam before editing lobby details.", POPUP_ERROR);
+      case "ERR_STEAMID": return showPopup("Unrecognized user", "Your SteamID is not present in the users database. WTF?", POPUP_ERROR);
+      case "ERR_LOBBYID": return showPopup("Lobby not found", "An open lobby with this ID does not exist.", POPUP_ERROR);
+      case "ERR_PERMS": return showPopup("Permission denied", "You do not have permission to perform this action.", POPUP_ERROR);
+      case "ERR_NOMAP": return showPopup("No map selected", "Please select a map for the lobby.", POPUP_ERROR);
+      case "ERR_INGAME": return showPopup("Game started", "The game has already started.", POPUP_ERROR);
 
       default: return showPopup("Unknown error", "The server returned an unexpected response: " + requestData, POPUP_ERROR);
     }

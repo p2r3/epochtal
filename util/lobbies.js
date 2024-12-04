@@ -52,6 +52,12 @@ function createLobbyContext (name) {
  * - `join`: Join a lobby
  * - `rename`: Rename a lobby
  * - `password`: Set a lobby password
+ * - `maxplayers`: Set the maximum player count of the lobby
+ * - `map`: Set the active lobby map
+ * - `ready`: Set the ready state of the specified player
+ * - `host`: Transfer the host role to the specified player
+ * - `leave`: Remove the specified player from the lobby
+ * - `start`: Force start the game
  *
  * @param {string[]} args The arguments for the call
  * @param {unknown} context The context on which to execute the call (defaults to epochtal)
@@ -114,6 +120,7 @@ module.exports = async function (args, context = epochtal) {
       const dataEntry = {
         password: password ? hashedPassword : false,
         players: {},
+        maxplayers: null,
         host: undefined,
         state: LOBBY_IDLE,
         context: createLobbyContext(cleanName)
@@ -180,6 +187,10 @@ module.exports = async function (args, context = epochtal) {
 
         const { steamid } = ws.data;
 
+        // Ensure the player is still in the lobby
+        if (!listEntry.players.includes(steamid)) return;
+        if (!(steamid in dataEntry.players)) return;
+
         // If this is a game client, just change their ready state to false and exit
         if (dataEntry.players[steamid].gameSocket === ws) {
           delete dataEntry.players[steamid].gameSocket;
@@ -193,54 +204,7 @@ module.exports = async function (args, context = epochtal) {
         }
 
         // Remove the player from the lobby
-        const index = listEntry.players.indexOf(steamid);
-        if (index !== -1) listEntry.players.splice(index, 1);
-        delete dataEntry.players[steamid];
-
-        // If the host just left, assign a new host
-        if (dataEntry.host === steamid) {
-          dataEntry.host = listEntry.players[0];
-          // Broadcast the host change to clients
-          await events(["send", eventName, { type: "lobby_host", steamid: listEntry.players[0] }], context);
-        }
-
-        // Brodcast the leave to clients
-        await events(["send", eventName, { type: "lobby_leave", steamid }], context);
-
-        // Delete the lobby if it is still empty 10 seconds after all players have left
-        if (listEntry.players.length === 0) {
-
-          setTimeout(async function () {
-            if (listEntry.players.length !== 0) return;
-
-            delete lobbies.list[newID];
-            delete lobbies.data[newID];
-            if (file) Bun.write(file, JSON.stringify(lobbies));
-
-            try {
-              await events(["delete", eventName], context);
-            } catch {
-              // Prevent a full server crash in case of a race condition
-            }
-          }, 10000);
-
-        } else {
-
-          // If everyone remaining is ready, start the game
-          let everyoneReady = true;
-          for (const curr in dataEntry.players) {
-            if (!dataEntry.players[curr].ready) {
-              everyoneReady = false;
-              break;
-            }
-          }
-          if (everyoneReady && dataEntry.state !== LOBBY_INGAME) {
-            dataEntry.state = LOBBY_INGAME;
-            const mapFile = dataEntry.context.data.map.file;
-            await events(["send", eventName, { type: "lobby_start", map: mapFile }], context);
-          }
-
-        }
+        await module.exports(["leave", newID, steamid], context);
 
       };
 
@@ -272,6 +236,7 @@ module.exports = async function (args, context = epochtal) {
 
       if (!listEntry || !dataEntry) throw new UtilError("ERR_LOBBYID", args, context);
       if (dataEntry.password && !(await Bun.password.verify(password, dataEntry.password))) throw new UtilError("ERR_PASSWORD", args, context);
+      if (dataEntry.maxplayers !== null && listEntry.players.length >= dataEntry.maxplayers) throw new UtilError("ERR_FULL", args, context);
 
       // If the player is already in the lobby, pretend the join was successful
       if (listEntry.players.includes(steamid)) return "SUCCESS";
@@ -335,6 +300,32 @@ module.exports = async function (args, context = epochtal) {
       // Set the lobby password
       const hashedPassword = password && await Bun.password.hash(password);
       dataEntry.password = password ? hashedPassword : false;
+
+      // Write the lobbies to file if it exists
+      if (file) Bun.write(file, JSON.stringify(lobbies));
+
+      return "SUCCESS";
+
+    }
+
+    case "maxplayers": {
+
+      const maxplayers = parseInt(args[2]);
+
+      const listEntry = lobbies.list[lobbyid];
+      const dataEntry = lobbies.data[lobbyid];
+      const eventName = "lobby_" + lobbyid;
+
+      // Ensure the lobby exists
+      if (!listEntry || !dataEntry) throw new UtilError("ERR_LOBBYID", args, context);
+
+      // If no value (or an invalid value) is provided, remove lobby size restrictions
+      if (!maxplayers || maxplayers < 1 || isNaN(maxplayers)) dataEntry.maxplayers = null;
+      // Otherwise, update the max player count
+      else dataEntry.maxplayers = maxplayers;
+
+      // Broadcast the size change
+      await events(["send", eventName, { type: "lobby_maxplayers", maxplayers: dataEntry.maxplayers }], context);
 
       // Write the lobbies to file if it exists
       if (file) Bun.write(file, JSON.stringify(lobbies));
@@ -540,6 +531,10 @@ module.exports = async function (args, context = epochtal) {
           }
         }
         if (nobodyReady) {
+          // Broadcast the lobby state change to clients
+          if (dataEntry.state === LOBBY_INGAME) {
+            await events(["send", eventName, { type: "lobby_finish" }], context);
+          }
           dataEntry.state = LOBBY_IDLE;
         }
 
@@ -580,6 +575,103 @@ module.exports = async function (args, context = epochtal) {
 
       // Write the lobbies to file if it exists
       if (file) Bun.write(file, JSON.stringify(lobbies));
+
+      return "SUCCESS";
+
+    }
+
+    case "leave": {
+
+      const steamid = args[2];
+
+      // Ensure a valid user SteamID was provided
+      const user = await users(["get", steamid], context);
+      if (!user) throw new UtilError("ERR_STEAMID", args, context);
+
+      const listEntry = lobbies.list[lobbyid];
+      const dataEntry = lobbies.data[lobbyid];
+      const eventName = "lobby_" + lobbyid;
+
+      // Ensure the lobby exists
+      if (!listEntry || !dataEntry) throw new UtilError("ERR_LOBBYID", args, context);
+
+      // Remove the player from the lobby
+      const index = listEntry.players.indexOf(steamid);
+      if (index !== -1) listEntry.players.splice(index, 1);
+      delete dataEntry.players[steamid];
+
+      // If the host just left, assign a new host
+      if (dataEntry.host === steamid) {
+        dataEntry.host = listEntry.players[0];
+        // Broadcast the host change to clients
+        await events(["send", eventName, { type: "lobby_host", steamid: listEntry.players[0] }], context);
+      }
+
+      // Brodcast the leave to clients
+      await events(["send", eventName, { type: "lobby_leave", steamid }], context);
+
+      // Delete the lobby if it is still empty 10 seconds after all players have left
+      if (listEntry.players.length === 0) {
+
+        setTimeout(async function () {
+          if (listEntry.players.length !== 0) return;
+
+          delete lobbies.list[lobbyid];
+          delete lobbies.data[lobbyid];
+          if (file) Bun.write(file, JSON.stringify(lobbies));
+
+          try {
+            await events(["delete", eventName], context);
+          } catch {
+            // Prevent a full server crash in case of a race condition
+          }
+        }, 10000);
+
+      } else {
+
+        // If everyone remaining is ready, start the game
+        let everyoneReady = true;
+        for (const curr in dataEntry.players) {
+          if (!dataEntry.players[curr].ready) {
+            everyoneReady = false;
+            break;
+          }
+        }
+        if (everyoneReady && dataEntry.state !== LOBBY_INGAME) {
+          dataEntry.state = LOBBY_INGAME;
+          const mapFile = dataEntry.context.data.map.file;
+          await events(["send", eventName, { type: "lobby_start", map: mapFile }], context);
+        }
+
+      }
+
+      // Write the lobbies to file if it exists
+      if (file) Bun.write(file, JSON.stringify(lobbies));
+
+      return "SUCCESS";
+
+    }
+
+    case "start": {
+
+      const listEntry = lobbies.list[lobbyid];
+      const dataEntry = lobbies.data[lobbyid];
+      const eventName = "lobby_" + lobbyid;
+
+      // Ensure the lobby exists
+      if (!listEntry || !dataEntry) throw new UtilError("ERR_LOBBYID", args, context);
+
+      // Don't proceed if we're already in-game
+      if (dataEntry.state === LOBBY_INGAME) throw new UtilError("ERR_INGAME", args, context);
+
+      // Make sure the lobby has a map
+      if (dataEntry.context.data.map === null) throw new UtilError("ERR_NOMAP", args, context);
+      const mapFile = dataEntry.context.data.map.file;
+
+      // Change the lobby state
+      dataEntry.state = LOBBY_INGAME;
+      // Broadcast game start to clients
+      await events(["send", eventName, { type: "lobby_start", map: mapFile }], context);
 
       return "SUCCESS";
 

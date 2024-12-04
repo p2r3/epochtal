@@ -68,6 +68,14 @@
   right: 0;
 }
 
+#lobby-settings-map-list {
+  overflow-y: scroll;
+  max-height: 256px;
+}
+.lobby-settings-map-entry {
+  margin-bottom: 10px;
+}
+
 .lobby-player {
   position: relative;
   width: 80%;
@@ -78,6 +86,16 @@
   box-sizing: border-box;
   background-color: rgba(0, 0, 0, 0.25);
   backdrop-filter: blur(5px);
+}
+
+.lobby-player-kick {
+  position: absolute;
+  left: -15px;
+  top: 50%;
+  transform: translate(-100%, -50%);
+  font-size: 1.25rem;
+  color: red;
+  cursor: pointer;
 }
 
 .lobby-player-avatar {
@@ -120,4 +138,9 @@
 
 #lobby-ready-button {
   transition: opacity 0.2s;
+}
+
+#lobby-forcestart-button {
+  display: none;
+  color: rgb(255, 80, 80);
 }
