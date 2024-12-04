@@ -257,6 +257,22 @@ async function lobbyEventHandler (event) {
       return;
     }
 
+    case "lobby_maxplayers": {
+
+      // Update the lobby size in the UI
+      lobby.data.maxplayers = data.maxplayers;
+
+      const lobbyPlayerCountText = document.querySelector("#lobby-playercount");
+
+      if (lobby.data.maxplayers !== null) {
+        lobbyPlayerCountText.textContent = `(${lobby.listEntry.players.length} / ${lobby.data.maxplayers})`;
+      } else {
+        lobbyPlayerCountText.textContent = `(${lobby.listEntry.players.length})`;
+      }
+
+      return;
+    }
+
     case "lobby_map": {
 
       // Update the lobby map
@@ -417,6 +433,7 @@ async function lobbyInit () {
 
   const lobbyNameText = document.querySelector("#lobby-name");
   const lobbyModeText = document.querySelector("#lobby-mode");
+  const lobbyPlayerCountText = document.querySelector("#lobby-playercount");
 
   // Display the lobby name and mode
   let modeString;
@@ -427,6 +444,11 @@ async function lobbyInit () {
 
   lobbyNameText.textContent = lobby.listEntry.name;
   lobbyModeText.innerHTML = "&nbsp;- " + modeString;
+  if (lobby.data.maxplayers !== null) {
+    lobbyPlayerCountText.textContent = `(${lobby.listEntry.players.length} / ${lobby.data.maxplayers})`;
+  } else {
+    lobbyPlayerCountText.textContent = `(${lobby.listEntry.players.length})`;
+  }
 
   // Update the player list and map display
   updatePlayerList();
@@ -529,6 +551,59 @@ async function lobbyInit () {
       switch (requestData) {
         case "SUCCESS":
           return showPopup("Success", "The lobby password has been successfully updated.");
+
+        case "ERR_LOGIN": return showPopup("Not logged in", "Please log in via Steam before editing lobby details.", POPUP_ERROR);
+        case "ERR_STEAMID": return showPopup("Unrecognized user", "Your SteamID is not present in the users database. WTF?", POPUP_ERROR);
+        case "ERR_LOBBYID": return showPopup("Lobby not found", "An open lobby with this ID does not exist.", POPUP_ERROR);
+        case "ERR_PERMS": return showPopup("Permission denied", "You do not have permission to perform this action.", POPUP_ERROR);
+
+        default: return showPopup("Unknown error", "The server returned an unexpected response: " + requestData, POPUP_ERROR);
+      }
+
+    };
+
+  }
+
+  // Handle the lobby change size button
+  window.changeLobbyMaxplayers = function () {
+
+    // Exit early if we don't have host permissions
+    if (!amHost) return;
+
+    // Display a popup to change the lobby password
+    showPopup("Change lobby size", `
+      Enter a new maximum player count for this lobby, or leave it blank to unrestrict the size.
+      If the new maximum is smaller than the current player count, existing players will not be kicked.<br><br>
+      <input id="new-lobby-maxplayers" type="text" placeholder="Max player count" style="margin-top:5px"></input>
+    `, POPUP_INFO, true);
+
+    popupOnOkay = async function () {
+      hidePopup();
+
+      const inputValue = document.querySelector("#new-lobby-maxplayers").value.trim();
+      const newMaxplayers = parseInt(inputValue);
+
+      /**
+       * Validate the user's input. A similar type of check is replicated
+       * on the server side, where invalid input unrestricts lobby size,
+       * equivalent to leaving the input field blank here.
+       */
+      if (inputValue && (newMaxplayers < 1 || isNaN(newMaxplayers))) {
+        return showPopup("Invalid input", "Please enter a number larger than zero.", POPUP_ERROR);
+      }
+
+      // Fetch the api to change the lobby password
+      const request = await fetch(`/api/lobbies/maxplayers/${lobbyid}/${newMaxplayers}`);
+      let requestData;
+      try {
+        requestData = await request.json();
+      } catch (e) {
+        return showPopup("Unknown error", "The server returned an unexpected response. Error code: " + request.status, POPUP_ERROR);
+      }
+
+      switch (requestData) {
+        case "SUCCESS":
+          return showPopup("Success", "The lobby size has been successfully updated.");
 
         case "ERR_LOGIN": return showPopup("Not logged in", "Please log in via Steam before editing lobby details.", POPUP_ERROR);
         case "ERR_STEAMID": return showPopup("Unrecognized user", "Your SteamID is not present in the users database. WTF?", POPUP_ERROR);
