@@ -562,6 +562,9 @@ module.exports = async function (args, context = epochtal) {
       const dataEntry = lobbies.data[lobbyid];
       const eventName = "lobby_" + lobbyid;
 
+      // Ensure the lobby exists
+      if (!listEntry || !dataEntry) throw new UtilError("ERR_LOBBYID", args, context);
+
       // Remove the player from the lobby
       const index = listEntry.players.indexOf(steamid);
       if (index !== -1) listEntry.players.splice(index, 1);
