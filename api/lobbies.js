@@ -41,6 +41,10 @@ async function checkUserPerms (request, lobbyid, checkHost = false) {
  * - `get`: Get a lobby's data.
  * - `rename`: Rename a lobby.
  * - `password`: Set a lobby's password.
+ * - `map`: Set the active lobby map
+ * - `ready`: Set the player's ready state
+ * - `host`: Transfer the host role to the specified player
+ * - `kick`: Remove the specified player from the lobby
  *
  * @param {string[]} args The arguments for the api request
  * @param {HttpRequest} request The http request object
