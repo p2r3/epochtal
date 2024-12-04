@@ -82,6 +82,12 @@ async function updatePlayerList () {
 
     output += `
 <div class="lobby-player">
+  ${(amHost && !isHost) ? `<i
+    class="fa-solid fa-xmark lobby-player-kick"
+    onmouseover="showTooltip('Kick player')"
+    onmouseleave="hideTooltip()"
+    onclick="kickPlayer('${steamid}')"
+  ></i>` : ""}
   <img
     src="${avatar}"
     class="lobby-player-avatar ${isHost ? "lobby-host-avatar" : (amHost ? "pointer" : "")}"
@@ -204,6 +210,12 @@ async function lobbyEventHandler (event) {
 
       // Handle player leaving the lobby
       const { steamid } = data;
+
+      // If we've been kicked, return to lobby list page
+      if (steamid === whoami.steamid) {
+        window.location.href = "/live/#kicked";
+        return;
+      }
 
       const index = lobby.listEntry.players.indexOf(steamid);
       if (index === -1) return;
@@ -679,6 +691,31 @@ async function lobbyInit () {
 
     // Request host role transfer from API
     const request = await fetch(`/api/lobbies/host/${lobbyid}/"${steamid}"`);
+
+    let requestData;
+    try {
+      requestData = await request.json();
+    } catch (e) {
+      return showPopup("Unknown error", "The server returned an unexpected response. Error code: " + request.status, POPUP_ERROR);
+    }
+
+    switch (requestData) {
+      case "SUCCESS": return;
+
+      case "ERR_LOGIN": return showPopup("Not logged in", "Please log in via Steam before editing lobby details.", POPUP_ERROR);
+      case "ERR_STEAMID": return showPopup("Unrecognized user", "The user you've selected does not exist or is not part of this lobby.", POPUP_ERROR);
+      case "ERR_LOBBYID": return showPopup("Lobby not found", "An open lobby with this ID does not exist.", POPUP_ERROR);
+      case "ERR_PERMS": return showPopup("Permission denied", "You do not have permission to perform this action.", POPUP_ERROR);
+
+      default: return showPopup("Unknown error", "The server returned an unexpected response: " + requestData, POPUP_ERROR);
+    }
+
+  };
+
+  window.kickPlayer = async function (steamid) {
+
+    // Request player kick from API
+    const request = await fetch(`/api/lobbies/kick/${lobbyid}/"${steamid}"`);
 
     let requestData;
     try {

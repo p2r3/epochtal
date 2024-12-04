@@ -88,6 +88,16 @@
   backdrop-filter: blur(5px);
 }
 
+.lobby-player-kick {
+  position: absolute;
+  left: -15px;
+  top: 50%;
+  transform: translate(-100%, -50%);
+  font-size: 1.25rem;
+  color: red;
+  cursor: pointer;
+}
+
 .lobby-player-avatar {
   width: 52px;
   border: 3px solid rgb(112, 191, 255);
