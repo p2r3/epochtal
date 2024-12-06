@@ -244,7 +244,7 @@ const fetchHandler = async function (req) {
   }
 
   // Handle Spplice calls
-  if (!userAgent || userAgent.startsWith("Bun/") || userAgent.includes("spplice/2")) {
+  if (!userAgent || userAgent.startsWith("Bun/") || userAgent.includes("spplice/")) {
 
     const path = `${epochtal.file.spplice.repository}/${urlPath[0]}`;
     if (!fs.existsSync(path) || !urlPath[0]) {
