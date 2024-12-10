@@ -59,7 +59,7 @@ async function discordUpdate (steamid, category) {
     output += ` and **${partner.name}**`;
   }
 
-  output += ` submitted a new run to "${currCategory.title}" with a time of \`${time}\``;
+  output += ` submitted a new${run.segmented ? " segmented" : ""} run to "${currCategory.title}" with a time of \`${time}\``;
 
   if (currCategory.portals) {
     const label = currCategory.portals === true ? "portal" : currCategory.portals;
