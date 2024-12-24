@@ -135,6 +135,12 @@ var lobbyListInit = async function () {
   // Refresh the lobby list every 5 seconds
   setInterval(fetchLobbies, 5000);
 
+  // Inform the user if they've been kicked
+  if (window.location.href.endsWith("#kicked")) {
+    showPopup("Kicked", "You have been kicked from the lobby.", POPUP_ERROR);
+    history.replaceState(null, document.title, "/live/");
+  }
+
   let cliKeysControl = false;
   let cliKeysTilde = false;
 
@@ -242,6 +248,7 @@ async function joinLobby (lobbyid) {
         case "ERR_STEAMID": return showPopup("Unrecognized user", "Your SteamID is not present in the users database. WTF?", POPUP_ERROR);
         case "ERR_LOBBYID": return showPopup("Lobby not found", "An open lobby with this ID does not exist.", POPUP_ERROR);
         case "ERR_PASSWORD": return showPopup("Incorrect password", "The password you provided was not correct. (But you didn't provide a password??)", POPUP_ERROR);
+        case "ERR_FULL": return showPopup("Lobby full", "The lobby has reached its maximum player count.", POPUP_ERROR);
 
         default: return showPopup("Unknown error", "The server returned an unexpected response: " + data, POPUP_ERROR);
 
@@ -278,6 +285,7 @@ async function joinLobby (lobbyid) {
         case "ERR_STEAMID": return showPopup("Unrecognized user", "Your SteamID is not present in the users database. WTF?", POPUP_ERROR);
         case "ERR_LOBBYID": return showPopup("Lobby not found", "An open lobby with this ID does not exist.", POPUP_ERROR);
         case "ERR_PASSWORD": return showPopup("Incorrect password", "The password you provided was not correct.", POPUP_ERROR);
+        case "ERR_FULL": return showPopup("Lobby full", "The lobby has reached its maximum player count.", POPUP_ERROR);
 
         default: return showPopup("Unknown error", "The server returned an unexpected response: " + data, POPUP_ERROR);
 

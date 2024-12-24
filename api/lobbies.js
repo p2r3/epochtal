@@ -41,6 +41,12 @@ async function checkUserPerms (request, lobbyid, checkHost = false) {
  * - `get`: Get a lobby's data.
  * - `rename`: Rename a lobby.
  * - `password`: Set a lobby's password.
+ * - `maxplayers`: Set the maximum player count of the lobby
+ * - `map`: Set the active lobby map
+ * - `ready`: Set the player's ready state
+ * - `host`: Transfer the host role to the specified player
+ * - `kick`: Remove the specified player from the lobby
+ * - `start`: Force start the game
  *
  * @param {string[]} args The arguments for the api request
  * @param {HttpRequest} request The http request object
@@ -119,6 +125,7 @@ module.exports = async function (args, request) {
         players: Object.fromEntries(
           Object.entries(data.players).map(([key, player]) => [key, { ready: player.ready }])
         ),
+        maxplayers: data.maxplayers,
         host: data.host,
         state: data.state,
         context: data.context.data
@@ -130,6 +137,7 @@ module.exports = async function (args, request) {
        *     steamid: { ready },
        *     ...
        *   },
+       *   maxplayers,
        *   host,
        *   state,
        *   context: {
@@ -165,6 +173,19 @@ module.exports = async function (args, request) {
 
       // Set the specified lobby's password
       return lobbies(["password", lobbyid, password]);
+
+    }
+
+    case "maxplayers": {
+
+      const maxplayers = args[2];
+
+      // Check if the player is the host of this lobby
+      const permsCheck = await checkUserPerms(request, lobbyid, true);
+      if (typeof permsCheck === "string") return permsCheck;
+
+      // Set the specified lobby's max player count
+      return lobbies(["maxplayers", lobbyid, maxplayers]);
 
     }
 
@@ -205,6 +226,30 @@ module.exports = async function (args, request) {
 
       // Transfer the host role
       return lobbies(["host", lobbyid, newHost]);
+
+    }
+
+    case "kick": {
+
+      const steamid = args[2];
+
+      // Check if the player is the host of this lobby
+      const permsCheck = await checkUserPerms(request, lobbyid, true);
+      if (typeof permsCheck === "string") return permsCheck;
+
+      // Force the specified player to leave
+      return lobbies(["leave", lobbyid, steamid]);
+
+    }
+
+    case "start": {
+
+      // Check if the player is the host of this lobby
+      const permsCheck = await checkUserPerms(request, lobbyid, true);
+      if (typeof permsCheck === "string") return permsCheck;
+
+      // Force start the game
+      return lobbies(["start", lobbyid]);
 
     }
 
