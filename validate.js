@@ -93,7 +93,7 @@ async function validate() {
   await ensureFile(`${gconfig.datadir}/util.error`, "");
   await ensureFile(`${gconfig.datadir}/util.print`, "");
   await ensureFile(`${gconfig.datadir}/spplice/index.json`, `{"packages":[]}`);
-  await ensureFile(`${gconfig.datadir}/week/config.json`, `{"categories":[],"votingmaps":[{"id":"140534764"}],"votes":{},"number":0}`);
+  await ensureFile(`${gconfig.datadir}/week/config.json`, `{"categories":[],"votingmaps":[{"id":"140534764"}],"votes":{},"number":0,"date":0}`);
   await ensureFile(`${gconfig.datadir}/week/leaderboard.json`, "{}");
   await ensureFile(`${gconfig.datadir}/week/week.log`, "");
   await ensureFile(`${gconfig.datadir}/week/mdp/filesum_whitelist.txt`, "");
