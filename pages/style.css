@@ -157,6 +157,7 @@ footer {
   border: 2px solid white;
   border-radius: 10px;
   padding: 10px;
+  overflow-wrap: break-word;
 }
 
 #header-left, #header-right {
