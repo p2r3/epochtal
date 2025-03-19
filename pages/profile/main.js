@@ -308,9 +308,25 @@ var profilePageInit = async function () {
         hoverInfo.innerHTML = `${dataPoint} Submission${dataPoint === 1 ? "" : "s"} on Week ${startOffset + index + 1}`;
       }
 
-      // Update the position of hoverInfo and hoverLine
-      hoverInfo.style.transform = `translate(${Math.round((mouseX - margin) / xStep) * xStep + bbox.left + margin}px, calc(${event.clientY - 10}px - 100%))`;
-      hoverLine.style.transform = `translate(${Math.round((mouseX - margin) / xStep) * xStep + bbox.left + margin}px, ${bbox.top}px)`;
+      // Calculate by how many pixels to offset selected point on the X axis
+      const pxLeft = Math.round((mouseX - margin) / xStep) * xStep + bbox.left + margin;
+
+      // Update the position of hoverLine and hoverInfo
+      hoverLine.style.transform = `translate(${pxLeft}px, ${bbox.top}px)`;
+      // Adjust position of hoverInfo based on whether it might go off-screen
+      const hoverInfoWidth = hoverInfo.getBoundingClientRect().width;
+      if (pxLeft + hoverInfoWidth > window.innerWidth) {
+        if (pxLeft - hoverInfoWidth < 0) {
+          // Both to the left AND right of the line is offscreen - put it in the center
+          hoverInfo.style.transform = `translate(calc(${pxLeft}px - 50%), calc(${event.clientY - 10}px - 100%))`;
+        } else {
+          // To the right of the line is offscreen, but to the left is fine
+          hoverInfo.style.transform = `translate(calc(${pxLeft}px - 100%), calc(${event.clientY - 10}px - 100%))`;
+        }
+      } else {
+        // To the right of the line is fine - anchor it on the right (default)
+        hoverInfo.style.transform = `translate(${pxLeft}px, calc(${event.clientY - 10}px - 100%))`;
+      }
 
       // Control opacity if within margins
       if (uncappedIndex < 0 || uncappedIndex > data.length - 3) {
