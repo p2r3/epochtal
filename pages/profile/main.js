@@ -96,7 +96,7 @@ var profilePageInit = async function () {
     bbox = canvas.getBoundingClientRect();
     graphLegend.style.transform = `translate(${bbox.left}px, ${bbox.top}px)`;
     graphLegendDropdown.style.transform = `translate(calc(${bbox.left + graphLegendBBox.left + graphLegendBBox.width / 2}px - 50%), ${bbox.top + graphLegendBBox.bottom}px)`;
-    generateGraph();
+    generateGraph("points in main");
   };
 
   var profileLog, leaderboards = {};
