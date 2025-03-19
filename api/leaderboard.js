@@ -51,12 +51,12 @@ async function discordUpdate (steamid, category) {
   const time = ticksToString(run.time);
 
   let emoji = "🎲";
-  let output = `**${user.name}**`;
+  let output = `**${user.name.replaceAll("\\", "\\\\").replaceAll("@", "\\@")}**`;
 
   if (currCategory.coop) {
     const partners = await config(["get", "partners"]);
     const partner = await users(["get", partners[steamid]]);
-    output += ` and **${partner.name}**`;
+    output += ` and **${partner.name.replaceAll("\\", "\\\\").replaceAll("@", "\\@")}**`;
   }
 
   output += ` submitted a new${run.segmented ? " segmented" : ""} run to "${currCategory.title}" with a time of \`${time}\``;
