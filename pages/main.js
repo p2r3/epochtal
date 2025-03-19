@@ -3,18 +3,33 @@
 const pageContent = document.querySelector("#page-content");
 const header = document.querySelector("header");
 
+/**
+ * Smooth-scrolls to the first element found by the given selector string
+ *
+ * @param {string} queryString - The string used to query for a DOM element
+ */
 var smoothScroll = function (queryString) {
 
+  // Find the element pointed to by the query string
   const element = document.querySelector(queryString);
+  if (!element) return;
+  // Get the rendered bounds of the element
   const bbox = element.getBoundingClientRect();
 
-  const headerSize = header.getBoundingClientRect().height;
+  // Keep track of the current section in the URL
+  if (queryString[0] === '#') {
+    history.pushState({}, "", queryString);
+  }
 
+  // If possible, center the element within the screen
   if (bbox.height < window.innerHeight) {
     element.scrollIntoView({ behavior: "smooth", block: "center" });
     return;
   }
 
+  // If centering isn't possible, find the top of the element
+  // offset by the page header and scroll to that instead
+  const headerSize = header.getBoundingClientRect().height;
   const offsetPosition = bbox.top + window.pageYOffset - headerSize;
 
   pageContent.scrollBy({
@@ -890,6 +905,11 @@ var homepageInit = async function () {
       window.location.reload();
     }
   };
+
+  // Handle scrolling to section specified in URL
+  // This is done after data is done loading, otherwise we become offset
+  const section = window.location.href.split("#")[1];
+  if (section) smoothScroll(`#${section}`);
 
   // Handle 404 redirect
   if (window.location.href.endsWith("#404")) {
