@@ -13,7 +13,9 @@ const WS_ADDRESS = HTTP_ADDRESS.replace("http", "ws");
  */
 function pathExists (path) {
   try { fs.rename(path, path) }
-  catch (_) { return false }
+  catch (e) {
+    return e.toString() == "Error: fs.rename: New path already occupied";
+  }
   return true;
 }
 
