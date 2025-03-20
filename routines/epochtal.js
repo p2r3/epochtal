@@ -70,6 +70,8 @@ async function concludeWeek (context) {
 
   try {
     await discord(["report", `Week ${week.number} demo report summary:`, [finalReportPath, demoTarPath]], context);
+  } catch (e) {
+    throw e;
   } finally {
     fs.unlinkSync(finalReportPath);
     fs.unlinkSync(demoTarPath);
