@@ -259,16 +259,17 @@ module.exports = async function (args, context = epochtal) {
 
           // Handle console commands and cvars
           case "cvar":
+          case "queuedcmd":
           case "cmd": {
 
-            const cvar = (event.type === "cvar" ? event.val.cvar : event.value.split(" ")[0]).trim().toLowerCase();
-            const value = event.type === "cvar" ? event.val.val : event.value.split(" ").slice(1).join(" ");
+            const cvar = (event.type === "cvar" ? event.value.cvar : event.value.split(" ")[0]).trim().toLowerCase();
+            const value = event.type === "cvar" ? event.value.value : event.value.split(" ").slice(1).join(" ");
 
             // Ensure the demo is on the correct map
             if (cvar === "host_map") {
               const expected = context.data.week.map.file + ".bsp";
               if (value !== expected) {
-                return `Host map path incorrect. Expected \`${expected}\`, got \`${event.val.val}\`.`;
+                return `Host map path incorrect. Expected \`${expected}\`, got \`${event.value.value}\`.`;
               }
             }
 
@@ -302,6 +303,12 @@ module.exports = async function (args, context = epochtal) {
           // Look for speedrun timer output
           case "speedrun": {
             speedrunTimer = event.value.total.ticks;
+            break;
+          }
+
+          // Look for untimed pauses
+          case "pause": {
+            if (event.value.timed === false) return `Found untimed pause of ${event.value.ticks} ticks`;
             break;
           }
 

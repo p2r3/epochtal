@@ -499,11 +499,11 @@ async function summarizeDemoEvents (context) {
       }
 
       // Ignore non-command events
-      if (event.type !== "cvar" && event.type !== "cmd") continue;
+      if (event.type !== "cvar" && event.type !== "cmd" && event.type !== "queuedcmd") continue;
 
       // Test if cvar is safe
-      const cvar = event.type === "cvar" ? event.val.cvar : event.value.split(" ")[0];
-      const value = event.type === "cvar" ? event.val.val : event.value.split(" ").slice(1).join(" ");
+      const cvar = event.type === "cvar" ? event.value.cvar : event.value.split(" ")[0];
+      const value = event.type === "cvar" ? event.value.value : event.value.split(" ").slice(1).join(" ");
 
       const verdict = await testcvar([cvar, value], context);
 
