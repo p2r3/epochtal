@@ -419,274 +419,303 @@ var homepageInit = async function () {
 
   };
 
-  const linkContainer = document.querySelector("#submit-link-container");
-  const linkInput = document.querySelector("#submit-link");
-  const linkInfo = document.querySelector("#submit-link-info");
+  // Gray out "submit" section when not logged in
+  if (whoami === null) {
 
-  const fakeInput = document.createElement("input");
-  fakeInput.type = "file";
+    const submitContainer = document.querySelector("#submit");
 
-  let demoFile = null;
+    // Blur and decrease opacity of all child elements
+    for (var i = 0; i < submitContainer.children.length; i++) {
+      submitContainer.children[i].style.opacity = 0.25;
+      submitContainer.children[i].style.filter = "blur(2px)";
+      submitContainer.children[i].style.pointerEvents = "none";
+    }
 
-  // Handle url submit input
-  linkInput.oninput = function () {
+    // Create an overlay notifying the user that they have to log in
+    const overlay = document.createElement("h1");
+    overlay.style.position = "absolute";
+    overlay.style.top = "50%";
+    overlay.style.left = "50%";
+    overlay.style.textAlign = "center";
+    overlay.style.transform = "translate(-50%, -50%)";
+    overlay.style.background = "rgba(0, 0, 0, 0.5)";
+    overlay.style.padding = "15px 25px";
+    overlay.style.borderRadius = "10px";
+    overlay.innerHTML = `<i class="fa-solid fa-user-lock"></i>&nbsp;&nbsp;Log in to submit runs`;
+    submitContainer.appendChild(overlay);
 
-    if (demoFile) return;
+  } else {
 
-    const empty = linkInput.value.trim() === "";
-    linkInfo.style.display = empty ? "none" : "unset";
+    const linkContainer = document.querySelector("#submit-link-container");
+    const linkInput = document.querySelector("#submit-link");
+    const linkInfo = document.querySelector("#submit-link-info");
 
-  };
+    const fakeInput = document.createElement("input");
+    fakeInput.type = "file";
 
-  // Handle demo file submit input
-  fakeInput.onchange = async function (evt) {
+    let demoFile = null;
 
-    demoFile = evt.target.files[0];
-    fakeInput.remove();
+    // Handle url submit input
+    linkInput.oninput = function () {
 
-    if (!demoFile) return;
+      if (demoFile) return;
 
-    linkInfo.style.display = "none";
-    linkContainer.style.display = "none";
-    demoClearButton.style.display = "inline-block";
+      const empty = linkInput.value.trim() === "";
+      linkInfo.style.display = empty ? "none" : "unset";
 
-    demoButton.innerHTML = demoFile.name;
+    };
 
-  };
+    // Handle demo file submit input
+    fakeInput.onchange = async function (evt) {
 
-  const demoButton = document.querySelector("#submit-demo");
-  demoButton.addEventListener("click", () => { fakeInput.click() });
+      demoFile = evt.target.files[0];
+      fakeInput.remove();
 
-  const demoClearButton = document.querySelector("#submit-demo-clear");
-  demoClearButton.addEventListener("click", function () {
-    demoFile = null;
-    demoButton.innerHTML = "Submit Demo File";
-    linkContainer.style.display = "";
-    demoClearButton.style.display = "none";
-  });
+      if (!demoFile) return;
 
-  // Add categories to submit dropdown
-  const categorySelect = document.querySelector("#submit-category");
-  for (let i = 0; i < config.categories.length; i ++) {
+      linkInfo.style.display = "none";
+      linkContainer.style.display = "none";
+      demoClearButton.style.display = "inline-block";
 
-    const { name, title } = config.categories[i];
+      demoButton.innerHTML = demoFile.name;
 
-    categorySelect.innerHTML += `<option value="${name}">${title}</option>`;
+    };
 
-  }
+    const demoButton = document.querySelector("#submit-demo");
+    demoButton.addEventListener("click", () => { fakeInput.click() });
 
-  // Handle category select
-  categorySelect.onchange = function () {
-
-    const category = categorySelect.value;
-    const portals = config.categories.find(function (curr) {
-      return curr.name === category && curr.portals;
+    const demoClearButton = document.querySelector("#submit-demo-clear");
+    demoClearButton.addEventListener("click", function () {
+      demoFile = null;
+      demoButton.innerHTML = "Submit Demo File";
+      linkContainer.style.display = "";
+      demoClearButton.style.display = "none";
     });
 
-    const input = document.querySelector("#submit-portals");
-    input.style.display = portals ? "inline" : "none";
+    // Add categories to submit dropdown
+    const categorySelect = document.querySelector("#submit-category");
+    for (let i = 0; i < config.categories.length; i ++) {
 
-  }
+      const { name, title } = config.categories[i];
 
-  const noteInput = document.querySelector("#submit-note");
-  const timeInput = document.querySelector("#submit-time");
-  const portalsInput = document.querySelector("#submit-portals");
+      categorySelect.innerHTML += `<option value="${name}">${title}</option>`;
 
-  /**
-   * Submits to the leaderboard
-   */
-  async function submitDemo () {
+    }
 
-    // File upload
-    const formData = new FormData();
-    formData.append("demo", demoFile);
+    // Handle category select
+    categorySelect.onchange = function () {
 
-    // Ensure category is selected
-    const category = categorySelect.value;
-    if (!category) return showPopup("No category selected", "Please select a category to submit your speedrun to.", POPUP_ERROR);
-
-    // Ensure note is not too long
-    const note = noteInput.value.trim();
-    if (note.length > 200) return showPopup("Comment too long", "Please keep your run comments to 200 characters or under.", POPUP_ERROR);
-
-    const safeNote = encodeURIComponent(note);
-
-    // Fetch api to submit run
-    let data;
-    try {
-
-      const response = await fetch(`/api/leaderboard/submit/${category}/${safeNote}`, {
-        method: "POST",
-        body: formData,
+      const category = categorySelect.value;
+      const portals = config.categories.find(function (curr) {
+        return curr.name === category && curr.portals;
       });
-      data = await response.json();
 
-      if (typeof data === "string") switch (data) {
-        case "ERR_LOGIN":
-          return showPopup("Not logged in", "Please log in via Steam before submitting runs.", POPUP_ERROR);
-        case "ERR_NOTE":
-          return showPopup("Comment too long", "Please keep your run comments to 200 characters or under.", POPUP_ERROR);
-        case "ERR_ILLEGAL":
-          return showPopup("Verification failed", "Your run failed to pass verification. Contact the organizers if you think this is a mistake.", POPUP_ERROR);
-        case "ERR_STEAMID":
-          return showPopup("SteamID mismatch", "This demo does not appear to belong to your Steam account.", POPUP_ERROR);
-        case "ERR_LOCKED":
-          return showPopup("Leaderboard locked", "The leaderboard for this category is locked.", POPUP_ERROR);
-        case "ERR_TIME":
-          return showPopup("Invalid time format", "The time you provided could not be parsed. Please provide time in the format \"min:sec.ms\".", POPUP_ERROR);
-        case "ERR_PROOF":
-          return showPopup("Invalid proof type", "This category does not accept demo submissions.", POPUP_ERROR);
-        case "ERR_PORTALS":
-          return showPopup("Invalid portal count", "The portal count could not be parsed.", POPUP_ERROR);
-        case "ERR_NOTCOOP":
-          return showPopup("Category not co-op", "You're trying to submit a co-op demo to a single player category.", POPUP_ERROR);
-        case "ERR_PARTNER":
-          return showPopup("Partner mismatch", "You cannot change partners during a week.", POPUP_ERROR);
-        case "ERR_NOPARTNER":
-          return showPopup("Partner required", "You're trying to submit a single player demo to a co-op category.", POPUP_ERROR);
-        case "ERR_PARTNERLOCK":
-          return showPopup("Category unavailable", "Submitting single player runs after playing co-op is not allowed. This is done to prevent route sharing.", POPUP_ERROR);
-
-        default:
-          throw data;
-      }
-
-    } catch (e) {
-
-      console.error(e);
-      return showPopup("Unknown error", "An unexpected error occurred while submitting your speedrun. Check the JavaScript console for more info.", POPUP_ERROR);
+      const input = document.querySelector("#submit-portals");
+      input.style.display = portals ? "inline" : "none";
 
     }
 
-    // Refresh leaderboard
-    leaderboard = await (await fetch("/api/leaderboard/get")).json();
-    displayLeaderboard(leaderboardCategorySelect.value);
+    const noteInput = document.querySelector("#submit-note");
+    const timeInput = document.querySelector("#submit-time");
+    const portalsInput = document.querySelector("#submit-portals");
 
-    // Show success message
-    return showPopup("Success", "Your run has been submitted!<br>Time: " + ticksToString(data.time));
+    /**
+     * Submits to the leaderboard
+     */
+    async function submitDemo () {
 
-  }
+      // File upload
+      const formData = new FormData();
+      formData.append("demo", demoFile);
 
+      // Ensure category is selected
+      const category = categorySelect.value;
+      if (!category) return showPopup("No category selected", "Please select a category to submit your speedrun to.", POPUP_ERROR);
 
-  /**
-   * Submits a link to the leaderboard
-   */
-  async function submitLink () {
+      // Ensure note is not too long
+      const note = noteInput.value.trim();
+      if (note.length > 200) return showPopup("Comment too long", "Please keep your run comments to 200 characters or under.", POPUP_ERROR);
 
-    // Ensure link is not empty
-    const link = linkInput.value.trim();
+      const safeNote = encodeURIComponent(note);
 
-    if (!link) return showPopup("Empty submission", "Please provide either a demo file or a link to a YouTube video.", POPUP_ERROR);
-    if (!link.includes("youtu")) return showPopup("Invalid link", "The link you provided doesn't look like a YouTube video.", POPUP_ERROR);
+      // Fetch api to submit run
+      let data;
+      try {
 
-    // Ensure category is selected
-    const category = categorySelect.value;
-    if (!category) return showPopup("No category selected", "Please select a category to submit your speedrun to.", POPUP_ERROR);
+        const response = await fetch(`/api/leaderboard/submit/${category}/${safeNote}`, {
+          method: "POST",
+          body: formData,
+        });
+        data = await response.json();
 
-    // Ensure time and portals is valid
-    const time = stringToTicks(timeInput.value.trim());
-    let portals = parseInt(portalsInput.value.trim());
+        if (typeof data === "string") switch (data) {
+          case "ERR_LOGIN":
+            return showPopup("Not logged in", "Please log in via Steam before submitting runs.", POPUP_ERROR);
+          case "ERR_NOTE":
+            return showPopup("Comment too long", "Please keep your run comments to 200 characters or under.", POPUP_ERROR);
+          case "ERR_ILLEGAL":
+            return showPopup("Verification failed", "Your run failed to pass verification. Contact the organizers if you think this is a mistake.", POPUP_ERROR);
+          case "ERR_STEAMID":
+            return showPopup("SteamID mismatch", "This demo does not appear to belong to your Steam account.", POPUP_ERROR);
+          case "ERR_LOCKED":
+            return showPopup("Leaderboard locked", "The leaderboard for this category is locked.", POPUP_ERROR);
+          case "ERR_TIME":
+            return showPopup("Invalid time format", "The time you provided could not be parsed. Please provide time in the format \"min:sec.ms\".", POPUP_ERROR);
+          case "ERR_PROOF":
+            return showPopup("Invalid proof type", "This category does not accept demo submissions.", POPUP_ERROR);
+          case "ERR_PORTALS":
+            return showPopup("Invalid portal count", "The portal count could not be parsed.", POPUP_ERROR);
+          case "ERR_NOTCOOP":
+            return showPopup("Category not co-op", "You're trying to submit a co-op demo to a single player category.", POPUP_ERROR);
+          case "ERR_PARTNER":
+            return showPopup("Partner mismatch", "You cannot change partners during a week.", POPUP_ERROR);
+          case "ERR_NOPARTNER":
+            return showPopup("Partner required", "You're trying to submit a single player demo to a co-op category.", POPUP_ERROR);
+          case "ERR_PARTNERLOCK":
+            return showPopup("Category unavailable", "Submitting single player runs after playing co-op is not allowed. This is done to prevent route sharing.", POPUP_ERROR);
 
-    if (isNaN(time)) return showPopup("Invalid time format", "The time you provided could not be parsed. Please provide time in the format \"min:sec.ms\".", POPUP_ERROR)
-    if (isNaN(portals) || portals < 0) {
-      if (portalsInput.style.display === "none") {
-        portals = 0;
-      } else {
-        return showPopup("Invalid portal count", "The portal count you provided could not be parsed. Please provide a single positive integer.", POPUP_ERROR);
+          default:
+            throw data;
+        }
+
+      } catch (e) {
+
+        console.error(e);
+        return showPopup("Unknown error", "An unexpected error occurred while submitting your speedrun. Check the JavaScript console for more info.", POPUP_ERROR);
+
       }
+
+      // Refresh leaderboard
+      leaderboard = await (await fetch("/api/leaderboard/get")).json();
+      displayLeaderboard(leaderboardCategorySelect.value);
+
+      // Show success message
+      return showPopup("Success", "Your run has been submitted!<br>Time: " + ticksToString(data.time));
+
     }
 
-    // Ensure note is not too long
-    const note = noteInput.value.trim();
-    if (note.length > 200) return showPopup("Comment too long", "Please keep your run comments to 200 characters or under.", POPUP_ERROR);
 
-    const safeLink = encodeURIComponent(link);
-    const safeNote = encodeURIComponent(note);
+    /**
+     * Submits a link to the leaderboard
+     */
+    async function submitLink () {
 
-    // Fetch api to submit run
-    let data;
-    try {
+      // Ensure link is not empty
+      const link = linkInput.value.trim();
 
-      const response = await fetch(`/api/leaderboard/submitlink/${category}/${safeLink}/${safeNote}/${time}/${portals}`);
-      data = await response.json();
+      if (!link) return showPopup("Empty submission", "Please provide either a demo file or a link to a YouTube video.", POPUP_ERROR);
+      if (!link.includes("youtu")) return showPopup("Invalid link", "The link you provided doesn't look like a YouTube video.", POPUP_ERROR);
 
-      if (typeof data === "string") switch (data) {
-        case "ERR_LOGIN":
-          return showPopup("Not logged in", "Please log in via Steam before submitting runs.", POPUP_ERROR);
-        case "ERR_ILLEGAL":
-          return showPopup("Verification failed", "Your run failed to pass verification. Contact the organizers if you think this is a mistake.", POPUP_ERROR);
-        case "ERR_LOCKED":
-          return showPopup("Leaderboard locked", "The leaderboard for this category is locked.", POPUP_ERROR);
-        case "ERR_TIME":
-          return showPopup("Invalid time format", "The time you provided could not be parsed. Please provide time in the format \"min:sec.ms\".", POPUP_ERROR);
-        case "ERR_PROOF":
-          return showPopup("Invalid proof type", "This category does not accept link submissions.", POPUP_ERROR);
-        case "ERR_PORTALS":
-          return showPopup("Invalid portal count", "The portal count you provided could not be parsed.", POPUP_ERROR);
+      // Ensure category is selected
+      const category = categorySelect.value;
+      if (!category) return showPopup("No category selected", "Please select a category to submit your speedrun to.", POPUP_ERROR);
 
-        default:
-          throw data;
+      // Ensure time and portals is valid
+      const time = stringToTicks(timeInput.value.trim());
+      let portals = parseInt(portalsInput.value.trim());
+
+      if (isNaN(time)) return showPopup("Invalid time format", "The time you provided could not be parsed. Please provide time in the format \"min:sec.ms\".", POPUP_ERROR)
+      if (isNaN(portals) || portals < 0) {
+        if (portalsInput.style.display === "none") {
+          portals = 0;
+        } else {
+          return showPopup("Invalid portal count", "The portal count you provided could not be parsed. Please provide a single positive integer.", POPUP_ERROR);
+        }
       }
 
-    } catch (e) {
+      // Ensure note is not too long
+      const note = noteInput.value.trim();
+      if (note.length > 200) return showPopup("Comment too long", "Please keep your run comments to 200 characters or under.", POPUP_ERROR);
 
-      console.error(e);
-      return showPopup("Unknown error", "An unexpected error occurred while submitting your speedrun. Check the JavaScript console for more info.", POPUP_ERROR);
+      const safeLink = encodeURIComponent(link);
+      const safeNote = encodeURIComponent(note);
+
+      // Fetch api to submit run
+      let data;
+      try {
+
+        const response = await fetch(`/api/leaderboard/submitlink/${category}/${safeLink}/${safeNote}/${time}/${portals}`);
+        data = await response.json();
+
+        if (typeof data === "string") switch (data) {
+          case "ERR_LOGIN":
+            return showPopup("Not logged in", "Please log in via Steam before submitting runs.", POPUP_ERROR);
+          case "ERR_ILLEGAL":
+            return showPopup("Verification failed", "Your run failed to pass verification. Contact the organizers if you think this is a mistake.", POPUP_ERROR);
+          case "ERR_LOCKED":
+            return showPopup("Leaderboard locked", "The leaderboard for this category is locked.", POPUP_ERROR);
+          case "ERR_TIME":
+            return showPopup("Invalid time format", "The time you provided could not be parsed. Please provide time in the format \"min:sec.ms\".", POPUP_ERROR);
+          case "ERR_PROOF":
+            return showPopup("Invalid proof type", "This category does not accept link submissions.", POPUP_ERROR);
+          case "ERR_PORTALS":
+            return showPopup("Invalid portal count", "The portal count you provided could not be parsed.", POPUP_ERROR);
+
+          default:
+            throw data;
+        }
+
+      } catch (e) {
+
+        console.error(e);
+        return showPopup("Unknown error", "An unexpected error occurred while submitting your speedrun. Check the JavaScript console for more info.", POPUP_ERROR);
+
+      }
+
+      // Refresh leaderboard
+      leaderboard = await (await fetch("/api/leaderboard/get")).json();
+      displayLeaderboard(leaderboardCategorySelect.value);
+
+      // Show success message
+      return showPopup("Success", "Your run has been submitted!<br>Time: " + ticksToString(data.time));
 
     }
 
-    // Refresh leaderboard
-    leaderboard = await (await fetch("/api/leaderboard/get")).json();
-    displayLeaderboard(leaderboardCategorySelect.value);
+    // Handle submit button
+    const submitButton = document.querySelector("#submit-button");
+    submitButton.onclick = async function () {
 
-    // Show success message
-    return showPopup("Success", "Your run has been submitted!<br>Time: " + ticksToString(data.time));
+      submitButton.innerHTML = "Submitting...";
+      submitButton.style.pointerEvents = "none";
+
+      if (demoFile) await submitDemo();
+      else await submitLink();
+
+      submitButton.innerHTML = "Submit";
+      submitButton.style.pointerEvents = "auto";
+
+    }
+
+    // Handle drag and drop
+    pageContent.ondragover = function (e) {
+      e.preventDefault();
+    };
+
+    // Handle file drop on page
+    pageContent.ondrop = function (e) {
+      e.preventDefault();
+
+      const items = e.dataTransfer.items;
+
+      // Ensure only one file is dropped
+      if (items[0].kind !== "file") return;
+      const file = items[0].getAsFile();
+
+      // Ensure file is a demo
+      if (!file.name.endsWith(".dem")) return;
+      demoFile = file;
+
+      // Update demo button
+      linkInfo.style.display = "none";
+      linkContainer.style.display = "none";
+
+      demoButton.innerHTML = demoFile.name;
+
+      smoothScroll('#submit');
+
+    };
 
   }
-
-  // Handle submit button
-  const submitButton = document.querySelector("#submit-button");
-  submitButton.onclick = async function () {
-
-    submitButton.innerHTML = "Submitting...";
-    submitButton.style.pointerEvents = "none";
-
-    if (demoFile) await submitDemo();
-    else await submitLink();
-
-    submitButton.innerHTML = "Submit";
-    submitButton.style.pointerEvents = "auto";
-
-  }
-
-  // Handle drag and drop
-  pageContent.ondragover = function (e) {
-    e.preventDefault();
-  };
-
-  // Handle file drop on page
-  pageContent.ondrop = function (e) {
-    e.preventDefault();
-
-    const items = e.dataTransfer.items;
-
-    // Ensure only one file is dropped
-    if (items[0].kind !== "file") return;
-    const file = items[0].getAsFile();
-
-    // Ensure file is a demo
-    if (!file.name.endsWith(".dem")) return;
-    demoFile = file;
-
-    // Update demo button
-    linkInfo.style.display = "none";
-    linkContainer.style.display = "none";
-
-    demoButton.innerHTML = demoFile.name;
-
-    smoothScroll('#submit');
-
-  };
 
   const votesContainer = document.querySelector("#votes-container");
   let votesOutput = "";
