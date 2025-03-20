@@ -585,6 +585,8 @@ var homepageInit = async function () {
 
       }
 
+      // Update week configuration (in case of new co-op partners)
+      config = await (await fetch("/api/config/get")).json();
       // Refresh leaderboard
       leaderboard = await (await fetch("/api/leaderboard/get")).json();
       displayLeaderboard(leaderboardCategorySelect.value);
@@ -662,6 +664,8 @@ var homepageInit = async function () {
 
       }
 
+      // Update week configuration (in case of new co-op partners)
+      config = await (await fetch("/api/config/get")).json();
       // Refresh leaderboard
       leaderboard = await (await fetch("/api/leaderboard/get")).json();
       displayLeaderboard(leaderboardCategorySelect.value);
