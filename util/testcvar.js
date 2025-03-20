@@ -3596,7 +3596,7 @@ const cvarTestSafe = {
   "sar_speedrun_start_on_load": (val) => true,
   "sar_speedrun_stop": (val) => true,
   "sar_speedrun_stop_in_menu": (val) => true,
-  "sar_speedrun_time_pauses": (val) => val == 0,
+  "sar_speedrun_time_pauses": (val) => val == 1,
   "sar_stop": (val) => false, // 	functional 	-
   "sar_toast_create": (val) => true, // 	non-functional 	-
   "sar_check_update": (val) => true, // 	non-functional 	-
@@ -3624,7 +3624,6 @@ const cvarTestSafe = {
   "svar_sub": (val) => true,
   "svar_substr": (val) => true,
   "sar_aircontrol": (val) => false, // 	banned 	-
-  "sar_autojump": (val) => false, // 	banned 	-
   "sar_autorecord": (val) => val == -1, // 	non-functional 	-
   "nop": (val) => true, // 	non-functional 	-
   "sar_about": (val) => true, // 	non-functional 	-
@@ -3643,6 +3642,7 @@ const cvarTestSafe = {
   "sar_chat": (val) => true, // 	non-functional 	-
   "sar_cheat_hud_x": (val) => true, // 	non-functional 	-
   "sar_cheat_hud_y": (val) => true, // 	non-functional 	-
+  "sar_cheat_hud": (val) => true, // 	non-functional 	-
   "sar_clear_lines": (val) => true, // 	non-functional 	-
   "sar_cm_rightwarp": (val) => val == 1, // 	non-functional 	-
   "sar_con_filter_allow": (val) => true,
@@ -3759,6 +3759,7 @@ const cvarTestSafe = {
   "sar_lphud_setpos": (val) => true,
   "sar_lphud_x": (val) => true,
   "sar_lphud_y": (val) => true,
+  "sar_lphud": (val) => true,
   "sar_minimap_load": (val) => true,
   "sar_minimap_max_height": (val) => true,
   "sar_minimap_max_width": (val) => true,
@@ -3879,6 +3880,18 @@ const cvarTestSafe = {
   "sar_on_tas_start": (val) => !val.includes("+") && !val.includes("-") && cvarTestSafe[val.split(" ")[0]](val.split(" ").slice(1).join(" ")),
   "sar_on_tas_start_clear": (val) => true,
   "sar_on_tas_start_list": (val) => true,
+  "sar_patch_minor_angle_decay": (val) => true,
+  "sar_crosshair_p1": (val, cheats) => (val == 0 || !cheats),
+  "sar_transition_timer": (val) => true,
+  "sar_render_blend": (val) => true,
+  "sar_trace_draw": (val, cheats) => (!cheats),
+  "sar_vphys_hud": (val, cheats) => (!cheats),
+  "sar_portalcolor_sp_1": (val) => true,
+  "sar_portalcolor_sp_2": (val) => true,
+  "sar_portalcolor_enable": (val) => true,
+  "sar_pp_hud_font": (val) => true,
+  "sar_pp_hud_x": (val) => true,
+  "sar_pp_hud_y": (val) => true,
   "hwait": (val) => !val.includes("+") && !val.includes("-") && cvarTestSafe[val.split(" ")[0]](val.split(" ").slice(1).join(" ")),
   "seq": (val) => !val.includes("+") && !val.includes("-") && cvarTestSafe[val.split(" ")[0]](val.split(" ").slice(1).join(" ")),
   "wait": (val) => !val.includes("+") && !val.includes("-") && cvarTestSafe[val.split(" ")[0]](val.split(" ").slice(1).join(" ")),
@@ -3902,7 +3915,10 @@ const cvarTestSafe = {
   "cm_current_community_map": (val) => true,
   "ui_pvplobby_show_offline": (val) => true,
   "joy_remap_player_for_controller1": (val) => true,
-  "mm_session_sys_delay_create_host": (val) => true
+  "mm_session_sys_delay_create_host": (val) => true,
+  "mat_forcemanagedtextureintohardware": (val) => true,
+  "mat_supportflashlight": (val) => true,
+  "cm_max_quickplay_maps": (val) => true
 };
 
 const cvarTestIllegal = {
@@ -4039,7 +4055,11 @@ const cvarTestIllegal = {
   "toolunload": (val) => true,
   "cl_cmdrate": (val) => true,
   "host_timescale": (val) => true,
-  "give": (val) => val != "weapon_portalgun"
+  "give": (val) => val != "weapon_portalgun",
+  "sar_speedrun_time_pauses": (val) => (val != 1),
+  "sar_crosshair_p1": (val, cheats) => (val != 0 && cheats),
+  "sar_vphys_hud": (val, cheats) => (val != 0 && cheats),
+  "sv_alternateticks": (val) => (val == 0)
 };
 
 /**
