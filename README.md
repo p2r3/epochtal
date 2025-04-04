@@ -17,7 +17,7 @@ cd epochtal
 bun install
 ```
 
-Make sure you have the required dependencies `tar`, `xz` and `wget` when running epochtal with `bun run main.js`.
+Make sure you have the required dependencies `tar`, `xz` and `wget` when running Epochtal with `bun run main.js`.
 
 You're also going to make your life a lot easier by reading [the contribution guidelines](CONTRIBUTING.md) before making
 any changes.
@@ -26,13 +26,13 @@ any changes.
 
 This project is written for the [Bun runtime](https://bun.sh/), and will not work on other runtimes such as Node or Deno.
 
-There are two primary ways in which you can deploy epochtal for your own tournament:
+There are two primary ways in which you can deploy Epochtal for your own tournament:
 
 ### Using Docker (recommended)
 
 Epochtal builds and publishes a Docker image every time a changes are pushed to the `main` branch.
 
-To run epochtal through Docker compose, use the provided [docker-compose.yml](docker-compose.yml) file.
+To run Epochtal through Docker compose, use the provided [docker-compose.yml](docker-compose.yml) file.
 
 If you want to use 'Plain Docker', you should first create a volume to persistently store data between updates:
 
@@ -61,9 +61,9 @@ The `/app/secrets` bind is optional, and not recommended unless you need to edit
 
 ### Manual installation
 
-If you don't want to use Docker, ~~use docker~~ you can run epochtal locally on your machine:
+If you don't want to use Docker, ~~use docker~~ you can run Epochtal locally on your machine:
 
-1. Install the required dependencies; epochtal needs `tar`, `xz` and `wget` to be available to the Bun process.
+1. Install the required dependencies; Epochtal needs `tar`, `xz` and `wget` to be available to the Bun process.
 2. Clone the repository
    ```shell
    git clone --depth 1 https://github.com/p2r3/epochtal
@@ -85,7 +85,7 @@ If you don't want to use Docker, ~~use docker~~ you can run epochtal locally on 
    chmod +x UntitledParser
    ```
 4. Copy `.env.example` to `.env` and populate the necessary fields
-5. Install bun packages and run epochtal!
+5. Install bun packages and run Epochtal!
    ```shell
    bun install --production
    bun run main.js
