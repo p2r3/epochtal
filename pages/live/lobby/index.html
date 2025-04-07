@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="/live/style.css">
     <script src="https://kit.fontawesome.com/fc2642e2d1.js" crossorigin="anonymous"></script>
   </head>
-  <body>
+  <body onkeypress="redirectEventToChat(event)">
 
     <div id="bg-anim-container">
       <div id="bg-anim-bg"></div>
@@ -73,6 +73,13 @@
 
         </div>
 
+      </div>
+
+      <div id="lobby-chat-container">
+        <input type="text" id="lobby-chat-input" onkeypress="sendChatMessageFromInput(event)" maxlength="200"></input>
+        <div id="lobby-chat-output">
+
+        </div>
       </div>
 
       <button id="lobby-spectate-button" onclick="spectate()">Spectate</button>

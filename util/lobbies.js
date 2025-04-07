@@ -60,6 +60,7 @@ function createLobbyContext (name) {
  * - `start`: Force start the game
  * - `abort`: Force stop the game (everyone is set to "not ready")
  * - `spectate`: Add or remove the given player from the spectators list
+ * - `chat`: Send a chat message to be broadcasted within the lobby
  *
  * @param {string[]} args The arguments for the call
  * @param {unknown} context The context on which to execute the call (defaults to epochtal)
@@ -754,6 +755,29 @@ module.exports = async function (args, context = epochtal) {
 
       // Write the lobbies to file if it exists
       if (file) Bun.write(file, JSON.stringify(lobbies));
+
+      return "SUCCESS";
+
+    }
+
+    case "chat": {
+
+      const message = args[2];
+
+      const listEntry = lobbies.list[lobbyid];
+      const dataEntry = lobbies.data[lobbyid];
+      const eventName = "lobby_" + lobbyid;
+
+      // Ensure the lobby exists
+      if (!listEntry || !dataEntry) throw new UtilError("ERR_LOBBYID", args, context);
+
+      // Ensure the message is within 200 characters
+      if (message.length > 200) throw new UtilError("ERR_LENGTH", args, context);
+      // Ensure the message isn't empty
+      if (message.trim().length === 0) throw new UtilError("ERR_EMPTY", args, context);
+
+      // Broadcast chat message to players
+      await events(["send", eventName, { type: "lobby_chat", steamid: steamid, value: message }], context);
 
       return "SUCCESS";
 

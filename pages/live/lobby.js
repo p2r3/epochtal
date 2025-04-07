@@ -213,7 +213,28 @@ function updateLobbyHost () {
 
 }
 
-};
+/**
+ * Displays a message in the lobby chat window.
+ */
+function displayChatMessage (message, from = null) {
+
+  message = message.toString().replaceAll("&quot;", '"')
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+
+  if (from) {
+    message = `<a>${users[from].name}</a>: ${message}`;
+  } else {
+    message = `<a>${message}</a>`;
+  }
+
+  const chatOutput = document.querySelector("#lobby-chat-output");
+  chatOutput.innerHTML += message + "<br>";
+
+  chatOutput.scrollTop = chatOutput.scrollHeight;
+
+}
 
 var eventHandlerConnected = false;
 
@@ -248,6 +269,8 @@ async function lobbyEventHandler (event) {
       // Rename the lobby
       document.querySelector("#lobby-name").textContent = data.newName;
 
+      displayChatMessage(`Lobby name changed to "${data.newName}".`);
+
       return;
     }
 
@@ -268,6 +291,8 @@ async function lobbyEventHandler (event) {
       lobby.listEntry.players.splice(index, 1);
       updatePlayerList();
 
+      displayChatMessage(`${users[steamid].name} left the lobby.`);
+
       const spectatorIndex = lobby.data.spectators.indexOf(steamid);
       if (spectatorIndex == -1) return;
       lobby.data.spectators.splice(spectatorIndex, 1);
@@ -286,6 +311,8 @@ async function lobbyEventHandler (event) {
       lobby.data.players[steamid] = {};
       updatePlayerList();
 
+      displayChatMessage(`${users[steamid].name} joined the lobby.`);
+
       return;
     }
 
@@ -297,6 +324,8 @@ async function lobbyEventHandler (event) {
       lobby.data.host = steamid;
       updatePlayerList();
       updateLobbyHost();
+
+      displayChatMessage(`${users[steamid].name} is now the host.`);
 
       return;
     }
@@ -406,6 +435,8 @@ async function lobbyEventHandler (event) {
       lobby.data.context.leaderboard[lobby.listEntry.mode] = [];
       updatePlayerList();
 
+      displayChatMessage(`The round is starting. Good luck!`);
+
       return;
     }
 
@@ -458,6 +489,14 @@ async function lobbyEventHandler (event) {
       if (data.steamid !== whoami.steamid) return;
 
       showPopup("Game connected", "Your game client has been connected successfully. You may now ready up.");
+      return;
+    }
+
+    case "lobby_chat": {
+
+      // Handle receiving chat messages
+      displayChatMessage(data.value, data.steamid);
+
       return;
     }
 
@@ -520,8 +559,8 @@ async function lobbyInit () {
   updateLobbyMap();
   updateLobbyHost();
 
-  // Connect to the WebSocket
-  if (lobbySocket) lobbySocket.close();
+  // Display a notification for this player joining the lobby
+  displayChatMessage(`${whoami.username} joined the lobby.`);
 
   const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
 
@@ -997,6 +1036,68 @@ async function lobbyInit () {
     }
 
   }
+
+  // Sends a chat message to be broadcasted to all players
+  window.sendChatMessage = async function (message) {
+
+    // Request chat message broadcast from API
+    const request = await fetch(`/api/lobbies/chat/${lobbyid}/"${encodeURIComponent(message.replaceAll('"', "&quot;"))}"`);
+
+    let requestData;
+    try {
+      requestData = await request.json();
+    } catch (e) {
+      return showPopup("Unknown error", "The server returned an unexpected response. Error code: " + request.status, POPUP_ERROR);
+    }
+
+    switch (requestData) {
+      case "SUCCESS": return true;
+
+      case "ERR_LOGIN": return showPopup("Not logged in", "Please log in via Steam before editing lobby details.", POPUP_ERROR);
+      case "ERR_STEAMID": return showPopup("Unrecognized user", "Your SteamID is not present in the users database. WTF?", POPUP_ERROR);
+      case "ERR_LOBBYID": return showPopup("Lobby not found", "An open lobby with this ID does not exist.", POPUP_ERROR);
+      case "ERR_LENGTH": return showPopup("Message too long", "Your message wasn't sent because it is too long. Please keep chat messages to under 200 characters.", POPUP_ERROR);
+      case "ERR_EMPTY": return;
+
+      default: return showPopup("Unknown error", "The server returned an unexpected response: " + requestData, POPUP_ERROR);
+    }
+
+  };
+
+  const chatInputField = document.querySelector("#lobby-chat-input");
+
+  // Sends a chat message containing the chatbox input field data
+  window.sendChatMessageFromInput = function (event) {
+
+    // Proceed only if the Enter key has been pressed
+    if (event.keyCode !== 13) return;
+
+    const message = chatInputField.value.trim();
+
+    // If there's nothing to send, don't even attempt it
+    if (message.length === 0) return;
+
+    // Clear the value of the input box immediately after it's been stored
+    chatInputField.value = "";
+
+    // Attempt to send the message
+    window.sendChatMessage(message).then(function (success) {
+      // If sending the message did not succeed, restore the input box
+      if (success !== true) chatInputField.value = message;
+    });
+
+  };
+
+  // Focuses the chat window and redirects the given event to it
+  window.redirectEventToChat = function (event) {
+    // Don't redirect events sent to text input boxes
+    if (event.target.tagName.toLowerCase() === "input") return;
+    // Don't redirect special keys
+    if (!event.key || event.key.length !== 1) return;
+    // Add the typed key to the chatbox and focus it
+    chatInputField.value += event.key;
+    chatInputField.focus();
+  };
 
 }
 lobbyInit();

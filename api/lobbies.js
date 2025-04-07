@@ -49,6 +49,7 @@ async function checkUserPerms (request, lobbyid, checkHost = false) {
  * - `start`: Force start the game
  * - `abort`: Force stop the game (everyone is set to "not ready")
  * - `spectate`: Add or remove the calling player from the spectators list
+ * - `chat`: Send a chat message to be broadcasted within the lobby
  *
  * @param {string[]} args The arguments for the api request
  * @param {HttpRequest} request The http request object
@@ -279,6 +280,20 @@ module.exports = async function (args, request) {
 
       // Toggle the player's spectator state
       return lobbies(["spectate", lobbyid, spectatorState, user.steamid]);
+
+    }
+
+    case "chat": {
+
+      const message = args[2];
+
+      // Check if the player is a member of this lobby
+      const permsCheck = await checkUserPerms(request, lobbyid);
+      if (typeof permsCheck === "string") return permsCheck;
+      const { user } = permsCheck;
+
+      // Send the message
+      return lobbies(["chat", lobbyid, message, user.steamid]);
 
     }
 
