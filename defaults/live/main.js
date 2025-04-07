@@ -418,15 +418,31 @@ function processWebSocket () {
   // If a socket has not been instantiated, don't proceed
   if (!webSocket) return;
 
-  // Process incoming data until the stack is empty
-  var message;
-  while ((message = ws.read(webSocket)) !== "") {
+  try {
+    // Process incoming data until the stack is empty
+    var message;
+    while ((message = ws.read(webSocket)) !== "") {
 
-    // Attempt to deserialize and process the message
-    try { processServerEvent(JSON.parse(message)) }
-    catch (_) { continue }
+      // Attempt to deserialize and process the message
+      try { processServerEvent(JSON.parse(message)) }
+      catch (_) { continue }
 
+    }
+  } catch (_) {
+    // If we've dropped down here, the socket has thrown an error
+    sendToConsole(gameSocket, 'echo "WebSocket disconnected, attempting to reconnect..."');
+    ws.disconnect(webSocket);
+    webSocket = ws.connect(WS_ADDRESS + "/api/events/connect");
+    while (!webSocket) {
+      if (!game.status()) doCleanup();
+      sendToConsole(gameSocket, 'echo "Connection failed, trying again..."');
+      sleep(1000);
+      webSocket = ws.connect(WS_ADDRESS + "/api/events/connect");
+    }
   }
+
+}
+
 
 }
 
