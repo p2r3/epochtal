@@ -1,6 +1,6 @@
 var lobby, users, whoami;
 var avatarCache = {};
-var lobbySocket = null;
+var lobbySocket = null, lobbySocketDisconnected = false;
 var readyState = false;
 var amHost = false;
 var localMapQueue = [];
@@ -206,6 +206,17 @@ async function lobbyEventHandler (event) {
 
   // Handle the event
   switch (data.type) {
+
+    case "authenticated": {
+
+      // If we previously lost connection, notify user of reconnect
+      if (lobbySocketDisconnected) {
+        showPopup("Connected", "Connection to server re-established.");
+        lobbySocketDisconnected = false;
+      }
+
+      return;
+    }
 
     case "lobby_name": {
 
@@ -464,12 +475,28 @@ async function lobbyInit () {
 
   const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
 
-  lobbySocket = new WebSocket(`${protocol}://${window.location.host}/api/events/connect`);
-  lobbySocket.onopen = async function () {
-    const token = await (await fetch(`/api/events/auth/lobby_${lobbyid}`)).json();
-    lobbySocket.send(token);
+  // Sets up the lobby WebSocket and its associated event handlers
+  window.setUpWebSocket = function () {
+    // Close existing connection, if any
+    if (lobbySocket) lobbySocket.close();
+    // Connect to the WebSocket API endpoint
+    lobbySocket = new WebSocket(`${protocol}://${window.location.host}/api/events/connect`);
+    // Set authentication token on connection
+    lobbySocket.onopen = async function () {
+      const token = await (await fetch(`/api/events/auth/lobby_${lobbyid}`)).json();
+      lobbySocket.send(token);
+    };
+    // Add event handler for incoming messages
+    lobbySocket.addEventListener("message", lobbyEventHandler);
+    // Attempt to reconnect to socket if connection closes
+    lobbySocket.onclose = function () {
+      showPopup("Disconnected", "Lost connection to server. Reconnecting...", POPUP_WARN);
+      lobbySocketDisconnected = true;
+      setTimeout(window.setUpWebSocket, 1000);
+    };
   };
-  lobbySocket.addEventListener("message", lobbyEventHandler);
+  // Connect to the WebSocket
+  window.setUpWebSocket();
 
   // Prompt game client authentication
   if (!("promptedGameAuth" in window)) {
