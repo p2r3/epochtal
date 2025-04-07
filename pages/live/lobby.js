@@ -128,7 +128,7 @@ async function updateLobbyMap () {
   if (!lobbyMap) {
     lobbyMapContainer.innerHTML = `
       <p class="votes-text">No map selected</p>
-      <button id="lobby-map-button" onclick="selectLobbyMap()">Select</button>
+      <button id="lobby-map-button" onclick="selectLobbyMap()" ${amHost ? "" : `style="display: none"`}>Select</button>
     `;
     return;
   }
@@ -142,7 +142,7 @@ async function updateLobbyMap () {
         <i class="font-light">by ${lobbyMap.author}</i>
       </p>
     </a>
-    <button id="lobby-map-button" onclick="selectLobbyMap()">Select</button>
+    <button id="lobby-map-button" onclick="selectLobbyMap()" ${amHost ? "" : `style="display: none"`}>Select</button>
   `;
 
 }
@@ -153,36 +153,40 @@ async function updateLobbyMap () {
 function updateLobbyHost () {
 
   // Enable or disable settings buttons based on if we're the host
-  const buttons = [
+  const grayedButtons = [
     document.querySelector("#lobby-name-button"),
-    document.querySelector("#lobby-password-button")
+    document.querySelector("#lobby-password-button"),
+    document.querySelector("#lobby-maxplayers-button")
+  ];
+  const hiddenButtons = [
+    document.querySelector("#lobby-map-button"),
+    document.querySelector("#lobby-forcestart-button"),
+    document.querySelector("#lobby-forceabort-button")
   ];
 
   if (amHost) {
-    for (const button of buttons) {
+    for (const button of grayedButtons) {
       button.style.opacity = 1.0;
       button.style.cursor = "pointer";
       button.removeAttribute("onmouseover");
       button.removeAttribute("onmouseleave");
     }
+    for (const button of hiddenButtons) {
+      button.style.display = "inline";
+    }
   } else {
-    for (const button of buttons) {
+    for (const button of grayedButtons) {
       button.style.opacity = 0.5;
       button.style.cursor = "default";
       button.setAttribute("onmouseover", "showTooltip('Only the host can do this.')");
       button.setAttribute("onmouseleave", "hideTooltip()");
     }
+    for (const button of hiddenButtons) {
+      button.style.display = "none";
+    }
   }
 
-  // Hide the map select button entirely for non-hosts
-  const mapButton = document.querySelector("#lobby-map-button");
-  if (amHost) mapButton.style.display = "";
-  else mapButton.style.display = "none";
-
-  // Hide the force start button for non-hosts
-  const forceStartButton = document.querySelector("#lobby-forcestart-button");
-  if (amHost) forceStartButton.style.display = "inline";
-  else forceStartButton.style.display = "none";
+}
 
 };
 
