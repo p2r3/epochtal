@@ -144,7 +144,7 @@
   transition: opacity 0.2s;
 }
 
-#lobby-forcestart-button {
+#lobby-forcestart-button, #lobby-forceabort-button {
   display: none;
   color: rgb(255, 80, 80);
 }
