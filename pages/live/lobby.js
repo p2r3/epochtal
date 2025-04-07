@@ -335,8 +335,7 @@ async function lobbyEventHandler (event) {
       updateLobbyMap();
 
       // Set all player ready states to false
-      for (const player in lobby.data.players) player.ready = false;
-      updatePlayerList();
+      for (const steamid in lobby.data.players) lobby.data.players[steamid].ready = false;
 
       // Update our own ready state
       readyState = false;
