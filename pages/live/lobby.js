@@ -857,6 +857,32 @@ async function lobbyInit () {
 
   };
 
+  // Aborts an ongoing match (if any) by un-readying all players
+  window.forceAbort = async function () {
+
+    // Request force abort from API
+    const request = await fetch(`/api/lobbies/abort/${lobbyid}`);
+
+    let requestData;
+    try {
+      requestData = await request.json();
+    } catch (e) {
+      return showPopup("Unknown error", "The server returned an unexpected response. Error code: " + request.status, POPUP_ERROR);
+    }
+
+    switch (requestData) {
+      case "SUCCESS": return showPopup("Success", "The round has been aborted.");
+
+      case "ERR_LOGIN": return showPopup("Not logged in", "Please log in via Steam before editing lobby details.", POPUP_ERROR);
+      case "ERR_STEAMID": return showPopup("Unrecognized user", "Your SteamID is not present in the users database. WTF?", POPUP_ERROR);
+      case "ERR_LOBBYID": return showPopup("Lobby not found", "An open lobby with this ID does not exist.", POPUP_ERROR);
+      case "ERR_PERMS": return showPopup("Permission denied", "You do not have permission to perform this action.", POPUP_ERROR);
+
+      default: return showPopup("Unknown error", "The server returned an unexpected response: " + requestData, POPUP_ERROR);
+    }
+
+  };
+
 }
 lobbyInit();
 

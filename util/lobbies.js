@@ -58,6 +58,7 @@ function createLobbyContext (name) {
  * - `host`: Transfer the host role to the specified player
  * - `leave`: Remove the specified player from the lobby
  * - `start`: Force start the game
+ * - `abort`: Force stop the game (everyone is set to "not ready")
  *
  * @param {string[]} args The arguments for the call
  * @param {unknown} context The context on which to execute the call (defaults to epochtal)
@@ -675,6 +676,23 @@ module.exports = async function (args, context = epochtal) {
       dataEntry.state = LOBBY_INGAME;
       // Broadcast game start to clients
       await events(["send", eventName, { type: "lobby_start", map: mapFile }], context);
+
+      return "SUCCESS";
+
+    }
+
+    case "abort": {
+
+      const listEntry = lobbies.list[lobbyid];
+      const dataEntry = lobbies.data[lobbyid];
+
+      // Ensure the lobby exists
+      if (!listEntry || !dataEntry) throw new UtilError("ERR_LOBBYID", args, context);
+
+      // Force the ready state of all players to false
+      for (const curr in dataEntry.players) {
+        await module.exports(["ready", lobbyid, false, curr, true], context);
+      }
 
       return "SUCCESS";
 
