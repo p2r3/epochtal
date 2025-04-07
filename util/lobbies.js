@@ -665,6 +665,12 @@ module.exports = async function (args, context = epochtal) {
       if (dataEntry.context.data.map === null) throw new UtilError("ERR_NOMAP", args, context);
       const mapFile = dataEntry.context.data.map.file;
 
+      // Remove all runs from the leaderboard
+      const lb = await leaderboard(["get", listEntry.mode], dataEntry.context);
+      for (const entry of lb) {
+        await leaderboard(["remove", listEntry.mode, entry.steamid], dataEntry.context);
+      }
+
       // Change the lobby state
       dataEntry.state = LOBBY_INGAME;
       // Broadcast game start to clients
