@@ -174,6 +174,11 @@ function processConsoleOutput () {
       // Request total session time for load start
       sendToConsole(gameSocket, "display_elapsedtime");
       expectReport = 1;
+      // Make saves at the start of runs to prevent loading a different map
+      if (totalTicks === 0) {
+        sendToConsole(gameSocket, "save quick");
+        sendToConsole(gameSocket, "save autosave");
+      }
 
       return;
     }
