@@ -161,11 +161,16 @@ function processConsoleOutput () {
   // If we received nothing, don't proceed
   if (buffer.length === 0) return;
 
-  // Add the latest buffer to any partial data we had before
-  lastLine += buffer;
+  try {
+    // Add the latest buffer to any partial data we had before
+    lastLine += buffer;
+  } catch (_) {
+    // Sometimes, the buffer can't be string-coerced for some reason
+    return;
+  }
 
   // Parse output line-by-line
-  const lines = lastLine.replace(/\r/, "").split("\n");
+  const lines = lastLine.split("\n");
   lines.forEach(function (line) {
 
     // Process WebSocket token
