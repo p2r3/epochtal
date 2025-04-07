@@ -856,15 +856,16 @@ async function lobbyInit () {
     }
 
     // This might take a while, prevent the user from spamming the button
-    lobbyReadyButton.style.opacity = 0.5;
-    lobbyReadyButton.style.pointerEvents = "none";
+    const forceStartButton = document.querySelector("#lobby-forcestart-button");
+    forceStartButton.style.opacity = 0.5;
+    forceStartButton.style.pointerEvents = "none";
 
     // Request force start from API
     const request = await fetch(`/api/lobbies/start/${lobbyid}`);
 
     // Restore the button once the request finishes
-    lobbyReadyButton.style.opacity = 1.0;
-    lobbyReadyButton.style.pointerEvents = "auto";
+    forceStartButton.style.opacity = 1.0;
+    forceStartButton.style.pointerEvents = "auto";
 
     let requestData;
     try {
