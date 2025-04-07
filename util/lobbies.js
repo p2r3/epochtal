@@ -513,8 +513,7 @@ module.exports = async function (args, context = epochtal) {
           }
         }
         if (everyoneReady) {
-          dataEntry.state = LOBBY_INGAME;
-          await events(["send", eventName, { type: "lobby_start", map: mapFile }], context);
+          await module.exports(["start", lobbyid], context);
         }
 
       } else {
