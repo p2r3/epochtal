@@ -4,6 +4,7 @@ var lobbySocket = null, lobbySocketDisconnected = false;
 var readyState = false;
 var amHost = false;
 var localMapQueue = [];
+var doRandomMaps = false;
 
 const lobbyPlayersList = document.querySelector("#lobby-players-list");
 
@@ -368,9 +369,14 @@ async function lobbyEventHandler (event) {
 
       // Handle game finishing
       // Switch to the next map in the local queue
-      if (amHost && localMapQueue.length > 0) {
-        requestLobbyMapChange(localMapQueue.shift());
-        updateLobbyMap();
+      if (amHost) {
+        if (doRandomMaps) {
+          requestLobbyMapChange(await (await fetch("/api/workshopper/random")).json());
+          updateLobbyMap();
+        } else if (localMapQueue.length > 0) {
+          requestLobbyMapChange(localMapQueue.shift());
+          updateLobbyMap();
+        }
       }
 
       return;
@@ -685,7 +691,7 @@ async function lobbyInit () {
   window.selectLobbyMap = function () {
 
     // Prompt for a workshop map link
-    showPopup("Select a map", `<p>Enter a workshop link, or a map name from the single-player campaign.</p>
+    showPopup("Select a map", `<p>Enter a workshop link, or a map name from the single-player campaign, or enter "random" for an endless queue of random workshop maps.</p>
       <div id="lobby-settings-map-list">
         <input type="text" placeholder="Workshop Link" class="lobby-settings-map-input"></input>
         <i class="fa-solid fa-plus" onmouseover="showTooltip('Add another map to queue')" onmouseleave="hideTooltip()" onclick="addMapInput()" style="cursor:pointer"></i></a>
@@ -702,6 +708,16 @@ async function lobbyInit () {
 
       // Get all link input fields
       const inputs = document.querySelectorAll(".lobby-settings-map-input");
+
+      // If user entered "random", activate list of random maps
+      if (inputs[0].value.trim().toLowerCase() === "random") {
+        doRandomMaps = true;
+        requestLobbyMapChange(await (await fetch("/api/workshopper/random")).json());
+        updateLobbyMap();
+        return;
+      } else {
+        doRandomMaps = false;
+      }
 
       // Update the current map to the first input
       requestLobbyMapChange(inputs[0].value);

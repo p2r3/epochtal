@@ -150,6 +150,23 @@ async function curateWorkshop (maps = []) {
 
 }
 
+// Returns the SteamID of a random singleplayer workshop map
+async function fetchRandomMap () {
+
+  // Base of the request query - selects only one singleplayer map ID
+  const baseQuery = `${STEAM_API}/IPublishedFileService/QueryFiles/v1/?key=${process.env.STEAM_API_KEY}&query_type=1&numperpage=1&appid=620&requiredtags[0]=Singleplayer&excludedtags[0]=Cooperative`;
+
+  // Select a random page out of 50000, which is the upper query limit
+  const { response } = await (await fetch(`${baseQuery}&page=${Math.floor(Math.random() * 50000)}`)).json();
+  const data = response.publishedfiledetails[0];
+
+  // If we've picked a deleted map, re-roll the selection
+  if (data.result !== 1) return await fetchRandomMap();
+
+  return data.publishedfileid;
+
+};
+
 /**
  * Handles the `workshopper` utility call. This utility is used to interact and curate the Steam Workshop.
  *
@@ -193,6 +210,13 @@ module.exports = async function (args, context = epochtal) {
 
       // Curate the workshop for the past week
       return await curateWorkshop(maps);
+
+    }
+
+    case "random": {
+
+      // Return the ID of a random singleplayer map
+      return await fetchRandomMap();
 
     }
 

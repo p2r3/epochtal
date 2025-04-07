@@ -1,3 +1,4 @@
+const workshopper = require("../util/workshopper.js");
 const curator = require("../util/curator.js");
 const api_users = require("./users.js");
 
@@ -5,6 +6,7 @@ const api_users = require("./users.js");
  * Handles `/api/workshopper/` endpoint requests. This endpoint supports only the `suggest` command:
  *
  * - `suggest`: Suggest a map for the workshop.
+ * - `random`: Returns the SteamID of a random Workshop map.
  *
  * @param {string[]} args The arguments for the api request
  * @param {HttpRequest} request The http request object
@@ -40,6 +42,10 @@ module.exports = async function (args, request) {
 
       return "SUCCESS";
 
+    }
+
+    case "random": {
+      return await workshopper(["random"]);
     }
 
   }
