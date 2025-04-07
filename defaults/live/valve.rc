@@ -8,3 +8,6 @@ startupmenu
 con_filter_enable 1
 con_filter_text_out "spec_goto "
 
+// If the user has SAR, this significantly improves timing consistency
+// It's a good idea to have this on for other reasons, anyway
+sar_disable_no_focus_sleep 1
