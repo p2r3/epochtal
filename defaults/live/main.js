@@ -1,5 +1,8 @@
-// Polyfills for Spplice 2
-if (!("game" in this)) eval(fs.read("polyfill.js"));
+// Require latest spplice-cpp version
+if (!("game" in this)) {
+  SendToConsole('disconnect "Epochtal Live requires the latest version of SppliceCPP. Update here: github.com/p2r3/spplice-cpp/releases"');
+  throw new Error("Terminating script due to version mismatch.");
+}
 
 // Read the server's HTTP address from file
 const HTTP_ADDRESS = fs.read("address.txt");
@@ -94,6 +97,18 @@ var lastTimeReport = 0;
 var expectReport = 0;
 // Name of the map we're running
 var runMap = null;
+
+/**
+ * Checks whether the player has the right spplice-cpp version and throws
+ * a warning if not.
+ */
+function processVersionCheck () {
+  // Use existance of game.status as a heuristic for spplice-cpp version
+  if (!("status" in game)) {
+    sendToConsole(gameSocket, 'disconnect "Epochtal Live requires the latest version of SppliceCPP. Update here: github.com/p2r3/spplice-cpp/releases"');
+    doCleanup();
+  }
+}
 
 // Store the last partially received line until it can be processed
 var lastLine = "";
@@ -380,6 +395,7 @@ function processWebSocket () {
 
 // Run each processing function on an interval
 while (true) {
+  processVersionCheck();
   processConsoleOutput();
   processWebSocket();
 
