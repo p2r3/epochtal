@@ -76,6 +76,10 @@
   margin-bottom: 10px;
 }
 
+#lobby-players-list {
+  margin-bottom: 25vh;
+}
+
 .lobby-player {
   position: relative;
   width: 80%;
