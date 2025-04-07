@@ -130,6 +130,14 @@ async function updatePlayerList () {
 
   lobbyPlayersList.innerHTML = output;
 
+  // Update player count text
+  const lobbyPlayerCountText = document.querySelector("#lobby-playercount");
+  if (lobby.data.maxplayers !== null) {
+    lobbyPlayerCountText.textContent = `(${lobby.listEntry.players.length - lobby.data.spectators.length} / ${lobby.data.maxplayers})`;
+  } else {
+    lobbyPlayerCountText.textContent = `(${lobby.listEntry.players.length - lobby.data.spectators.length})`;
+  }
+
 }
 
 const lobbyMapContainer = document.querySelector("#lobby-settings-map");
