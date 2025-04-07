@@ -502,7 +502,7 @@ async function lobbyInit () {
   if (!("promptedGameAuth" in window)) {
     showPopup(
       "Connect with Portal 2",
-      `To connect your game client, start the "Epochtal Live" Spplice package, <a href="javascript:copyEventToken()">click here</a> to copy your lobby token, then paste that into your console.`
+      `To connect your game client, start the "Epochtal Live" Spplice package, click "New Token" at the top of this page to copy your lobby token, then paste that into your console.`
     );
     window.promptedGameAuth = true;
   }
@@ -744,14 +744,19 @@ async function lobbyInit () {
   };
 
   /**
-   * Fetches the lobby event token and copies it to clipboard.
+   * Fetches the lobby event token and copies it to clipboard. If access
+   * to the clipboard is denied, displays it on-screen instead.
    */
   window.copyEventToken = async function () {
 
     const token = await (await fetch(`/api/events/auth/lobby_${lobbyid}`)).json();
-    navigator.clipboard.writeText(`echo ws:${token}`);
 
-    return showPopup("Token copied", "A new token has been copied to your clipboard. It is valid for 30 seconds, starting now. Paste it in your Portal 2 console to complete the setup.");
+    try {
+      navigator.clipboard.writeText(`echo ws:${token}`);
+      return showPopup("Token copied", "A new token has been copied to your clipboard. It is valid for 30 seconds, starting now. Paste it in your Portal 2 console to complete the setup.");
+    } catch (e) {
+      return showPopup("Token generated", `Your token is:<br><a>echo ws:${token}</a><br><br>It is valid for 30 seconds, starting now. Paste it in your Portal 2 console to complete the setup.`);
+    }
 
   }
 
