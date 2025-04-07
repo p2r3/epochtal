@@ -144,3 +144,11 @@
   display: none;
   color: rgb(255, 80, 80);
 }
+
+#lobby-spectate-button {
+  position: fixed;
+  left: 34vw;
+  bottom: 2vw;
+  min-width: 160px;
+  box-shadow: none;
+}

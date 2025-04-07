@@ -59,6 +59,7 @@ function createLobbyContext (name) {
  * - `leave`: Remove the specified player from the lobby
  * - `start`: Force start the game
  * - `abort`: Force stop the game (everyone is set to "not ready")
+ * - `spectate`: Add or remove the given player from the spectators list
  *
  * @param {string[]} args The arguments for the call
  * @param {unknown} context The context on which to execute the call (defaults to epochtal)
@@ -123,6 +124,7 @@ module.exports = async function (args, context = epochtal) {
         players: {},
         maxplayers: null,
         host: undefined,
+        spectators: [],
         state: LOBBY_IDLE,
         context: createLobbyContext(cleanName)
       };
@@ -176,6 +178,28 @@ module.exports = async function (args, context = epochtal) {
             // Change the client's ready state to false
             await module.exports(["ready", newID, false, steamid, true], context);
 
+            return;
+          }
+
+          // Contains position data for the client's player
+          case "spectate": {
+            // Ignore position packets sent by spectators
+            if (dataEntry.spectators.includes(steamid)) return;
+            // Convert the string of coordinates/angles to arrays of numbers
+            const arr = data.value.split(" ").map(Number);
+            // Construct the outgoing message
+            const output = {
+              type: "spectate",
+              pos: arr.slice(0, 3),
+              ang: arr.slice(3, 5),
+              steamid: steamid,
+              name: (await users(["get", steamid])).name
+            };
+            // Send this message to all spectators
+            for (const spectator of dataEntry.spectators) {
+              if (!dataEntry.players[spectator].gameSocket) continue;
+              dataEntry.players[spectator].gameSocket.send(JSON.stringify(output));
+            }
             return;
           }
 
@@ -525,7 +549,7 @@ module.exports = async function (args, context = epochtal) {
         // If no one is ready, reset the lobby state
         let nobodyReady = true;
         for (const curr in dataEntry.players) {
-          if (dataEntry.players[curr].ready) {
+          if (dataEntry.players[curr].ready && !dataEntry.spectators.includes(curr)) {
             nobodyReady = false;
             break;
           }
@@ -605,6 +629,12 @@ module.exports = async function (args, context = epochtal) {
         dataEntry.host = listEntry.players[0];
         // Broadcast the host change to clients
         await events(["send", eventName, { type: "lobby_host", steamid: listEntry.players[0] }], context);
+      }
+
+      // If a spectator just left, remove them from the spectators list
+      const spectatorIndex = dataEntry.spectators.indexOf(steamid);
+      if (spectatorIndex !== -1) {
+        dataEntry.spectators.splice(spectatorIndex, 1);
       }
 
       // Brodcast the leave to clients
@@ -693,6 +723,37 @@ module.exports = async function (args, context = epochtal) {
       for (const curr in dataEntry.players) {
         await module.exports(["ready", lobbyid, false, curr, true], context);
       }
+
+      return "SUCCESS";
+
+    }
+
+    case "spectate": {
+
+      const spectatorState = args[2];
+
+      const listEntry = lobbies.list[lobbyid];
+      const dataEntry = lobbies.data[lobbyid];
+      const eventName = "lobby_" + lobbyid;
+
+      // Ensure the lobby exists
+      if (!listEntry || !dataEntry) throw new UtilError("ERR_LOBBYID", args, context);
+
+      // Add or remove this player from the spectators list
+      if (spectatorState) {
+        if (dataEntry.spectators.includes(steamid)) return;
+        dataEntry.spectators.push(steamid);
+      } else {
+        const index = dataEntry.spectators.indexOf(steamid);
+        if (index === -1) return;
+        dataEntry.spectators.splice(index, 1);
+      }
+
+      // Broadcast new spectators list to players
+      await events(["send", eventName, { type: "lobby_spectators", steamids: dataEntry.spectators }], context);
+
+      // Write the lobbies to file if it exists
+      if (file) Bun.write(file, JSON.stringify(lobbies));
 
       return "SUCCESS";
 

@@ -101,6 +101,19 @@ var runMap = null;
 var startMapWhenReady = false;
 // Counts the amount of times `processConsoleOutput` has been called
 var consoleTick = 0;
+// Whether we're a spectator - resets each round
+var amSpectator = false;
+// Spectator position and angles for interpolation
+var spectatorData = {
+  tick: 0,
+  lastTick: 0,
+  deltaTick: 0,
+  pos: [null, null],
+  ang: [null, null],
+  target: 0,
+  targets: [],
+  god: false
+};
 
 /**
  * Checks whether the player has the right spplice-cpp version and throws
@@ -127,6 +140,10 @@ function processConsoleOutput () {
 
   // Run some less common actions on every 5th console tick
   if (consoleTick % 5 === 0) {
+    // Log player position and angles for sending to spectators
+    if (!amSpectator && webSocket && runMap) {
+      sendToConsole(gameSocket, "spec_pos");
+    }
     // If we're supposed to be starting the map, ping the console until we get a response
     if (startMapWhenReady) {
       sendToConsole(gameSocket, "echo Starting Epochtal Live round...");
@@ -265,6 +282,36 @@ function processConsoleOutput () {
       return;
     }
 
+    // Send spectator position output to server for spectators
+    if (line.indexOf("spec_goto ") === 0) {
+      ws.send(webSocket, '{"type":"spectate","value":"'+ line.slice(10).trim() +'"}');
+
+      return;
+    }
+
+    // The events below this only apply to spectators
+    if (!amSpectator) return;
+
+    // Handle switching spectated player
+    if (line.indexOf("Switching spectated player...") === 0) {
+      spectatorData.target ++;
+      if (spectatorData.target >= spectatorData.targets.length) {
+        spectatorData.target = 0;
+      }
+
+      return;
+    }
+
+    // Ensure that godmode remains on while spectating
+    if (line.indexOf("godmode ON") === 0) {
+      spectatorData.god = true;
+      return;
+    }
+    if (line.indexOf("godmode OFF") === 0) {
+      sendToConsole(gameSocket, "god");
+      return;
+    }
+
   });
 
   // Store the last entry of the array as a partially received line
@@ -356,6 +403,63 @@ function processServerEvent (data) {
       // This will run the map command once the game is focused
       startMapWhenReady = true;
 
+      // Clear spectator state
+      amSpectator = false;
+      spectatorData.tick = 0;
+      spectatorData.lastTick = 0;
+      spectatorData.pos = [null, null];
+      spectatorData.ang = [null, null];
+      spectatorData.target = 0;
+      spectatorData.targets = [];
+      spectatorData.god = false;
+      // Reset specator commands
+      sendToConsole(gameSocket, "sv_cheats 0");
+      sendToConsole(gameSocket, "alias +remote_view \"\"");
+
+      return;
+    }
+
+    // Handle incoming coordinates for spectating
+    case "spectate": {
+
+      // Set up spectator environment
+      if (!amSpectator) {
+        sendToConsole(gameSocket, "sv_cheats 1");
+        sendToConsole(gameSocket, "alias +remote_view \"echo Switching spectated player...\"");
+        sendToConsole(gameSocket, "disconnect;map " + runMap);
+        amSpectator = true;
+      }
+
+      // Add player to targets list if they're not there already
+      if (spectatorData.targets.indexOf(data.steamid) === -1) {
+        spectatorData.targets.push(data.steamid);
+      }
+
+      // Skip packets of players who we're not actively spectating
+      if (data.steamid !== spectatorData.targets[spectatorData.target]) return;
+
+      // Force the player into noclip on each position update
+      sendToConsole(gameSocket, "noclip 1");
+      // Show currently spectated player's name on-screen
+      sendToConsole(gameSocket, "script ScriptShowHudMessageAll(\"\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n"+ data.name +"\", 1.0)");
+      // Try to enable god mode until we've confirmed that it's on
+      if (!spectatorData.god) {
+        sendToConsole(gameSocket, "god");
+      }
+
+      // Store the tick at which this update was received
+      spectatorData.deltaTick = spectatorData.tick - spectatorData.lastTick;
+      spectatorData.lastTick = spectatorData.tick;
+
+      /**
+       * Position and angle data is linearly interpolated across two
+       * consecutive ticks. We store those updates in a 2-long array,
+       * cyclically replacing the old entries.
+       */
+      spectatorData.pos[0] = spectatorData.pos[1];
+      spectatorData.ang[0] = spectatorData.ang[1];
+      spectatorData.pos[1] = data.pos;
+      spectatorData.ang[1] = data.ang;
 
       return;
     }
@@ -451,6 +555,45 @@ function processWebSocket () {
 
 }
 
+/**
+ * Processes position and angles sent to spectating players
+ */
+function processSpectator () {
+
+  if (!amSpectator) return;
+
+  spectatorData.tick ++;
+
+  // Don't proceed if we can't interpolate
+  if (!spectatorData.pos[0] || !spectatorData.ang[0] || !spectatorData.pos[1] || !spectatorData.ang[1]) return;
+
+  // Ticks since last position update
+  const localTick = spectatorData.tick - spectatorData.lastTick;
+
+  // Fraction indicating how far along we are in linear interpolation
+  const interp = Math.min(localTick / (spectatorData.deltaTick || 0), 1);
+
+  // Account for yaw angle flipping at 180 degrees
+  if (spectatorData.ang[1][1] - spectatorData.ang[0][1] > 180) {
+    // Current is negative, next is positive - make current positive
+    spectatorData.ang[0][1] += 360;
+  } else if (spectatorData.ang[0][1] - spectatorData.ang[1][1] > 180) {
+    // Current is positive, next is negative - make current negative
+    spectatorData.ang[0][1] -= 360;
+  }
+
+  // Calculate interpolated coordinates
+  const pos = new Array(3), ang = new Array(2);
+  for (var i = 0; i < 3; i ++) {
+    pos[i] = spectatorData.pos[0][i] + (spectatorData.pos[1][i] - spectatorData.pos[0][i]) * interp;
+    if (i !== 2) ang[i] = spectatorData.ang[0][i] + (spectatorData.ang[1][i] - spectatorData.ang[0][i]) * interp;
+  }
+
+  // Adjust for offset between player eyes and origin
+  pos[2] -= 64;
+
+  sendToConsole(gameSocket, "setpos "+ pos.join(" "));
+  sendToConsole(gameSocket, "setang "+ ang.join(" "));
 
 }
 
@@ -459,6 +602,7 @@ while (true) {
   processVersionCheck();
   processConsoleOutput();
   processWebSocket();
+  processSpectator();
 
   // If we're not connected yet, we can afford a slower loop
   if (!webSocket) sleep(500);

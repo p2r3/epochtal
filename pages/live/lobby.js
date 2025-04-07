@@ -2,7 +2,7 @@ var lobby, users, whoami;
 var avatarCache = {};
 var lobbySocket = null, lobbySocketDisconnected = false;
 var readyState = false;
-var amHost = false;
+var amHost = false, amSpectator = false;
 var localMapQueue = [];
 var doRandomMaps = false;
 
@@ -19,9 +19,23 @@ async function updatePlayerList () {
   const leaderboard = lobby.data.context.leaderboard[lobby.listEntry.mode];
   // Check if we are the host
   amHost = lobby.data.host === whoami.steamid;
+  // Check if we are a spectator
+  amSpectator = lobby.data.spectators.includes(whoami.steamid);
 
   // Sort players by their latest time
   lobby.listEntry.players.sort(function (a, b) {
+
+    // Push spectators to the bottom
+    const isSpectatorA = lobby.data.spectators.includes(a);
+    const isSpectatorB = lobby.data.spectators.includes(b);
+
+    // If both players are spectators, sort by SteamID string
+    if (isSpectatorA && isSpectatorB) {
+      return a < b ? 1 : -1;
+    }
+    // Otherwise, put spectators below non-spectators
+    if (isSpectatorA) return 1;
+    if (isSpectatorB) return -1;
 
     const runA = leaderboard.find(c => c.steamid === a);
     const runB = leaderboard.find(c => c.steamid === b);
@@ -80,9 +94,11 @@ async function updatePlayerList () {
     const ready = lobby.data.players[steamid].ready;
     // Check if this player is the host
     const isHost = lobby.data.host === steamid;
+    // Check if this player is a spectator
+    const isSpectator = lobby.data.spectators.includes(steamid);
 
     output += `
-<div class="lobby-player">
+<div class="lobby-player ${isSpectator ? "lobby-spectator" : ""}" ${isSpectator ? `style="opacity: 0.5"` : ""}>
   ${(amHost && !isHost) ? `<i
     class="fa-solid fa-xmark lobby-player-kick"
     onmouseover="showTooltip('Kick player')"
@@ -101,10 +117,10 @@ async function updatePlayerList () {
       onclick="transferHost('${steamid}')"
       ` : "")}
   >
-  <p class="lobby-player-name">${username}${run ? ` - ${ticksToString(run.time)}` : ""}</p>
+  <p class="lobby-player-name">${username}${(run && !isSpectator) ? ` - ${ticksToString(run.time)}` : ""}</p>
   <i
-    class="${ready ? "fa-solid fa-circle-check" : "fa-regular fa-circle"} lobby-player-ready"
-    onmouseover="showTooltip('${ready ? "Ready" : "Not ready"}')"
+    class="${isSpectator ? "fa-regular fa-eye" : (ready ? "fa-solid fa-circle-check" : "fa-regular fa-circle")} lobby-player-ready"
+    onmouseover="showTooltip('${isSpectator ? "Spectating" : (ready ? "Ready" : "Not ready")}')"
     onmouseleave="hideTooltip()"
   ></i>
 </div>
@@ -244,6 +260,10 @@ async function lobbyEventHandler (event) {
       lobby.listEntry.players.splice(index, 1);
       updatePlayerList();
 
+      const spectatorIndex = lobby.data.spectators.indexOf(steamid);
+      if (spectatorIndex == -1) return;
+      lobby.data.spectators.splice(spectatorIndex, 1);
+
       return;
     }
 
@@ -273,6 +293,17 @@ async function lobbyEventHandler (event) {
       return;
     }
 
+    case "lobby_spectators": {
+
+      // Handle spectator list update
+      const { steamids } = data;
+
+      lobby.data.spectators = steamids;
+      updatePlayerList();
+
+      return;
+    }
+
     case "lobby_maxplayers": {
 
       // Update the lobby size in the UI
@@ -281,9 +312,9 @@ async function lobbyEventHandler (event) {
       const lobbyPlayerCountText = document.querySelector("#lobby-playercount");
 
       if (lobby.data.maxplayers !== null) {
-        lobbyPlayerCountText.textContent = `(${lobby.listEntry.players.length} / ${lobby.data.maxplayers})`;
+        lobbyPlayerCountText.textContent = `(${lobby.listEntry.players.length - lobby.data.spectators.length} / ${lobby.data.maxplayers})`;
       } else {
-        lobbyPlayerCountText.textContent = `(${lobby.listEntry.players.length})`;
+        lobbyPlayerCountText.textContent = `(${lobby.listEntry.players.length - lobby.data.spectators.length})`;
       }
 
       return;
@@ -302,6 +333,12 @@ async function lobbyEventHandler (event) {
       // Update our own ready state
       readyState = false;
       lobbyReadyButton.innerHTML = "I'm ready!";
+
+      // If we're a spectator, automatically ready up for any new map
+      if (amSpectator) {
+        const lobbyid = window.location.href.split("#")[1];
+        fetch(`/api/lobbies/ready/${lobbyid}/true`);
+      }
 
       return;
     }
@@ -466,9 +503,9 @@ async function lobbyInit () {
   lobbyNameText.textContent = lobby.listEntry.name;
   lobbyModeText.innerHTML = "&nbsp;- " + modeString;
   if (lobby.data.maxplayers !== null) {
-    lobbyPlayerCountText.textContent = `(${lobby.listEntry.players.length} / ${lobby.data.maxplayers})`;
+    lobbyPlayerCountText.textContent = `(${lobby.listEntry.players.length - lobby.data.spectators.length} / ${lobby.data.maxplayers})`;
   } else {
-    lobbyPlayerCountText.textContent = `(${lobby.listEntry.players.length})`;
+    lobbyPlayerCountText.textContent = `(${lobby.listEntry.players.length - lobby.data.spectators.length})`;
   }
 
   // Update the player list and map display
@@ -935,6 +972,24 @@ async function lobbyInit () {
     }
 
   };
+
+  // Toggle spectator state
+  window.spectate = async function () {
+
+    const spectateButton = document.querySelector("#lobby-spectate-button");
+
+    if (amSpectator) {
+      document.head.innerHTML = document.head.innerHTML.replace(`<link rel="stylesheet" href="/live/spectate.css">`, "");
+      spectateButton.innerHTML = "Spectate";
+      return await fetch(`/api/lobbies/spectate/${lobbyid}/false`);
+    } else {
+      if (!readyState) fetch(`/api/lobbies/ready/${lobbyid}/true`);
+      document.head.innerHTML += `<link rel="stylesheet" href="/live/spectate.css">`;
+      spectateButton.innerHTML = "Stop Spectating";
+      return await fetch(`/api/lobbies/spectate/${lobbyid}/true`);
+    }
+
+  }
 
 }
 lobbyInit();

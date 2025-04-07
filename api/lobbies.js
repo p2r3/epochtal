@@ -48,6 +48,7 @@ async function checkUserPerms (request, lobbyid, checkHost = false) {
  * - `kick`: Remove the specified player from the lobby
  * - `start`: Force start the game
  * - `abort`: Force stop the game (everyone is set to "not ready")
+ * - `spectate`: Add or remove the calling player from the spectators list
  *
  * @param {string[]} args The arguments for the api request
  * @param {HttpRequest} request The http request object
@@ -128,6 +129,7 @@ module.exports = async function (args, request) {
         ),
         maxplayers: data.maxplayers,
         host: data.host,
+        spectators: data.spectators,
         state: data.state,
         context: data.context.data
       };
@@ -140,6 +142,7 @@ module.exports = async function (args, request) {
        *   },
        *   maxplayers,
        *   host,
+       *   spectators,
        *   state,
        *   context: {
        *     map,
@@ -262,6 +265,20 @@ module.exports = async function (args, request) {
 
       // Abort the game
       return lobbies(["abort", lobbyid]);
+
+    }
+
+    case "spectate": {
+
+      const spectatorState = args[2];
+
+      // Check if the player is a member of this lobby
+      const permsCheck = await checkUserPerms(request, lobbyid);
+      if (typeof permsCheck === "string") return permsCheck;
+      const { user } = permsCheck;
+
+      // Toggle the player's spectator state
+      return lobbies(["spectate", lobbyid, spectatorState, user.steamid]);
 
     }
 
