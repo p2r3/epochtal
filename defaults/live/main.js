@@ -97,6 +97,10 @@ var lastTimeReport = 0;
 var expectReport = 0;
 // Name of the map we're running
 var runMap = null;
+// Whether to start runMap as soon as the game console is responsive
+var startMapWhenReady = false;
+// Counts the amount of times `processConsoleOutput` has been called
+var consoleTick = 0;
 
 /**
  * Checks whether the player has the right spplice-cpp version and throws
@@ -117,6 +121,17 @@ var lastLine = "";
  * Processes output from the Portal 2 console
  */
 function processConsoleOutput () {
+
+  // Increment this function's call counter
+  consoleTick ++;
+
+  // Run some less common actions on every 5th console tick
+  if (consoleTick % 5 === 0) {
+    // If we're supposed to be starting the map, ping the console until we get a response
+    if (startMapWhenReady) {
+      sendToConsole(gameSocket, "echo Starting Epochtal Live round...");
+    }
+  }
 
   // Receive 1024 bytes from the game console socket
   const buffer = readFromConsole(gameSocket, 1024);
@@ -139,6 +154,15 @@ function processConsoleOutput () {
     // The events below this only apply to connected clients
     if (!webSocket) return;
 
+    // Check for a ping to start the map
+    // This should only happen when the game is focused and ready to communicate
+    if (startMapWhenReady && line.indexOf("Starting Epochtal Live round...") === 0) {
+      sendToConsole(gameSocket, "disconnect;map " + runMap);
+      startMapWhenReady = false;
+
+      return;
+    }
+
     // Process start of map load event
     if (line.indexOf("---- Host_") === 0) {
       // Request total session time for load start
@@ -155,7 +179,7 @@ function processConsoleOutput () {
       expectReport = 2;
 
       // Process the start of a workshop map
-      if (runMap.indexOf("workshop/") === 0) {
+      if (runMap && runMap.indexOf("workshop/") === 0) {
         // Attach an output to report time and run end on PTI level end
         // In workshop maps, we can afford running cheat commands
         sendToConsole(gameSocket, 'script ::__elFinish<-function(){ printl("elFinish") }');
@@ -175,7 +199,7 @@ function processConsoleOutput () {
     }
 
     // Process map transition event
-    if (line.indexOf("DEFAULT_WRITE_PATH") !== -1 && line.indexOf(runMap.split("/").pop()) === -1) {
+    if (runMap && line.indexOf("DEFAULT_WRITE_PATH") !== -1 && line.indexOf(runMap.split("/").pop()) === -1) {
       // Notice that we don't actually request a new time report
       // Instead, we tell it to treat the last one (start of map load) as a map finish event
       expectReport = 3;
@@ -305,15 +329,15 @@ function processServerEvent (data) {
     // Handle round start
     case "lobby_start": {
 
-      // Reset run timer
-      totalTicks = 0;
       // Update the currently active map
       runMap = data.map;
+      // Reset run timer
+      totalTicks = 0;
       // Clear last known session time
       lastTimeReport = 0;
+      // This will run the map command once the game is focused
+      startMapWhenReady = true;
 
-      // Send the map command to start the map
-      game.send(gameSocket, "map " + data.map + "\n");
 
       return;
     }
