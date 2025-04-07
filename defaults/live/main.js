@@ -397,16 +397,19 @@ function processWebSocket () {
       return;
     }
 
-    // Shortly after, send a ping to check that we're still connected
+    // Shortly after, try to read to check that we're still connected
     sleep(1000);
-    const pingSuccess = ws.send(webSocket, '{"type":"ping"}');
-
-    // If this failed, the server probably closed the connection, indicating auth failure
-    if (!pingSuccess) {
-      game.send(gameSocket, "echo Authentication failed.\n");
-      game.send(gameSocket, 'echo ""\n');
-      game.send(gameSocket, "echo The token you provided most likely expired. Tokens are only valid for 30 seconds after being issued.\n");
-      game.send(gameSocket, "echo Please try again with a new token obtained through the New Token button at the top of the lobby window.\n");
+    try {
+      const message = ws.read(webSocket);
+      // If this succeeded, we do actually have to parse it
+      try { processServerEvent(JSON.parse(message)) }
+      catch (_) { return }
+    } catch (_) {
+      // If this failed, the server probably closed the connection, indicating auth failure
+      sendToConsole(gameSocket, "echo Authentication failed.");
+      sendToConsole(gameSocket, 'echo ""');
+      sendToConsole(gameSocket, "echo The token you provided most likely expired. Tokens are only valid for 30 seconds after being issued.");
+      sendToConsole(gameSocket, "echo Please try again with a new token obtained through the New Token button at the top of the lobby window.");
 
       ws.disconnect(webSocket);
       webSocket = null;
