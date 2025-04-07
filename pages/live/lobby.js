@@ -6,6 +6,8 @@ var amHost = false, amSpectator = false;
 var localMapQueue = [];
 var doRandomMaps = false;
 
+const [LOBBY_IDLE, LOBBY_INGAME] = [0, 1];
+
 const lobbyPlayersList = document.querySelector("#lobby-players-list");
 
 /**
@@ -21,6 +23,8 @@ async function updatePlayerList () {
   amHost = lobby.data.host === whoami.steamid;
   // Check if we are a spectator
   amSpectator = lobby.data.spectators.includes(whoami.steamid);
+  // Check if the lobby is in "in-game" mode
+  const ingame = lobby.data.state === LOBBY_INGAME;
 
   // Sort players by their latest time
   lobby.listEntry.players.sort(function (a, b) {
@@ -119,8 +123,8 @@ async function updatePlayerList () {
   >
   <p class="lobby-player-name">${username}${(run && !isSpectator) ? ` - ${ticksToString(run.time)}` : ""}</p>
   <i
-    class="${isSpectator ? "fa-regular fa-eye" : (ready ? "fa-solid fa-circle-check" : "fa-regular fa-circle")} lobby-player-ready"
-    onmouseover="showTooltip('${isSpectator ? "Spectating" : (ready ? "Ready" : "Not ready")}')"
+    class="${isSpectator ? "fa-regular fa-eye" : (ready ? (ingame ? "fa-solid fa-circle-play" : "fa-solid fa-circle-check") : "fa-regular fa-circle")} lobby-player-ready"
+    onmouseover="showTooltip('${isSpectator ? "Spectating" : (ready ? (ingame ? "Playing" : "Ready") : "Not ready")}')"
     onmouseleave="hideTooltip()"
   ></i>
 </div>
@@ -431,6 +435,9 @@ async function lobbyEventHandler (event) {
 
       }, 1000);
 
+      // Update local lobby state
+      lobby.data.state = LOBBY_INGAME;
+
       // Clear previous run times from player list
       lobby.data.context.leaderboard[lobby.listEntry.mode] = [];
       updatePlayerList();
@@ -453,6 +460,9 @@ async function lobbyEventHandler (event) {
           updateLobbyMap();
         }
       }
+
+      // Update local lobby state
+      lobby.data.state = LOBBY_IDLE;
 
       return;
     }
