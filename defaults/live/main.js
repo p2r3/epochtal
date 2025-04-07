@@ -131,6 +131,12 @@ function processConsoleOutput () {
     if (startMapWhenReady) {
       sendToConsole(gameSocket, "echo Starting Epochtal Live round...");
     }
+    /**
+     * Check if the game is still running, and if not, terminate the script.
+     * In most cases, this would've already been caught earlier, but we run
+     * it here too just to be safe.
+     */
+    if (!game.status()) doCleanup();
   }
 
   // Receive 1024 bytes from the game console socket
