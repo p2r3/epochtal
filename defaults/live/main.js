@@ -26,6 +26,65 @@ do { // Attempt connection with the game's console
 
 console.log("Connected to Portal 2 console.");
 
+/**
+ * Utility function, cleans up any open sockets and throws an error.
+ * This is useful for when the game has closed or when an otherwise
+ * critical issue requires us to stop the script.
+ */
+function doCleanup () {
+  // Disconnect from the WebSocket, if any
+  if (webSocket) {
+    ws.disconnect(webSocket);
+    webSocket = null;
+  }
+  // Disconnect from the game's console
+  if (gameSocket !== -1) game.disconnect(gameSocket);
+  // Throw an error to terminate the script
+  throw new Error("Cleanup finished, terminating script.");
+}
+
+/**
+ * Utility funtion, attempts to read a command from the console. On failure,
+ * attempts to reconnect to the socket.
+ * @param {number} socket Game socket file descriptor (index)
+ * @param {number} bytes How many bytes to request from the socket
+ */
+function readFromConsole (socket, bytes) {
+  try {
+    return game.read(socket, bytes);
+  } catch (e) {
+    console.error(e);
+    // Attempt to reconnect to the game's console
+    do {
+      if (!game.status()) doCleanup();
+      var gameSocket = game.connect();
+      sleep(200);
+    } while (gameSocket === -1);
+    return readFromConsole(gameSocket, bytes);
+  }
+}
+
+/**
+ * Utility funtion, attempts to write a command to the console. On failure,
+ * attempts to reconnect to the socket.
+ * @param {number} socket Game socket file descriptor (index)
+ * @param {number} command Command to send to the console
+ */
+function sendToConsole (socket, command) {
+  try {
+    return game.send(socket, command);
+  } catch (e) {
+    console.error(e);
+    // Attempt to reconnect to the game's console
+    do {
+      if (!game.status()) doCleanup();
+      var gameSocket = game.connect();
+      sleep(200);
+    } while (gameSocket === -1);
+    return sendToConsole(gameSocket, command);
+  }
+}
+
 // Time of the currently ongoing run
 var totalTicks = 0;
 // Session time from last received report
@@ -45,7 +104,7 @@ var lastLine = "";
 function processConsoleOutput () {
 
   // Receive 1024 bytes from the game console socket
-  const buffer = game.read(gameSocket, 1024);
+  const buffer = readFromConsole(gameSocket, 1024);
   // If we received nothing, don't proceed
   if (buffer.length === 0) return;
 
@@ -68,7 +127,7 @@ function processConsoleOutput () {
     // Process start of map load event
     if (line.indexOf("---- Host_") === 0) {
       // Request total session time for load start
-      game.send(gameSocket, "display_elapsedtime\n");
+      sendToConsole(gameSocket, "display_elapsedtime");
       expectReport = 1;
 
       return;
@@ -77,15 +136,15 @@ function processConsoleOutput () {
     // Process end of map load event
     if (line.indexOf("Redownloading all lightmaps") === 0) {
       // Request total session time for load end
-      game.send(gameSocket, "display_elapsedtime\n");
+      sendToConsole(gameSocket, "display_elapsedtime");
       expectReport = 2;
 
       // Process the start of a workshop map
       if (runMap.indexOf("workshop/") === 0) {
         // Attach an output to report time and run end on PTI level end
         // In workshop maps, we can afford running cheat commands
-        game.send(gameSocket, 'script ::__elFinish<-function(){ printl("elFinish") }\n');
-        game.send(gameSocket, 'ent_fire @relay_pti_level_end AddOutput "OnTrigger !self:RunScriptCode:__elFinish():0:1"\n');
+        sendToConsole(gameSocket, 'script ::__elFinish<-function(){ printl("elFinish") }');
+        sendToConsole(gameSocket, 'ent_fire @relay_pti_level_end AddOutput "OnTrigger !self:RunScriptCode:__elFinish():0:1"');
       }
 
       return;
@@ -94,7 +153,7 @@ function processConsoleOutput () {
     // Process workshop map finish event
     if (line.indexOf("elFinish") === 0) {
       // Request total session time for map finish
-      game.send(gameSocket, "display_elapsedtime\n");
+      sendToConsole(gameSocket, "display_elapsedtime");
       expectReport = 3;
 
       return;
@@ -128,9 +187,9 @@ function processConsoleOutput () {
       if (expectReport === 3) {
         const success = ws.send(webSocket, '{"type":"finishRun","value":{"time":'+ totalTicks +',"portals":0}}');
         // Disconnect from socket on failure
-        if (!success){
-          game.send(gameSocket, "echo Failed to send finishRun event.\n");
-          game.send(gameSocket, "echo Please reconnect to the lobby with a new token.\n");
+        if (!success) {
+          sendToConsole(gameSocket, "echo Failed to send finishRun event.");
+          sendToConsole(gameSocket, "echo Please reconnect to the lobby with a new token.");
           ws.disconnect(webSocket);
           webSocket = null;
         }
@@ -170,11 +229,11 @@ function processServerEvent (data) {
     case "authenticated": {
 
       // Acknowledge success to the user
-      game.send(gameSocket, "echo Authentication complete.\n");
+      sendToConsole(gameSocket, "echo Authentication complete.");
 
       // Send isGame event to inform the server of our role
       if (!ws.send(webSocket, '{"type":"isGame","value":"true"}')) {
-        game.send(gameSocket, "echo Failed to send isGame event. Disconnecting.\n");
+        sendToConsole(gameSocket, "echo Failed to send isGame event. Disconnecting.");
         ws.disconnect(webSocket);
         webSocket = null;
       }
@@ -221,7 +280,7 @@ function processServerEvent (data) {
         // If the procedure was unsuccessful, respond with code -1
         ws.send(webSocket, '{"type":"getMap","value":-1}');
         // Log the error to the Portal 2 console
-        game.send(gameSocket, 'echo "' + e.toString().replace(/\"/g, "'") + '"\n');
+        sendToConsole(gameSocket, 'echo "' + e.toString().replace(/\"/g, "'") + '"');
 
       }
 
@@ -263,24 +322,24 @@ function processWebSocket () {
     // Disconnect existing socket, if any
     if (webSocket) ws.disconnect(webSocket);
     // Start a new WebSocket connection
-    game.send(gameSocket, "echo Connecting to WebSocket...\n");
+    sendToConsole(gameSocket, "echo Connecting to WebSocket...");
     webSocket = ws.connect(WS_ADDRESS + "/api/events/connect");
 
     // Clear the token and exit if the connection failed
     if (!webSocket) {
-      game.send(gameSocket, "echo WebSocket connection failed.\n");
+      sendToConsole(gameSocket, "echo WebSocket connection failed.");
       webSocketToken = null;
       return;
     }
 
     // Send the token to authenticate
-    game.send(gameSocket, "echo Connection established, authenticating...\n");
+    sendToConsole(gameSocket, "echo Connection established, authenticating...");
     const success = ws.send(webSocket, webSocketToken);
     webSocketToken = null;
 
     // On transmission failure, assume the socket is dead
     if (!success) {
-      game.send(gameSocket, "echo Failed to send authentication token.\n");
+      sendToConsole(gameSocket, "echo Failed to send authentication token.");
       ws.disconnect(webSocket);
       webSocket = null;
       return;
