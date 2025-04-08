@@ -103,13 +103,19 @@ var consoleTick = 0;
 var amSpectator = false;
 // Spectator position and angles for interpolation
 var spectatorData = {
+  // Current spectator time as loop tick count
   tick: 0,
+  // Time of last position update
   lastTick: 0,
+  // Ticks between previous and current position update
   deltaTick: 0,
+  // Position and angles for interpolating across two samples
   pos: [null, null],
   ang: [null, null],
-  target: 0,
+  // List of available SteamIDs and index of currently spectated player
   targets: [],
+  target: 0,
+  // Whether godmode has been enabled
   god: false
 };
 
@@ -274,9 +280,7 @@ function processConsoleOutput () {
 
     // Send spectator position output to server for spectators
     if (line.indexOf("spec_goto ") === 0) {
-      // Update last known player position while we're at it
-      lastPlayerPosition = line.slice(10).trim();
-      ws.send(webSocket, '{"type":"spectate","value":"'+ lastPlayerPosition +'"}');
+      ws.send(webSocket, '{"type":"spectate","player":"'+ line.slice(10).trim() +'","portals":"","cube":""}');
 
       return;
     }
