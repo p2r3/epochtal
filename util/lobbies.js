@@ -182,17 +182,27 @@ module.exports = async function (args, context = epochtal) {
             return;
           }
 
-          // Contains position data for the client's player
+          // Contains the client's position, portals, and nearby cubes
           case "spectate": {
             // Ignore position packets sent by spectators
             if (dataEntry.spectators.includes(steamid)) return;
-            // Convert the string of coordinates/angles to arrays of numbers
-            const arr = data.value.split(" ").map(Number);
+            // Convert the strings of coordinates/angles to arrays of numbers
+            const arrPlayer = data.player.split(" ").map(Number);
+            const arrPortals = data.portals.split(" ").map(Number).map(c => c.toFixed(3));
+            const arrCube = data.cube.split(" ").map(Number).map(Math.round);
             // Construct the outgoing message
             const output = {
               type: "spectate",
-              pos: arr.slice(0, 3),
-              ang: arr.slice(3, 5),
+              pos: arrPlayer.slice(0, 3),
+              ang: arrPlayer.slice(3, 5),
+              portals: [
+                arrPortals.slice(0, 6).join(" "),
+                arrPortals.slice(6, 12).join(" ")
+              ],
+              cube: {
+                pos: arrCube.slice(0, 3),
+                ang: arrCube.slice(3, 6)
+              },
               steamid: steamid,
               name: (await users(["get", steamid])).name
             };
