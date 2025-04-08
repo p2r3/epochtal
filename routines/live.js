@@ -27,9 +27,12 @@ async function rebuildPackage (context) {
   fs.mkdirSync(`${portal2}/maps`);
   fs.mkdirSync(`${portal2}/maps/workshop`);
   fs.mkdirSync(`${portal2}/cfg`);
+  fs.mkdirSync(`${portal2}/scripts`);
+  fs.mkdirSync(`${portal2}/scripts/vscripts`);
   // Copy game files to temporary directory
   fs.copyFileSync(`${defaults}/main.js`, `${portal2}/main.js`);
   fs.copyFileSync(`${defaults}/valve.rc`, `${portal2}/cfg/valve.rc`);
+  fs.copyFileSync(`${defaults}/mapspawn.nut`, `${portal2}/scripts/vscripts/mapspawn.nut`);
   // Write the server's HTTP address to a file
   await Bun.write(`${portal2}/address.txt`, `${gconfig.https ? "https" : "http"}://${gconfig.domain}`);
 

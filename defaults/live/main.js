@@ -97,8 +97,6 @@ var lastTimeReport = 0;
 var expectReport = 0;
 // Name of the map we're running
 var runMap = null;
-// Whether to start runMap as soon as the game console is responsive
-var startMapWhenReady = false;
 // Counts the amount of times `processConsoleOutput` has been called
 var consoleTick = 0;
 // Whether we're a spectator - resets each round
@@ -114,10 +112,6 @@ var spectatorData = {
   targets: [],
   god: false
 };
-// Last known player position and angles
-var lastPlayerPosition = "";
-// Position and angles of the player at map start
-var runStartPlayerPosition = "";
 
 /**
  * Checks whether the player has the right spplice-cpp version and throws
@@ -195,31 +189,11 @@ function processConsoleOutput () {
       return;
     }
 
-    // Process commands scheduled for the start of a run
-    if (runStartPlayerPosition && runStartPlayerPosition !== lastPlayerPosition) {
-      runStartPlayerPosition = null;
-      // Make saves at the start of runs to prevent loading a different map
-      sendToConsole(gameSocket, "save quick");
-      sendToConsole(gameSocket, "save autosave");
-      // Attach an output to report time and run end on PTI level end
-      // In workshop maps, we can afford running cheat commands
-      if (runMap && runMap.indexOf("workshop/") === 0) {
-        sendToConsole(gameSocket, 'script ::__elFinish<-function(){ printl("elFinish") }');
-        sendToConsole(gameSocket, 'ent_fire @relay_pti_level_end AddOutput "OnTrigger !self:RunScriptCode:__elFinish():0:1"');
-      }
-    }
-
     // Process start of map load event
     if (line.indexOf("---- Host_") === 0) {
       // Request total session time for load start
       sendToConsole(gameSocket, "display_elapsedtime");
       expectReport = 1;
-
-      // Store the player's position at the start of the run
-      // This is later checked to detect if the engine is active
-      if (totalTicks === 0) {
-        runStartPlayerPosition = lastPlayerPosition;
-      }
 
       return;
     }
@@ -233,7 +207,7 @@ function processConsoleOutput () {
       return;
     }
 
-    // Process workshop map finish event
+    // Process map finish event
     if (line.indexOf("elFinish") === 0) {
       // Request total session time for map finish
       sendToConsole(gameSocket, "display_elapsedtime");
@@ -418,8 +392,8 @@ function processServerEvent (data) {
       totalTicks = 0;
       // Clear last known session time
       lastTimeReport = 0;
-      // This will run the map command once the game is focused
-      startMapWhenReady = true;
+      // Start the requested map
+      sendToConsole(gameSocket, "disconnect;map " + runMap);
 
       // Clear spectator state
       amSpectator = false;
