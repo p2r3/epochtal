@@ -116,7 +116,11 @@ var spectatorData = {
   targets: [],
   target: 0,
   // Whether godmode has been enabled
-  god: false
+  god: false,
+  // Contents of last portal/cube position update from VScript
+  // These are the only parameters used by players, NOT spectators
+  portals: "",
+  cube: ""
 };
 
 /**
@@ -147,10 +151,6 @@ function processConsoleOutput () {
     // Log player position and angles for sending to spectators
     if (!amSpectator && webSocket && runMap) {
       sendToConsole(gameSocket, "spec_pos");
-    }
-    // If we're supposed to be starting the map, ping the console until we get a response
-    if (startMapWhenReady) {
-      sendToConsole(gameSocket, "echo Starting Epochtal Live round...");
     }
     /**
      * Check if the game is still running, and if not, terminate the script.
@@ -185,15 +185,6 @@ function processConsoleOutput () {
 
     // The events below this only apply to connected clients
     if (!webSocket) return;
-
-    // Check for a ping to start the map
-    // This should only happen when the game is focused and ready to communicate
-    if (startMapWhenReady && line.indexOf("Starting Epochtal Live round...") === 0) {
-      sendToConsole(gameSocket, "disconnect;map " + runMap);
-      startMapWhenReady = false;
-
-      return;
-    }
 
     // Process start of map load event
     if (line.indexOf("---- Host_") === 0) {
@@ -280,8 +271,17 @@ function processConsoleOutput () {
 
     // Send spectator position output to server for spectators
     if (line.indexOf("spec_goto ") === 0) {
-      ws.send(webSocket, '{"type":"spectate","player":"'+ line.slice(10).trim() +'","portals":"","cube":""}');
-
+      ws.send(webSocket, '{"type":"spectate","player":"'+ line.slice(10).trim() +'","portals":"'+ spectatorData.portals +'","cube":"'+ spectatorData.cube +'"}');
+      return;
+    }
+    // Update last known position of portals
+    if (line.indexOf("spec_goto_portals ") === 0) {
+      spectatorData.portals = line.slice(18).trim();
+      return;
+    }
+    // Update last known position of the nearest cube
+    if (line.indexOf("spec_goto_cube ") === 0) {
+      spectatorData.cube = line.slice(15).trim();
       return;
     }
 
@@ -409,6 +409,7 @@ function processServerEvent (data) {
       spectatorData.targets = [];
       spectatorData.god = false;
       // Reset specator commands
+      sendToConsole(gameSocket, "in_forceuser 0");
       sendToConsole(gameSocket, "sv_cheats 0");
       sendToConsole(gameSocket, "alias +remote_view \"\"");
 
@@ -421,6 +422,7 @@ function processServerEvent (data) {
       // Set up spectator environment
       if (!amSpectator) {
         sendToConsole(gameSocket, "sv_cheats 1");
+        sendToConsole(gameSocket, "in_forceuser 1");
         sendToConsole(gameSocket, "alias +remote_view \"echo Switching spectated player...\"");
         sendToConsole(gameSocket, "disconnect;map " + runMap);
         amSpectator = true;
@@ -456,6 +458,13 @@ function processServerEvent (data) {
       spectatorData.ang[0] = spectatorData.ang[1];
       spectatorData.pos[1] = data.pos;
       spectatorData.ang[1] = data.ang;
+
+      // Portals are managed using the portal_place command
+      sendToConsole(gameSocket, "portal_place 0 0 " + data.portals[0]);
+      sendToConsole(gameSocket, "portal_place 0 1 " + data.portals[1]);
+
+      // Cubes are managed using a non-solid prop created with VScript
+      sendToConsole(gameSocket, "script ::__elSpectatorCube(Vector("+ data.cube.pos.join(", ") +"), Vector("+ data.cube.ang.join(", ") +"))");
 
       return;
     }
