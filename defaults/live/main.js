@@ -114,6 +114,10 @@ var spectatorData = {
   targets: [],
   god: false
 };
+// Last known player position and angles
+var lastPlayerPosition = "";
+// Position and angles of the player at map start
+var runStartPlayerPosition = "";
 
 /**
  * Checks whether the player has the right spplice-cpp version and throws
@@ -191,15 +195,30 @@ function processConsoleOutput () {
       return;
     }
 
+    // Process commands scheduled for the start of a run
+    if (runStartPlayerPosition && runStartPlayerPosition !== lastPlayerPosition) {
+      runStartPlayerPosition = null;
+      // Make saves at the start of runs to prevent loading a different map
+      sendToConsole(gameSocket, "save quick");
+      sendToConsole(gameSocket, "save autosave");
+      // Attach an output to report time and run end on PTI level end
+      // In workshop maps, we can afford running cheat commands
+      if (runMap && runMap.indexOf("workshop/") === 0) {
+        sendToConsole(gameSocket, 'script ::__elFinish<-function(){ printl("elFinish") }');
+        sendToConsole(gameSocket, 'ent_fire @relay_pti_level_end AddOutput "OnTrigger !self:RunScriptCode:__elFinish():0:1"');
+      }
+    }
+
     // Process start of map load event
     if (line.indexOf("---- Host_") === 0) {
       // Request total session time for load start
       sendToConsole(gameSocket, "display_elapsedtime");
       expectReport = 1;
-      // Make saves at the start of runs to prevent loading a different map
+
+      // Store the player's position at the start of the run
+      // This is later checked to detect if the engine is active
       if (totalTicks === 0) {
-        sendToConsole(gameSocket, "save quick");
-        sendToConsole(gameSocket, "save autosave");
+        runStartPlayerPosition = lastPlayerPosition;
       }
 
       return;
@@ -210,14 +229,6 @@ function processConsoleOutput () {
       // Request total session time for load end
       sendToConsole(gameSocket, "display_elapsedtime");
       expectReport = 2;
-
-      // Process the start of a workshop map
-      if (runMap && runMap.indexOf("workshop/") === 0) {
-        // Attach an output to report time and run end on PTI level end
-        // In workshop maps, we can afford running cheat commands
-        sendToConsole(gameSocket, 'script ::__elFinish<-function(){ printl("elFinish") }');
-        sendToConsole(gameSocket, 'ent_fire @relay_pti_level_end AddOutput "OnTrigger !self:RunScriptCode:__elFinish():0:1"');
-      }
 
       return;
     }
@@ -289,7 +300,9 @@ function processConsoleOutput () {
 
     // Send spectator position output to server for spectators
     if (line.indexOf("spec_goto ") === 0) {
-      ws.send(webSocket, '{"type":"spectate","value":"'+ line.slice(10).trim() +'"}');
+      // Update last known player position while we're at it
+      lastPlayerPosition = line.slice(10).trim();
+      ws.send(webSocket, '{"type":"spectate","value":"'+ lastPlayerPosition +'"}');
 
       return;
     }
