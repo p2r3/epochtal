@@ -97,6 +97,8 @@ var lastTimeReport = 0;
 var expectReport = 0;
 // Name of the map we're running
 var runMap = null;
+// Name of the map we were just running
+var lastRunMap = null;
 // Counts the amount of times `processConsoleOutput` has been called
 var consoleTick = 0;
 // Whether we're a spectator - resets each round
@@ -244,6 +246,7 @@ function processConsoleOutput () {
         sendToConsole(gameSocket, "echo;echo Round finished.");
         sendToConsole(gameSocket, "echo \"Final time: " + (totalTicks / 60).toFixed(3) + " seconds.\";echo");
         // Clear current map to indicate that we're not in a run anymore
+        lastRunMap = runMap;
         runMap = null;
         // Send the finishRun event
         const success = ws.send(webSocket, '{"type":"finishRun","value":{"time":'+ totalTicks +',"portals":0}}');
@@ -424,7 +427,7 @@ function processServerEvent (data) {
         sendToConsole(gameSocket, "sv_cheats 1");
         sendToConsole(gameSocket, "in_forceuser 1");
         sendToConsole(gameSocket, "alias +remote_view \"echo Switching spectated player...\"");
-        sendToConsole(gameSocket, "disconnect;map " + runMap);
+        sendToConsole(gameSocket, "disconnect;map " + (runMap || lastRunMap));
         amSpectator = true;
       }
 
