@@ -1030,7 +1030,7 @@ async function lobbyInit () {
   };
 
   // Toggle spectator state
-  window.spectate = async function () {
+  window.spectate = async function (applyStylesheet = false) {
 
     const spectateButton = document.querySelector("#lobby-spectate-button");
 
@@ -1040,7 +1040,7 @@ async function lobbyInit () {
       return await fetch(`/api/lobbies/spectate/${lobbyid}/false`);
     } else {
       if (!readyState) fetch(`/api/lobbies/ready/${lobbyid}/true`);
-      document.head.innerHTML += `<link rel="stylesheet" href="/live/spectate.css">`;
+      if (applyStylesheet) document.head.innerHTML += `<link rel="stylesheet" href="/live/spectate.css">`;
       spectateButton.innerHTML = "Stop Spectating";
       return await fetch(`/api/lobbies/spectate/${lobbyid}/true`);
     }
