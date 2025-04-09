@@ -230,6 +230,19 @@ async function rebuildRandomMapCache (node = null) {
 
 }
 
+// Automatically schedules a cache rebuild once it expires
+async function autoRebuildRandomMapCache () {
+  // If the cache has expired, rebuild it
+  const cacheAge = Date.now() - randomMapCache.created;
+  if (cacheAge > 86400000) {
+    await rebuildRandomMapCache();
+  }
+  // Schedule a rebuild for a minute after the cache expires
+  const untilExpiry = Math.max(0, 86400000 - cacheAge);
+  setTimeout(autoRebuildRandomMapCache, untilExpiry + 60000);
+}
+autoRebuildRandomMapCache();
+
 // Fetches a truly random singleplayer map from the Steam workshop
 async function fetchRandomMap (node = null) {
 
