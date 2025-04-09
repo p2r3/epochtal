@@ -150,22 +150,138 @@ async function curateWorkshop (maps = []) {
 
 }
 
-// Returns the SteamID of a random singleplayer workshop map
-async function fetchRandomMap () {
-
-  // Base of the request query - selects only one singleplayer map ID
-  const baseQuery = `${STEAM_API}/IPublishedFileService/QueryFiles/v1/?key=${process.env.STEAM_API_KEY}&query_type=1&numperpage=1&appid=620&requiredtags[0]=Singleplayer&excludedtags[0]=Cooperative`;
-
-  // Select a random page out of 50000, which is the upper query limit
-  const { response } = await (await fetch(`${baseQuery}&page=${Math.floor(Math.random() * 50000)}`)).json();
-  const data = response.publishedfiledetails[0];
-
-  // If we've picked a deleted map, re-roll the selection
-  if (data.result !== 1) return await fetchRandomMap();
-
-  return data.publishedfileid;
-
+// Contains a tree structure for buckets of random maps
+const randomMapCache = {
+  created: 0
 };
+
+/**
+ * Rebuilds the random map total count cache tree.
+ *
+ * This is a binary tree, where each node represents the total amount of
+ * maps published to the workshop in a given timespan. The tree generates
+ * until a child node has less than 50'000 total maps, which is the upper
+ * workshop API query limit.
+ */
+async function rebuildRandomMapCache (node = null) {
+
+  if (!node) {
+    // Start iteration with global tree cache
+    node = randomMapCache;
+    // Store cache creation date for expiry checks later
+    randomMapCache.created = Date.now();
+    // Use date range between PTI release and today
+    node.start = Math.floor(new Date("2012-05-08").getTime() / 1000);
+    node.end = Math.floor(new Date().getTime() / 1000);
+  }
+
+  // Calculate midpoint of this node's date range
+  const half = Math.floor((node.start + node.end) / 2);
+
+  // Create branches for this node containing timestamp ranges
+  node.left = {
+    start: node.start,
+    end: half
+  };
+  node.right = {
+    start: half,
+    end: node.end
+  };
+
+  // Set up base parameters for querying map totals
+  const baseParams = {
+    query_type: 1,
+    appid: 620,
+    requiredtags: ["Singleplayer"],
+    excludedtags: ["Cooperative"],
+    totalonly: true
+  };
+  const baseQuery = `${STEAM_API}/IPublishedFileService/QueryFiles/v1/?key=${process.env.STEAM_API_KEY}`;
+
+  // Set up parameters for the left and right branches
+  const leftParams = structuredClone(baseParams);
+  leftParams.date_range_created = {
+    timestamp_start: node.start,
+    timestamp_end: half
+  };
+  const rightParams = structuredClone(baseParams);
+  rightParams.date_range_created = {
+    timestamp_start: half,
+    timestamp_end: node.end
+  };
+
+  // Fetch totals for both the left and right branches in parallel
+  const [leftData, rightData] = await Promise.all([
+    fetch(`${baseQuery}&input_json=${encodeURIComponent(JSON.stringify(leftParams))}`).then(res => res.json()),
+    fetch(`${baseQuery}&input_json=${encodeURIComponent(JSON.stringify(rightParams))}`).then(res => res.json())
+  ]);
+
+  // Assign totals to each of the branch nodes
+  node.left.total = leftData.response.total;
+  node.right.total = leftData.response.total;
+  // If necessary, assign a total for this node too
+  if (!("total" in node)) node.total = node.left.total + node.right.total;
+
+  // Recursively (and asynchronously) generate caches for the rest of the tree
+  const remaining = [];
+  if (node.left.total > 50000) remaining.push(rebuildRandomMapCache(node.left));
+  if (node.right.total > 50000) remaining.push(rebuildRandomMapCache(node.right));
+  await Promise.all(remaining);
+
+}
+
+// Fetches a truly random singleplayer map from the Steam workshop
+async function fetchRandomMap (node = null) {
+
+  // Start the recursion with the top of the cached tree
+  if (!node) {
+    // Rebuild bucket cache tree if it has expired
+    if (Date.now() - randomMapCache.created > 86400000) {
+      await rebuildRandomMapCache();
+    }
+    node = randomMapCache;
+  }
+
+  // If no maps found in this node, reroll the entire selection
+  if (node.total === 0) return await fetchRandomMap(null);
+
+  // If the map count in this node is within the query limit, pick a map
+  if (node.total <= 50000) {
+
+    const queryParams = {
+      query_type: 1,
+      appid: 620,
+      requiredtags: ["Singleplayer"],
+      excludedtags: ["Cooperative"],
+      numperpage: 1,
+      page: Math.floor(Math.random() * node.total) + 1,
+      date_range_created: {
+        timestamp_start: node.start,
+        timestamp_end: node.end
+      }
+    };
+
+    const baseQuery = `${STEAM_API}/IPublishedFileService/QueryFiles/v1/?key=${process.env.STEAM_API_KEY}&input_json=${encodeURIComponent(JSON.stringify(queryParams))}`;
+
+    const finalResponse = await fetch(baseQuery);
+    const finalJson = await finalResponse.json();
+    const data = finalJson.response.publishedfiledetails[0];
+
+    // If we've picked a deleted map, reroll the current range
+    if (data.result !== 1) return await fetchRandomMap(node);
+
+    return data.publishedfileid;
+
+  }
+
+  // Pick the left or right branch of the tree with a weighted probability
+  if (Math.random() < node.left.total / node.total) {
+    return await fetchRandomMap(node.left);
+  } else {
+    return await fetchRandomMap(node.right);
+  }
+
+}
 
 /**
  * Handles the `workshopper` utility call. This utility is used to interact and curate the Steam Workshop.
