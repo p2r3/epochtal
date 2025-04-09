@@ -147,6 +147,7 @@ module.exports = async function (args, request) {
        *   state,
        *   context: {
        *     map,
+       *     maps,
        *     leaderboard,
        *     week
        *   }

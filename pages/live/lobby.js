@@ -172,6 +172,7 @@ async function updateLobbyMap () {
       </p>
     </a>
     <button id="lobby-map-button" onclick="selectLobbyMap()" ${amHost ? "" : `style="display: none"`}>Select</button>
+    <p id="lobby-map-history-button"><a href="javascript:toggleMapHistoryWindow()">See map history</a></p>
   `;
 
 }
@@ -365,6 +366,8 @@ async function lobbyEventHandler (event) {
       // Update the lobby map
       lobby.data.context.map = data.newMap;
       updateLobbyMap();
+      // Update lobby map history
+      lobby.data.context.maps.push(data.newMap);
 
       // Set all player ready states to false
       for (const steamid in lobby.data.players) lobby.data.players[steamid].ready = false;
@@ -1116,6 +1119,32 @@ async function lobbyInit () {
     // Add the typed key to the chatbox and focus it
     chatInputField.value += event.key;
     chatInputField.focus();
+  };
+
+  window.toggleMapHistoryWindow = function () {
+
+    const container = document.querySelector("#lobby-map-history-container");
+    const isVisible = Number(container.style.opacity) === 1;
+
+    if (isVisible) {
+      container.style.opacity = 0;
+      container.style.pointerEvents = "none";
+      container.style.transform = "translateY(calc(-50% + 10vh))";
+      return;
+    }
+
+    let output = "";
+    for (const map of lobby.data.context.maps) {
+      const link = `https://steamcommunity.com/sharedfiles/filedetails/?id=${map.id}`;
+      output += `<p><b><a href="${link}" target="_blank">${map.title}</a></b> by <b>${map.author}</b></p>`;
+    }
+    output += `<i class="fa-solid fa-xmark" id="lobby-map-history-close" onclick="toggleMapHistoryWindow()"></i>`;
+    container.innerHTML = output;
+
+    container.style.opacity = 1;
+    container.style.pointerEvents = "auto";
+    container.style.transform = "translateY(-50%)";
+
   };
 
 }

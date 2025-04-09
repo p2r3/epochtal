@@ -23,6 +23,7 @@ function createLobbyContext (name) {
     },
     data: {
       map: null,
+      maps: [],
       leaderboard: {
         ffa: []
       },
@@ -432,6 +433,8 @@ module.exports = async function (args, context = epochtal) {
 
       // Set the lobby map
       dataEntry.context.data.map = newMap;
+      // Append map to lobby map history
+      dataEntry.context.data.maps.push(newMap);
 
       // Force all player ready states to false
       for (const player in dataEntry.players) player.ready = false;
