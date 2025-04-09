@@ -248,6 +248,7 @@ async function fetchRandomMap (node = null) {
   // If the map count in this node is within the query limit, pick a map
   if (node.total <= 50000) {
 
+    // Query for exactly one random map in this node's time range
     const queryParams = {
       query_type: 1,
       appid: 620,
@@ -260,12 +261,9 @@ async function fetchRandomMap (node = null) {
         timestamp_end: node.end
       }
     };
-
     const baseQuery = `${STEAM_API}/IPublishedFileService/QueryFiles/v1/?key=${process.env.STEAM_API_KEY}&input_json=${encodeURIComponent(JSON.stringify(queryParams))}`;
-
-    const finalResponse = await fetch(baseQuery);
-    const finalJson = await finalResponse.json();
-    const data = finalJson.response.publishedfiledetails[0];
+    const { response } = await (await fetch(baseQuery)).json();
+    const data = response.publishedfiledetails[0];
 
     // If we've picked a deleted map, reroll the current range
     if (data.result !== 1) return await fetchRandomMap(node);
