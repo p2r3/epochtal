@@ -189,8 +189,7 @@ function updateLobbyHost () {
   ];
   const hiddenButtons = [
     document.querySelector("#lobby-map-button"),
-    document.querySelector("#lobby-forcestart-button"),
-    document.querySelector("#lobby-forceabort-button")
+    document.querySelector("#lobby-force-button")
   ];
 
   if (amHost) {
@@ -444,6 +443,11 @@ async function lobbyEventHandler (event) {
 
       displayChatMessage(`The round is starting. Good luck!`);
 
+      // Update the force action button
+      const forceButton = document.querySelector("#lobby-force-button");
+      forceButton.textContent = "Abort round";
+      forceButton.href = "javascript:forceAbort()";
+
       return;
     }
 
@@ -463,6 +467,11 @@ async function lobbyEventHandler (event) {
 
       // Update local lobby state
       lobby.data.state = LOBBY_IDLE;
+
+      // Update the force action button
+      const forceButton = document.querySelector("#lobby-force-button");
+      forceButton.textContent = "Force start";
+      forceButton.href = "javascript:forceStart()";
 
       return;
     }
@@ -970,7 +979,7 @@ async function lobbyInit () {
     }
 
     // This might take a while, prevent the user from spamming the button
-    const forceStartButton = document.querySelector("#lobby-forcestart-button");
+    const forceStartButton = document.querySelector("#lobby-force-button");
     forceStartButton.style.opacity = 0.5;
     forceStartButton.style.pointerEvents = "none";
 

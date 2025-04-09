@@ -144,7 +144,7 @@
   transition: opacity 0.2s;
 }
 
-#lobby-forcestart-button, #lobby-forceabort-button {
+#lobby-force-button {
   display: none;
   color: rgb(255, 80, 80);
 }
@@ -187,4 +187,5 @@
   bottom: 2vw;
   min-width: 160px;
   box-shadow: none;
+  backdrop-filter: blur(5px);
 }
