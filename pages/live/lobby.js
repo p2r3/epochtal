@@ -29,18 +29,6 @@ async function updatePlayerList () {
   // Sort players by their latest time
   lobby.listEntry.players.sort(function (a, b) {
 
-    // Push spectators to the bottom
-    const isSpectatorA = lobby.data.spectators.includes(a);
-    const isSpectatorB = lobby.data.spectators.includes(b);
-
-    // If both players are spectators, sort by SteamID string
-    if (isSpectatorA && isSpectatorB) {
-      return a < b ? 1 : -1;
-    }
-    // Otherwise, put spectators below non-spectators
-    if (isSpectatorA) return 1;
-    if (isSpectatorB) return -1;
-
     const runA = leaderboard.find(c => c.steamid === a);
     const runB = leaderboard.find(c => c.steamid === b);
 
@@ -121,7 +109,7 @@ async function updatePlayerList () {
       onclick="transferHost('${steamid}')"
       ` : "")}
   >
-  <p class="lobby-player-name">${username}${(run && !isSpectator) ? ` - ${ticksToString(run.time)}` : ""}</p>
+  <p class="lobby-player-name">${username}${run ? ` - ${ticksToString(run.time)}` : ""}</p>
   <i
     class="${isSpectator ? "fa-regular fa-eye" : (ready ? (ingame ? "fa-solid fa-circle-play" : "fa-solid fa-circle-check") : "fa-regular fa-circle")} lobby-player-ready"
     onmouseover="showTooltip('${isSpectator ? "Spectating" : (ready ? (ingame ? "Playing" : "Ready") : "Not ready")}')"
