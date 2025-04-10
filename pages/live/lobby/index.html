@@ -74,7 +74,15 @@
       </div>
 
       <div id="lobby-chat-container">
-        <input type="text" id="lobby-chat-input" onkeypress="sendChatMessageFromInput(event)" maxlength="200"></input>
+        <input type="text"
+          name="el_lobby_chat_input"
+          id="lobby-chat-input"
+          autocomplete="off"
+          autocorrect="off"
+          autocapitalize="off"
+          spellcheck="false"
+          maxlength="200"
+          onkeypress="sendChatMessageFromInput(event)"></input>
         <div id="lobby-chat-output">
 
         </div>
