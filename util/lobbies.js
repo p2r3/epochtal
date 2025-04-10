@@ -240,6 +240,7 @@ module.exports = async function (args, context = epochtal) {
         // Disconnect the connected game client (if any) for this player
         if (dataEntry.players[steamid].gameSocket) {
           dataEntry.players[steamid].gameSocket.close(1001, "LOBBY_LEAVE");
+          delete dataEntry.players[steamid].gameSocket;
         }
 
         // Remove the player from the lobby
@@ -548,6 +549,8 @@ module.exports = async function (args, context = epochtal) {
         // If everyone's ready, start the game
         let everyoneReady = true;
         for (const curr in dataEntry.players) {
+          // Ignore spectators without connected game clients
+          if (dataEntry.spectators.includes(steamid) && !dataEntry.players[steamid].gameSocket) continue;
           if (!dataEntry.players[curr].ready) {
             everyoneReady = false;
             break;
@@ -678,6 +681,8 @@ module.exports = async function (args, context = epochtal) {
         // If everyone remaining is ready, start the game
         let everyoneReady = true;
         for (const curr in dataEntry.players) {
+          // Ignore spectators without connected game clients
+          if (dataEntry.spectators.includes(steamid) && !dataEntry.players[steamid].gameSocket) continue;
           if (!dataEntry.players[curr].ready) {
             everyoneReady = false;
             break;
