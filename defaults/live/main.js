@@ -105,15 +105,6 @@ var consoleTick = 0;
 var amSpectator = false;
 // Spectator position and angles for interpolation
 var spectatorData = {
-  // Current spectator time as loop tick count
-  tick: 0,
-  // Time of last position update
-  lastTick: 0,
-  // Ticks between previous and current position update
-  deltaTick: 0,
-  // Position and angles for interpolating across two samples
-  pos: [null, null],
-  ang: [null, null],
   // List of available SteamIDs and index of currently spectated player
   targets: [],
   target: 0,
@@ -355,10 +346,6 @@ function processServerEvent (data) {
 
       // Clear spectator state
       amSpectator = false;
-      spectatorData.tick = 0;
-      spectatorData.lastTick = 0;
-      spectatorData.pos = [null, null];
-      spectatorData.ang = [null, null];
       spectatorData.target = 0;
       spectatorData.targets = [];
       spectatorData.god = false;
@@ -394,6 +381,8 @@ function processServerEvent (data) {
       } else {
         // Hide the Bendy of the player we're actively spectating
         sendToConsole(gameSocket, "script ::__elSpectatorBendy(null, null, \""+ data.steamid +"\")");
+        // Instead, interpolate POV with __elSpectatorPlayer
+        sendToConsole(gameSocket, "script ::__elSpectatorPlayer(Vector("+ data.pos.join(", ") +"), Vector("+ data.ang.join(", ") +"))");
       }
 
       // Force the player into noclip on each position update
@@ -406,20 +395,6 @@ function processServerEvent (data) {
       if (!spectatorData.god) {
         sendToConsole(gameSocket, "god");
       }
-
-      // Store the tick at which this update was received
-      spectatorData.deltaTick = spectatorData.tick - spectatorData.lastTick;
-      spectatorData.lastTick = spectatorData.tick;
-
-      /**
-       * Position and angle data is linearly interpolated across two
-       * consecutive ticks. We store those updates in a 2-long array,
-       * cyclically replacing the old entries.
-       */
-      spectatorData.pos[0] = spectatorData.pos[1];
-      spectatorData.ang[0] = spectatorData.ang[1];
-      spectatorData.pos[1] = data.pos;
-      spectatorData.ang[1] = data.ang;
 
       // Portals are managed using the portal_place command
       sendToConsole(gameSocket, "portal_place 0 0 " + data.portals[0]);
@@ -522,54 +497,11 @@ function processWebSocket () {
 
 }
 
-/**
- * Processes position and angles sent to spectating players
- */
-function processSpectator () {
-
-  if (!amSpectator) return;
-
-  spectatorData.tick ++;
-
-  // Don't proceed if we can't interpolate
-  if (!spectatorData.pos[0] || !spectatorData.ang[0] || !spectatorData.pos[1] || !spectatorData.ang[1]) return;
-
-  // Ticks since last position update
-  const localTick = spectatorData.tick - spectatorData.lastTick;
-
-  // Fraction indicating how far along we are in linear interpolation
-  const interp = Math.min(localTick / (spectatorData.deltaTick || 0), 1);
-
-  // Account for yaw angle flipping at 180 degrees
-  if (spectatorData.ang[1][1] - spectatorData.ang[0][1] > 180) {
-    // Current is negative, next is positive - make current positive
-    spectatorData.ang[0][1] += 360;
-  } else if (spectatorData.ang[0][1] - spectatorData.ang[1][1] > 180) {
-    // Current is positive, next is negative - make current negative
-    spectatorData.ang[0][1] -= 360;
-  }
-
-  // Calculate interpolated coordinates
-  const pos = new Array(3), ang = new Array(2);
-  for (var i = 0; i < 3; i ++) {
-    pos[i] = spectatorData.pos[0][i] + (spectatorData.pos[1][i] - spectatorData.pos[0][i]) * interp;
-    if (i !== 2) ang[i] = spectatorData.ang[0][i] + (spectatorData.ang[1][i] - spectatorData.ang[0][i]) * interp;
-  }
-
-  // Adjust for offset between player eyes and origin
-  pos[2] -= 64;
-
-  sendToConsole(gameSocket, "setpos "+ pos.join(" "));
-  sendToConsole(gameSocket, "setang "+ ang.join(" "));
-
-}
-
 // Run each processing function on an interval
 while (true) {
   processVersionCheck();
   processConsoleOutput();
   processWebSocket();
-  processSpectator();
 
   // If we're not connected yet, we can afford a slower loop
   if (!webSocket) sleep(500);

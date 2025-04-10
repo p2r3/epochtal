@@ -79,6 +79,47 @@ if (!("Entities" in this)) return;
   // Schedule this function for the next console tick
   SendToConsole("script ::__elTick()");
 
+  // The events in this block apply only to active spectators
+  if (::__elSpectatorData.active) {
+
+    // Don't proceed if we can't interpolate
+    if (!::__elSpectatorData.pos[0] || !::__elSpectatorData.ang[0]) return;
+
+    // Ticks since last position update
+    local localTick = ::__elTicks - ::__elSpectatorData.lastTick;
+
+    // Fraction indicating how far along we are in linear interpolation
+    local interp = localTick.tofloat() / ::__elSpectatorData.deltaTick;
+    if (interp > 1.0) interp = 1.0;
+
+    // Account for yaw angle flipping at 180 degrees
+    if (::__elSpectatorData.ang[1].y - ::__elSpectatorData.ang[0].y > 180.0) {
+      // Current is negative, next is positive - make current positive
+      ::__elSpectatorData.ang[0].y += 360.0;
+    } else if (::__elSpectatorData.ang[0].y - ::__elSpectatorData.ang[1].y > 180.0) {
+      // Current is positive, next is negative - make current negative
+      ::__elSpectatorData.ang[0].y -= 360.0;
+    }
+
+    // Calculate interpolated coordinates
+    local pos = ::__elSpectatorData.pos[0] + (::__elSpectatorData.pos[1] - ::__elSpectatorData.pos[0]) * interp;
+    local ang = ::__elSpectatorData.ang[0] + (::__elSpectatorData.ang[1] - ::__elSpectatorData.ang[0]) * interp;
+
+    // Update the position of the designated view entity
+    ::__elSpectatorData.viewent.SetAbsOrigin(pos);
+    ::__elSpectatorData.viewent.__KeyValueFromString("angles", ang.x + " " + ang.y + " 0");
+    // Force spectator POV to use this entity with "cl_view"
+    SendToConsole("cl_view " + ::__elSpectatorData.viewent.entindex());
+
+    // Update physical player's position and angles too (for triggers, etc.)
+    local player = GetPlayer();
+    player.SetAbsOrigin(pos - Vector(0.0, 0.0, 64.0));
+    player.SetAngles(ang.x, ang.y, player.GetAngles().z);
+
+    return;
+
+  }
+
   /**
    * The events below create updates for spectators - we print the position
    * of the two portals, and the cube nearest to the player, to the console.
@@ -117,6 +158,45 @@ if (!("Entities" in this)) return;
     local ca = cube.GetAngles();
     printl("spec_goto_cube "+co.x+" "+co.y+" "+co.z+" "+ca.x+" "+ca.y+" "+ca.z);
   }
+
+};
+
+/**
+ * Manages the position and angles of the player while actively spectating.
+ *
+ * This table and function are only used when spectating other runs.
+ */
+::__elSpectatorData <- {
+  active = false,
+  viewent = null,
+  deltaTick = 0,
+  lastTick = 0,
+  pos = [null, null],
+  ang = [null, null]
+};
+::__elSpectatorPlayer <- function (pos, ang) {
+
+  // If this is the first spectator update, create a view entity
+  // This is what will be used for managing the rendered eye position
+  if (!::__elSpectatorData.active) {
+    ::__elSpectatorData.viewent = Entities.CreateByClassname("info_teleport_destination");
+  }
+  // Any activation of this update permanently enables spectator mode
+  ::__elSpectatorData.active = true;
+
+  // Store the tick at which this update was received
+  ::__elSpectatorData.deltaTick = ::__elTicks - ::__elSpectatorData.lastTick;
+  ::__elSpectatorData.lastTick = ::__elTicks;
+
+  /**
+  * Position and angle data is linearly interpolated across two
+  * consecutive ticks. We store those updates in a 2-long array,
+  * cyclically replacing the old entries.
+  */
+  ::__elSpectatorData.pos[0] = ::__elSpectatorData.pos[1];
+  ::__elSpectatorData.ang[0] = ::__elSpectatorData.ang[1];
+  ::__elSpectatorData.pos[1] = pos;
+  ::__elSpectatorData.ang[1] = ang;
 
 };
 
