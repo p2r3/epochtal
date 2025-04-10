@@ -711,10 +711,7 @@ module.exports = async function (args, context = epochtal) {
       const mapFile = dataEntry.context.data.map.file;
 
       // Remove all runs from the leaderboard
-      const lb = await leaderboard(["get", listEntry.mode], dataEntry.context);
-      for (const entry of lb) {
-        await leaderboard(["remove", listEntry.mode, entry.steamid], dataEntry.context);
-      }
+      dataEntry.context.data.leaderboard[listEntry.mode] = [];
 
       // Change the lobby state
       dataEntry.state = LOBBY_INGAME;
