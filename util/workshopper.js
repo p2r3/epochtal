@@ -277,6 +277,8 @@ async function fetchRandomMap (node = null) {
     };
     const baseQuery = `${STEAM_API}/IPublishedFileService/QueryFiles/v1/?key=${process.env.STEAM_API_KEY}&input_json=${encodeURIComponent(JSON.stringify(queryParams))}`;
     const { response } = await (await fetch(baseQuery)).json();
+    // Some queries don't return anything, reroll the current range
+    if (!("publishedfiledetails" in response)) return await fetchRandomMap(node);
     const data = response.publishedfiledetails[0];
 
     // If we've picked a deleted map, reroll the current range
@@ -289,6 +291,9 @@ async function fetchRandomMap (node = null) {
     return data;
 
   }
+
+  // If a branch node is missing its map total, assume incomplete cache
+  if (!("total" in node.left)) throw "ERR_CACHE";
 
   // Pick the left or right branch of the tree with a weighted probability
   if (Math.random() < node.left.total / node.total) {

@@ -774,6 +774,7 @@ async function lobbyInit () {
       case "ERR_MAPID": return showPopup("Invalid map", "The string you provided does not name a valid workshop or campaign map.", POPUP_ERROR);
       case "ERR_STEAMAPI": return showPopup("Missing map info", "Failed to retrieve map details. Is this the right link?", POPUP_ERROR);
       case "ERR_WEEKMAP": return showPopup("Active Epochtal map", "You may not play the currently active weekly tournament map in lobbies.", POPUP_ERROR);
+      case "ERR_CACHE": return showPopup("Incomplete cache", "The random map cache is incomplete, try again later.", POPUP_ERROR);
 
       default: return showPopup("Unknown error", "The server returned an unexpected response: " + requestData, POPUP_ERROR);
     }
