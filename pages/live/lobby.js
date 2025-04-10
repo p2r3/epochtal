@@ -1121,11 +1121,14 @@ async function lobbyInit () {
     chatInputField.focus();
   };
 
+  // Toggles displaying the "map history" window
   window.toggleMapHistoryWindow = function () {
 
+    // Query the container, check if it's visible based on its opacity
     const container = document.querySelector("#lobby-map-history-container");
     const isVisible = Number(container.style.opacity) === 1;
 
+    // If the container is visible, hide it and exit early
     if (isVisible) {
       container.style.opacity = 0;
       container.style.pointerEvents = "none";
@@ -1133,6 +1136,7 @@ async function lobbyInit () {
       return;
     }
 
+    // Generate HTML for stuffing into the list
     let output = "";
     for (const map of lobby.data.context.maps) {
       const link = `https://steamcommunity.com/sharedfiles/filedetails/?id=${map.id}`;
@@ -1141,6 +1145,7 @@ async function lobbyInit () {
     output += `<i class="fa-solid fa-xmark" id="lobby-map-history-close" onclick="toggleMapHistoryWindow()"></i>`;
     container.innerHTML = output;
 
+    // Bring up the container and enable interaction with it
     container.style.opacity = 1;
     container.style.pointerEvents = "auto";
     container.style.transform = "translateY(-50%)";
