@@ -352,8 +352,12 @@ module.exports = async function (args, context = epochtal) {
 
     case "random": {
 
-      // Return the ID of a random singleplayer map
-      return await fetchRandomMap();
+      // Return the data for a random singleplayer map
+      const output = await fetchRandomMap();
+      if (typeof output === "string") {
+        throw new UtilError(output, args, context);
+      }
+      return output;
 
     }
 
