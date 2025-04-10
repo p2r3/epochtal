@@ -170,6 +170,8 @@ module.exports = async function (args, context = epochtal) {
 
             // Reject the response if we're not in-game
             if (dataEntry.state !== LOBBY_INGAME) return;
+            // Reject the response if we're a spectator
+            if (dataEntry.spectators.includes(steamid)) return;
 
             const { time, portals } = data.value;
 

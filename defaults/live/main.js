@@ -190,6 +190,8 @@ function processConsoleOutput () {
 
     // Process map finish event
     if (line.indexOf("elFinish") === 0) {
+      // Don't process time updates from spectators
+      if (amSpectator) return;
       // Add last tick report to running tick total
       totalTicks += lastTicksReport;
       // Close the map after the run has finished
@@ -212,6 +214,8 @@ function processConsoleOutput () {
 
     // Process timer updates from VScript
     if (line.indexOf("spec_goto_tick ") === 0) {
+      // Don't process time updates from spectators
+      if (amSpectator) return;
       // Parse the fragment of the string containing the tick count
       const ticks = parseInt(line.slice(15));
       // Tick count decrease marks a load - add previous report to total
