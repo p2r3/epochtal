@@ -424,7 +424,7 @@ module.exports = async function (args, context = epochtal) {
           const authorData = await authorRequest.json();
           newMap.author = authorData.response.players[0].personaname;
         } catch {
-          throw new UtilError("ERR_STEAMID", args, context);
+          newMap.author = "unknown";
         }
 
         // Get the path to which the map is saved when subscribed to
