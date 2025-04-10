@@ -90,8 +90,8 @@ function sendToConsole (socket, command) {
 
 // Time of the currently ongoing run
 var totalTicks = 0;
-// Session time from last received report
-var lastTimeReport = 0;
+// Last tick count reported by the VScript
+var lastTicksReport = 0;
 // Expected session time report:
 // 0 - none, 1 - load start, 2 - load end, 3 - run end
 var expectReport = 0;
@@ -188,88 +188,36 @@ function processConsoleOutput () {
     // The events below this only apply to connected clients
     if (!webSocket) return;
 
-    // Process start of map load event
-    if (line.indexOf("---- Host_") === 0) {
-      // Request total session time for load start
-      sendToConsole(gameSocket, "display_elapsedtime");
-      expectReport = 1;
-
-      return;
-    }
-
-    // Process end of map load event
-    if (line.indexOf("Redownloading all lightmaps") === 0) {
-      // Request total session time for load end
-      sendToConsole(gameSocket, "display_elapsedtime");
-      expectReport = 2;
-
-      return;
-    }
-
     // Process map finish event
     if (line.indexOf("elFinish") === 0) {
-      // Request total session time for map finish
-      sendToConsole(gameSocket, "display_elapsedtime");
-      expectReport = 3;
-
-      return;
+      // Add last tick report to running tick total
+      totalTicks += lastTicksReport;
+      // Close the map after the run has finished
+      sendToConsole(gameSocket, "disconnect");
+      sendToConsole(gameSocket, "echo;echo Round finished.");
+      sendToConsole(gameSocket, "echo \"Final time: " + (totalTicks / 30).toFixed(3) + " seconds.\";echo");
+      // Clear current map to indicate that we're not in a run anymore
+      lastRunMap = runMap;
+      runMap = null;
+      // Send the finishRun event
+      const success = ws.send(webSocket, '{"type":"finishRun","value":{"time":'+ (totalTicks * 2) +',"portals":0}}');
+      // Disconnect from socket on failure
+      if (!success) {
+        sendToConsole(gameSocket, "echo Failed to send finishRun event.");
+        sendToConsole(gameSocket, "echo Please reconnect to the lobby with a new token.");
+        ws.disconnect(webSocket);
+        webSocket = null;
+      }
     }
 
-    // Process map transition event
-    if (runMap && line.indexOf("DEFAULT_WRITE_PATH") !== -1 && line.indexOf(runMap.split("/").pop()) === -1) {
-      // Notice that we don't actually request a new time report
-      // Instead, we tell it to treat the last one (start of map load) as a map finish event
-      expectReport = 3;
-
-      return;
-    }
-
-    // Process total session time report
-    if (line.indexOf("Elapsed time: ") === 0) {
-
-      // If not expecting a time report, do nothing
-      if (!expectReport) return;
-
-      // Parse time from command output
-      const seconds = parseFloat(line.slice(14));
-      const ticks = Math.round(seconds * 60);
-
-      // If this is the end of a segment, add time since last report to total run time
-      if (expectReport !== 2 && lastTimeReport !== 0) {
-        totalTicks += ticks - lastTimeReport;
-      }
-
-      // Handle the end of a run
-      if (expectReport === 3 && runMap) {
-        // Close the map after the run has finished
-        sendToConsole(gameSocket, "disconnect");
-        sendToConsole(gameSocket, "echo;echo Round finished.");
-        sendToConsole(gameSocket, "echo \"Final time: " + (totalTicks / 60).toFixed(3) + " seconds.\";echo");
-        // Clear current map to indicate that we're not in a run anymore
-        lastRunMap = runMap;
-        runMap = null;
-        // Send the finishRun event
-        const success = ws.send(webSocket, '{"type":"finishRun","value":{"time":'+ totalTicks +',"portals":0}}');
-        // Disconnect from socket on failure
-        if (!success) {
-          sendToConsole(gameSocket, "echo Failed to send finishRun event.");
-          sendToConsole(gameSocket, "echo Please reconnect to the lobby with a new token.");
-          ws.disconnect(webSocket);
-          webSocket = null;
-        }
-      }
-
-      /**
-       * Finally, store the time of this report for future reference.
-       *
-       * Since these reports start counting from engine startup, we need a
-       * way to convert that to relative time. Even though the start of a
-       * map load doesn't have any special handling above, it's still
-       * important to store it so that we're not adding loading times into
-       * the final submission.
-       */
-      lastTimeReport = ticks;
-      return;
+    // Process timer updates from VScript
+    if (line.indexOf("spec_goto_tick ") === 0) {
+      // Parse the fragment of the string containing the tick count
+      const ticks = parseInt(line.slice(15));
+      // Tick count decrease marks a load - add previous report to total
+      if (ticks < lastTicksReport) totalTicks += lastTicksReport;
+      // Update previous report
+      lastTicksReport = ticks;
     }
 
     // Send spectator position output to server for spectators
@@ -397,8 +345,7 @@ function processServerEvent (data) {
       runMap = data.map;
       // Reset run timer
       totalTicks = 0;
-      // Clear last known session time
-      lastTimeReport = 0;
+      lastTicksReport = 0;
       // Start the requested map
       sendToConsole(gameSocket, "disconnect;map " + runMap);
 
