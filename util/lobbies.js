@@ -414,7 +414,7 @@ module.exports = async function (args, context = epochtal) {
         else details = await workshopper(["get", mapid, true]);
 
         newMap = {
-          id: mapid,
+          id: details.publishedfileid,
           title: details.title,
           thumbnail: details.preview_url,
           link: details.file_url
