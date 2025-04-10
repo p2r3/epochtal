@@ -163,8 +163,17 @@ if (!("Entities" in this)) return;
 
 /**
  * Manages the position and angles of the player while actively spectating.
- *
  * This table and function are only used when spectating other runs.
+ *
+ * The position and angle updates reported by spectators are expected to
+ * have inconsistent gaps, which is why we choose to linearly interpolate
+ * to achieve smoother playback. The actual interpolation code runs in
+ * ::__elTick across two consecutive samples - the time between these samples
+ * is used to create a linear slope for the position and angle vectors.
+ *
+ * This technically isn't ideal, as the time gap until the next update
+ * won't ever be consistent, but that's the nature of working with network
+ * latency - we can't predict latency in the future.
  */
 ::__elSpectatorData <- {
   active = false,
