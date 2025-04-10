@@ -292,7 +292,8 @@ const __EL_BENDY_MODEL = "models/info_character/info_character_bendy.mdl";
   }
 
   // If a falsy position was provided, hide this Bendy
-  if (!pos) bendy.DisableDraw();
+  if (!pos) return bendy.DisableDraw();
+  else bendy.EnableDraw();
 
   // Adjust for offset between player eyes and Bendy origin
   pos.z -= 64.0;
