@@ -43,9 +43,9 @@ body {
   display: block !important;
   position: fixed;
   margin: 0 !important;
-  width: 35%;
+  width: 30%;
   left: 50%;
-  top: 20%;
+  bottom: 5%;
   transform: translateX(-50%);
 }
 #lobby-settings-map * {
@@ -65,14 +65,17 @@ body {
 #lobby-force-button {
   display: none !important;
 }
+#lobby-map-history-button {
+  display: none !important;
+}
 
 #lobby-chat-container {
   left: unset;
   right: 2vw;
+  height: 15%;
 }
 #lobby-spectate-button {
-  left: unset;
-  right: 34vw;
+  display: none;
 }
 
 header {
