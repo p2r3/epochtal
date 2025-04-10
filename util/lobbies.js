@@ -437,7 +437,7 @@ module.exports = async function (args, context = epochtal) {
       dataEntry.context.data.maps.push(newMap);
 
       // Force all player ready states to false
-      for (const player in dataEntry.players) player.ready = false;
+      for (const player in dataEntry.players) dataEntry.players[player].ready = false;
       // Brodcast map change to clients
       await events(["send", eventName, { type: "lobby_map", newMap }], context);
 
