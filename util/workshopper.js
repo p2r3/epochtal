@@ -293,7 +293,7 @@ async function fetchRandomMap (node = null) {
   }
 
   // If a branch node is missing its map total, assume incomplete cache
-  if (!("total" in node.left)) throw "ERR_CACHE";
+  if (!("total" in node.left)) return "ERR_CACHE";
 
   // Pick the left or right branch of the tree with a weighted probability
   if (Math.random() < node.left.total / node.total) {
