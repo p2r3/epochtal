@@ -269,6 +269,7 @@ async function fetchRandomMap (node = null) {
       excludedtags: ["Cooperative"],
       numperpage: 1,
       page: Math.floor(Math.random() * node.total) + 1,
+      return_details: true,
       date_range_created: {
         timestamp_start: node.start,
         timestamp_end: node.end
@@ -280,6 +281,10 @@ async function fetchRandomMap (node = null) {
 
     // If we've picked a deleted map, reroll the current range
     if (data.result !== 1) return await fetchRandomMap(node);
+
+    // Some maps can't be downloaded, reroll the full range
+    const fileFetch = await fetch(data.file_url);
+    if (fileFetch.status !== 200) return await fetchRandomMap(null);
 
     return data.publishedfileid;
 
