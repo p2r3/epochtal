@@ -387,8 +387,14 @@ function processServerEvent (data) {
         spectatorData.targets.push(data.steamid);
       }
 
-      // Skip packets of players who we're not actively spectating
-      if (data.steamid !== spectatorData.targets[spectatorData.target]) return;
+      // Use Bendies for players who we're not actively spectating
+      if (data.steamid !== spectatorData.targets[spectatorData.target]) {
+        sendToConsole(gameSocket, "script ::__elSpectatorBendy(Vector("+ data.pos.join(", ") +"), "+ data.ang[1] +", \""+ data.steamid +"\")");
+        return;
+      } else {
+        // Hide the Bendy of the player we're actively spectating
+        sendToConsole(gameSocket, "script ::__elSpectatorBendy(null, null, \""+ data.steamid +"\")");
+      }
 
       // Force the player into noclip on each position update
       sendToConsole(gameSocket, "noclip 1");

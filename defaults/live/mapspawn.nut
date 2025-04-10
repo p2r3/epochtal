@@ -128,6 +128,7 @@ if (!("Entities" in this)) return;
  * angle vectors for simulating the spectated player's nearest cube.
  */
 ::__elSpectatorCube <- function (pos, ang) {
+
   // Find the named prop acting as the spectator's cube
   local cube = Entities.FindByName(null, "__elSpectatorCube");
   // If one could not be found, attempt to create it
@@ -140,13 +141,16 @@ if (!("Entities" in this)) return;
     }
     return;
   }
+
   // Don't render any other cubes on the map
   EntFire("prop_weighted_cube", "DisableDraw");
   EntFire("prop_monster_box", "DisableDraw");
+
   // Set the cube's position and angles
   // These specific methods are used because they enable interpolation
   cube.SetAbsOrigin(pos);
   cube.__KeyValueFromString("angles", ang.x + " " + ang.y + " " + ang.z);
+
   // Find the closest cube to this one and use its model
   local nearest = Entities.FindByClassnameNearest("prop_weighted_cube", pos, 1024.0);
   local monster = Entities.FindByClassnameNearest("prop_monster_box", pos, 1024.0);
@@ -159,6 +163,56 @@ if (!("Entities" in this)) return;
   if (nearest && nearest.IsValid()) {
     cube.SetModel(nearest.GetModelName());
   }
+
+};
+
+/**
+ * Manages the positions of Bendies for representing spectated players.
+ *
+ * This function only gets executed when spectating other runs. It first
+ * ensures that the Bendy model is precached using "prop_dynamic_create",
+ * and from there creates several unsimulated props with the same model.
+ *
+ * Their positions and angles are updated based on the "id" parameter,
+ * which is typically provided as the SteamID string of the player.
+ */
+const __EL_BENDY_MODEL = "models/info_character/info_character_bendy.mdl";
+::__elSpectatorBendy <- function (pos, yaw, id) {
+
+  // If no existing Bendy model found, precache it and exit
+  if (!Entities.FindByModel(null, __EL_BENDY_MODEL)) {
+    SendToConsole("prop_dynamic_create " + __EL_BENDY_MODEL.slice(7));
+    return;
+  }
+
+  // All managed Bendies are "prop_physics" - don't draw any that aren't
+  local dummy = null;
+  while (dummy = Entities.FindByModel(dummy, __EL_BENDY_MODEL)) {
+    if (!dummy.IsValid()) continue;
+    if (dummy.GetClassname() != "prop_physics") EntFireByHandle(dummy, "DisableDraw", "", 0.0, null, null);
+  }
+
+  // Try to find the referenced Bendy, or create it if one doesn't exist
+  local bendy = Entities.FindByName(null, "__elBendy_" + id);
+  if (!bendy) {
+    if (!pos) return;
+    bendy = CreateProp("prop_physics", pos, __EL_BENDY_MODEL, 0);
+    bendy.__KeyValueFromString("Targetname", "__elBendy_" + id);
+    bendy.SetAngles(0, yaw + 90.0, 0);
+    return;
+  }
+
+  // If a falsy position was provided, hide this Bendy
+  if (!pos) bendy.DisableDraw();
+
+  // Adjust for offset between player eyes and Bendy origin
+  pos.z -= 64.0;
+
+  // Update the Bendy's position and angles
+  // These specific methods are used because they enable interpolation
+  bendy.SetAbsOrigin(pos);
+  bendy.__KeyValueFromString("angles", "0 " + (yaw + 90.0) + " 0");
+
 };
 
 // Run the entrypoint function as soon as entity I/O kicks in
