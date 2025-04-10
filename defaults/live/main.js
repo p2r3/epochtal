@@ -388,6 +388,8 @@ function processServerEvent (data) {
 
       // Force the player into noclip on each position update
       sendToConsole(gameSocket, "noclip 1");
+      // Force spectators to be faded in on each position update
+      sendToConsole(gameSocket, "fadein 0");
       // Show currently spectated player's name on-screen
       sendToConsole(gameSocket, "script ScriptShowHudMessageAll(\"\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n"+ data.name +"\", 1.0)");
       // Try to enable god mode until we've confirmed that it's on
