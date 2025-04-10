@@ -1136,7 +1136,7 @@ async function lobbyInit () {
     let output = "";
     for (const map of lobby.data.context.maps) {
       const link = `https://steamcommunity.com/sharedfiles/filedetails/?id=${map.id}`;
-      output += `<p><b><a href="${link}" target="_blank">${map.title}</a></b> by <b>${map.author}</b></p>`;
+      output += `<p>•&nbsp;&nbsp;<b><a href="${link}" target="_blank">${map.title}</a></b> by <b>${map.author}</b></p>`;
     }
     output += `<i class="fa-solid fa-xmark" id="lobby-map-history-close" onclick="toggleMapHistoryWindow()"></i>`;
     container.innerHTML = output;

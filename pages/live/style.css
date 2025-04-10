@@ -157,13 +157,13 @@
   left: 30%;
   width: 40%;
   top: 50%;
-  padding: 15px;
+  padding: 15px 30px;
   box-sizing: border-box;
   background-color: rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(10px);
   border: 2px solid white;
   border-radius: 10px;
-  text-align: center;
+  font-weight: 300;
   pointer-events: none;
   transform: translateY(calc(-50% + 10vh));
   opacity: 0;
