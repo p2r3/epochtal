@@ -1037,8 +1037,8 @@ async function lobbyInit () {
     if (amSpectator) {
       document.head.innerHTML = document.head.innerHTML.replace(`<link rel="stylesheet" href="/live/spectate.css">`, "");
       spectateButton.innerHTML = "Spectate";
-      return await fetch(`/api/lobbies/spectate/${lobbyid}/false`);
       if (readyState) fetch(`/api/lobbies/ready/${lobbyid}/false`);
+      return await fetch(`/api/lobbies/spectate/${lobbyid}/false`);
     } else {
       if (!readyState) fetch(`/api/lobbies/ready/${lobbyid}/true`);
       if (applyStylesheet) document.head.innerHTML += `<link rel="stylesheet" href="/live/spectate.css">`;
