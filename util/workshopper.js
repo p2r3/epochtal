@@ -286,7 +286,7 @@ async function fetchRandomMap (node = null) {
     const fileFetch = await fetch(data.file_url);
     if (fileFetch.status !== 200) return await fetchRandomMap(null);
 
-    return data.publishedfileid;
+    return data;
 
   }
 

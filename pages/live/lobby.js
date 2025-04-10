@@ -448,7 +448,7 @@ async function lobbyEventHandler (event) {
       // Switch to the next map in the local queue
       if (amHost) {
         if (doRandomMaps) {
-          requestLobbyMapChange(await (await fetch("/api/workshopper/random")).json());
+          requestLobbyMapChange("random");
           updateLobbyMap();
         } else if (localMapQueue.length > 0) {
           requestLobbyMapChange(localMapQueue.shift());
@@ -805,7 +805,7 @@ async function lobbyInit () {
       // If user entered "random", activate list of random maps
       if (inputs[0].value.trim().toLowerCase() === "random") {
         doRandomMaps = true;
-        requestLobbyMapChange(await (await fetch("/api/workshopper/random")).json());
+        requestLobbyMapChange("random");
         updateLobbyMap();
         return;
       } else {

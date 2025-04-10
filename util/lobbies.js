@@ -409,7 +409,9 @@ module.exports = async function (args, context = epochtal) {
       } else {
 
         // We forge the map entry from a raw workshop request to extract only what we need
-        const details = await workshopper(["get", mapid, true]);
+        let details;
+        if (mapid === "random") details = await workshopper(["random"]);
+        else details = await workshopper(["get", mapid, true]);
 
         newMap = {
           id: mapid,
