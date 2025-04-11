@@ -152,7 +152,8 @@ async function curateWorkshop (maps = []) {
 
 // Contains a tree structure for buckets of random maps
 const randomMapCache = {
-  created: 0
+  created: 0,
+  map: null
 };
 
 /**
@@ -352,7 +353,24 @@ module.exports = async function (args, context = epochtal) {
 
     case "random": {
 
-      // Return the data for a random singleplayer map
+      // Save the precached query result and clear it
+      const cachedMap = randomMapCache.map;
+      const cacheAge = Date.now() - randomMapCache.created;
+      randomMapCache.map = null;
+
+      // Cache a result for the next query
+      fetchRandomMap().then(result => {
+        // Leave cache blank in case of an error
+        if (typeof result === "string") return;
+        randomMapCache.map = result;
+      }).catch(e => {});
+
+      // Return the previously cached result if it is valid
+      if (cachedMap && cacheAge < 86400000) {
+        return cachedMap;
+      }
+
+      // Otherwise, perform the query on the spot
       const output = await fetchRandomMap();
       if (typeof output === "string") {
         throw new UtilError(output, args, context);
