@@ -46,6 +46,7 @@ if (!("Entities" in this)) return;
   SendToConsole("save autosave");
   // Connect outputs to run finish events
   EntFire("@relay_pti_level_end", "AddOutput", "OnTrigger !self:RunScriptCode:__elFinish():0:1");
+  EntFire("@changelevel", "AddOutput", "OnChangeLevel !self:RunScriptCode:__elFinish():0:1");
 };
 
 // Called after the map has finished loading, on every load
