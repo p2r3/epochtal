@@ -191,7 +191,7 @@ if (!("Entities" in this)) return;
   // If this is the first spectator update, create a view entity
   // This is what will be used for managing the rendered eye position
   if (!::__elSpectatorData.active) {
-    ::__elSpectatorData.viewent = Entities.CreateByClassname("info_teleport_destination");
+    ::__elSpectatorData.viewent = Entities.CreateByClassname("info_placement_helper");
   }
   // Any activation of this update permanently enables spectator mode
   ::__elSpectatorData.active = true;
