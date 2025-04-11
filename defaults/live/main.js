@@ -296,6 +296,15 @@ function processServerEvent (data) {
       return;
     }
 
+    // Handle spare (backup) tokens
+    case "token": {
+
+      // Store the token for use in a disconnect event
+      webSocketSpareToken = data.value;
+
+      return;
+    }
+
     // Handle request to download a workshop map
     case "getMap": {
 
@@ -413,6 +422,7 @@ function processServerEvent (data) {
 // Keep track of WebSocket parameters
 var webSocket = null;
 var webSocketToken = null;
+var webSocketSpareToken = null;
 
 /**
  * Processes communication with the WebSocket
@@ -493,6 +503,8 @@ function processWebSocket () {
       sleep(1000);
       webSocket = ws.connect(WS_ADDRESS + "/api/events/connect");
     }
+    sendToConsole(gameSocket, "echo Connection established, authenticating...");
+    ws.send(webSocket, webSocketSpareToken);
   }
 
 }

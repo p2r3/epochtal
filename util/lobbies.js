@@ -151,10 +151,30 @@ module.exports = async function (args, context = epochtal) {
           // Distinguishes browser clients from game clients
           // Game clients are expected to send this right after authenticating
           case "isGame": {
+
             // Link the socket to the player data
             dataEntry.players[steamid].gameSocket = ws;
+
             // Broadcast game client join to all lobby clients
             await events(["send", eventName, { type: "lobby_join_game", steamid }], context);
+
+            // Send the game client a new token regularly (every 20s)
+            // This allows them to reconnect in case of connection instability
+            if (dataEntry.players[steamid].tokenHeartbeat) {
+              clearInterval(dataEntry.players[steamid].tokenHeartbeat);
+            }
+            dataEntry.players[steamid].tokenHeartbeat = setInterval(async function () {
+              // Stop the interval if the client has disconnected
+              if (!dataEntry.players[steamid].gameSocket) {
+                return clearInterval(dataEntry.players[steamid].tokenHeartbeat);
+              }
+              // Generate a new token and attach it to the event
+              const token = Bun.hash(eventName).toString(36) + Math.random().toString(36).substring(2) + Date.now().toString(36);
+              await events(["addtoken", eventName, token, steamid]);
+              // Send the token to the game client
+              dataEntry.players[steamid].gameSocket.send(JSON.stringify({ type: "token", value: token }));
+            }, 20000);
+
             return;
           }
 
