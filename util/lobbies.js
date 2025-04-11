@@ -168,11 +168,16 @@ module.exports = async function (args, context = epochtal) {
               if (!dataEntry.players[steamid].gameSocket) {
                 return clearInterval(dataEntry.players[steamid].tokenHeartbeat);
               }
-              // Generate a new token and attach it to the event
-              const token = Bun.hash(eventName).toString(36) + Math.random().toString(36).substring(2) + Date.now().toString(36);
-              await events(["addtoken", eventName, token, steamid]);
-              // Send the token to the game client
-              dataEntry.players[steamid].gameSocket.send(JSON.stringify({ type: "token", value: token }));
+              try {
+                // Generate a new token and attach it to the event
+                const token = Bun.hash(eventName).toString(36) + Math.random().toString(36).substring(2) + Date.now().toString(36);
+                await events(["addtoken", eventName, token, steamid]);
+                // Send the token to the game client
+                dataEntry.players[steamid].gameSocket.send(JSON.stringify({ type: "token", value: token }));
+              } catch {
+                // If something goes wrong, stop sending tokens
+                return clearInterval(dataEntry.players[steamid].tokenHeartbeat);
+              }
             }, 20000);
 
             return;
