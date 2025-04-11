@@ -179,6 +179,13 @@ function processConsoleOutput () {
     // The events below this only apply to connected clients
     if (!webSocket) return;
 
+    // Process map start event - reset timer
+    if (line.indexOf("elStart") !== -1) {
+      totalTicks = 0;
+      lastTicksReport = 0;
+      return;
+    };
+
     // Process map finish event
     if (line.indexOf("elFinish") === 0) {
       // Don't process time updates from spectators

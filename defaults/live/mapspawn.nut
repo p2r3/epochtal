@@ -41,6 +41,8 @@ if (!("Entities" in this)) return;
 
 // Called only once on the initial map load
 ::__elSetup <- function () {
+  // Print run start signature
+  printl("elStart");
   // Make some saves to prevent accidentally loading into a different map
   SendToConsole("save quick");
   SendToConsole("save autosave");
