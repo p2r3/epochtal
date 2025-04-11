@@ -247,6 +247,8 @@ function processConsoleOutput () {
       if (spectatorData.target >= spectatorData.targets.length) {
         spectatorData.target = 0;
       }
+      // Close previous player's portals
+      sendToConsole("ent_fire prop_portal SetActivatedState 0");
 
       return;
     }
@@ -413,8 +415,8 @@ function processServerEvent (data) {
       }
 
       // Portals are managed using the portal_place command
-      sendToConsole(gameSocket, "portal_place 0 0 " + data.portals[0]);
-      sendToConsole(gameSocket, "portal_place 0 1 " + data.portals[1]);
+      if (data.portals[0].slice(0, 17) !== "0.000 0.000 0.000") sendToConsole(gameSocket, "portal_place 0 0 " + data.portals[0]);
+      if (data.portals[1].slice(0, 17) !== "0.000 0.000 0.000") sendToConsole(gameSocket, "portal_place 0 1 " + data.portals[1]);
 
       // Cubes are managed using a non-solid prop created with VScript
       sendToConsole(gameSocket, "script ::__elSpectatorCube(Vector("+ data.cube.pos.join(", ") +"), Vector("+ data.cube.ang.join(", ") +"))");
