@@ -34,6 +34,7 @@ if (!("Entities" in this)) return;
     EntFireByHandle(Entities.First(), "RunScriptCode", "::__elFirstInit()", FrameTime(), null, null);
     return;
   } else {
+    ::__elTicks <- 0;
     ::__elSetup();
     ::__elLoad();
   }
@@ -53,20 +54,27 @@ if (!("Entities" in this)) return;
 
 // Called after the map has finished loading, on every load
 ::__elLoad <- function () {
+  // Store the server time for the start of the current session
+  // This is later used as an offset to calculate time since last load
+  ::__elSessionOffset <- Time() * 30.0;
   // Start (or resume) elTick recursion
-  // The tick counter is reset to 0 to cleanly separate different sessions
-  ::__elTicks <- 0;
   ::__elTick();
+};
+
+// Returns the time in ticks since the last load
+::__elGetSessionTicks <- function () {
+  return (Time() * 30.0 - ::__elSessionOffset).tointeger();
 };
 
 // Called when the map end condition is reached
 ::__elFinish <- function () {
-  // Print run end signature, which is then detected by main.js
-  printl("elFinish");
+  // Print run end signature followed by the session time in ticks
+  // This is later detected by main.js and used for submitting the run
+  printl("elFinish " + ::__elGetSessionTicks());
 };
 
 /**
- * This function is called on every console tick, i.e. 30 times per second.
+ * This function is called on every console tick, i.e. ~30 times per second.
  *
  * We achieve this by recursively running the `script` console command to
  * delay the next execution of the function into the next console tick.
@@ -74,10 +82,21 @@ if (!("Entities" in this)) return;
  */
 ::__elTick <- function () {
 
-  // Increment the tick timer and print it with a signature
-  // This is monitored in main.js to sum up times of different sessions
+  // If we're paused (engine frame time is zero), decrement session offset
+  // This effectively times paused ticks, albeit not entirely accurately
+  if (FrameTime() == 0.0) ::__elSessionOffset --;
+
+  // Print the current session time (the time since the last load)
+  // This is monitored in main.js to sum up times of different segments
+  printl("spec_goto_tick " + ::__elGetSessionTicks());
+
+  /**
+   * Increment the total tick timer. This is NOT an accurate 30 TPS tick
+   * counter, and therefore should not be used for timing runs. It simply
+   * counts the amount of __elTick iterations, which makes it safe to use
+   * for things like spectator interpolation.
+   */
   ::__elTicks ++;
-  printl("spec_goto_tick " + __elTicks);
 
   // Schedule this function for the next console tick
   SendToConsole("script ::__elTick()");

@@ -187,11 +187,11 @@ function processConsoleOutput () {
     };
 
     // Process map finish event
-    if (line.indexOf("elFinish") === 0) {
+    if (line.indexOf("elFinish ") === 0) {
       // Don't process time updates from spectators
       if (amSpectator) return;
-      // Add last tick report to running tick total
-      totalTicks += lastTicksReport;
+      // Add run finish tick report to running tick total
+      totalTicks += parseInt(line.slice(9));
       // Close the map after the run has finished
       sendToConsole(gameSocket, "disconnect");
       sendToConsole(gameSocket, "echo;echo Round finished.");
