@@ -25,14 +25,14 @@ function createLobbyContext (name) {
       map: null,
       maps: [],
       leaderboard: {
-        ffa: []
+        lobby: []
       },
       week: {
         date: Date.now(),
         categories: [
           {
-            name: "ffa",
-            title: "Free For All",
+            name: "lobby",
+            title: "Lobby Leaderboard",
             portals: false
           }
         ]
@@ -246,7 +246,7 @@ module.exports = async function (args, context = epochtal) {
             const { time, portals } = data.value;
 
             // Submit this run to the lobby leaderboard
-            await leaderboard(["add", listEntry.mode, steamid, time, "", portals], dataEntry.context);
+            await leaderboard(["add", "lobby", steamid, time, "", portals], dataEntry.context);
             // Broadcast submission to all lobby clients
             await events(["send", eventName, { type: "lobby_submit", value: { time, portals, steamid } }], context);
             // Change the client's ready state to false
@@ -817,7 +817,7 @@ module.exports = async function (args, context = epochtal) {
       const mapFile = dataEntry.context.data.map.file;
 
       // Remove all runs from the leaderboard
-      dataEntry.context.data.leaderboard[listEntry.mode] = [];
+      dataEntry.context.data.leaderboard["lobby"] = [];
 
       // Change the lobby state
       dataEntry.state = LOBBY_INGAME;

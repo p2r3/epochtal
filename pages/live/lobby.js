@@ -23,7 +23,7 @@ async function updatePlayerList () {
   let output = "";
 
   // Get the leaderboard for this lobby mode
-  const leaderboard = lobby.data.context.leaderboard[lobby.listEntry.mode];
+  const leaderboard = lobby.data.context.leaderboard["lobby"];
   // Check if we are the host
   amHost = lobby.data.host === whoami.steamid;
   // Check if we are a spectator
@@ -414,7 +414,7 @@ async function lobbyEventHandler (event) {
 
       // Handle new run submission
       const run = data.value;
-      const leaderboard = lobby.data.context.leaderboard[lobby.listEntry.mode];
+      const leaderboard = lobby.data.context.leaderboard["lobby"];
 
       const index = leaderboard.findIndex(c => c.steamid === run.steamid);
       if (index !== -1) leaderboard.splice(index, 1);
@@ -450,7 +450,7 @@ async function lobbyEventHandler (event) {
       lobby.data.state = LOBBY_INGAME;
 
       // Clear previous run times from player list
-      lobby.data.context.leaderboard[lobby.listEntry.mode] = [];
+      lobby.data.context.leaderboard["lobby"] = [];
       updatePlayerList();
 
       displayChatMessage(`The round is starting. Good luck!`);
