@@ -43,6 +43,7 @@ async function checkUserPerms (request, lobbyid, checkHost = false) {
  * - `password`: Set a lobby's password.
  * - `maxplayers`: Set the maximum player count of the lobby
  * - `map`: Set the active lobby map
+ * - `mode`: Set the lobby mode
  * - `ready`: Set the player's ready state
  * - `host`: Transfer the host role to the specified player
  * - `kick`: Remove the specified player from the lobby
@@ -205,6 +206,19 @@ module.exports = async function (args, request) {
 
       // Set the specified lobby's map
       return lobbies(["map", lobbyid, mapid]);
+
+    }
+
+    case "mode": {
+
+      const newMode = args[2];
+
+      // Check if the player is the host of this lobby
+      const permsCheck = await checkUserPerms(request, lobbyid, true);
+      if (typeof permsCheck === "string") return permsCheck;
+
+      // Change the mode of the specified lobby
+      return lobbies(["mode", lobbyid, newMode]);
 
     }
 

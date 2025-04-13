@@ -4,7 +4,12 @@ var lobbySocket = null, lobbySocketDisconnected = false;
 var readyState = false;
 var amHost = false, amSpectator = false;
 var localMapQueue = [];
-var doRandomMaps = false;
+
+const lobbyModeStrings = {
+  "ffa": "Free For All",
+  "random": "Random Workshop Maps",
+  "battle_royale": "Battle Royale"
+};
 
 const [LOBBY_IDLE, LOBBY_INGAME] = [0, 1];
 
@@ -174,7 +179,8 @@ function updateLobbyHost () {
   const grayedButtons = [
     document.querySelector("#lobby-name-button"),
     document.querySelector("#lobby-password-button"),
-    document.querySelector("#lobby-maxplayers-button")
+    document.querySelector("#lobby-maxplayers-button"),
+    document.querySelector("#lobby-mode-button")
   ];
   const hiddenButtons = [
     document.querySelector("#lobby-map-button"),
@@ -373,6 +379,21 @@ async function lobbyEventHandler (event) {
       return;
     }
 
+    case "lobby_mode": {
+
+      // Update lobby mode
+      lobby.listEntry.mode = data.newMode;
+
+      // Change the lobby mode text
+      const modeString = lobbyModeStrings[lobby.listEntry.mode];
+      const lobbyModeText = document.querySelector("#lobby-mode");
+      lobbyModeText.innerHTML = "&nbsp;- " + modeString;
+
+      displayChatMessage(`Lobby mode changed to "${modeString}".`);
+
+      return;
+    }
+
     case "lobby_ready": {
 
       // Update the ready state of the given player
@@ -446,14 +467,9 @@ async function lobbyEventHandler (event) {
 
       // Handle game finishing
       // Switch to the next map in the local queue
-      if (amHost) {
-        if (doRandomMaps) {
-          requestLobbyMapChange("random");
-          updateLobbyMap();
-        } else if (localMapQueue.length > 0) {
-          requestLobbyMapChange(localMapQueue.shift());
-          updateLobbyMap();
-        }
+      if (amHost && localMapQueue.length > 0) {
+        requestLobbyMapChange(localMapQueue.shift());
+        updateLobbyMap();
       }
 
       // Update local lobby state
@@ -550,14 +566,8 @@ async function lobbyInit () {
   const lobbyPlayerCountText = document.querySelector("#lobby-playercount");
 
   // Display the lobby name and mode
-  let modeString;
-  switch (lobby.listEntry.mode) {
-    case "ffa": modeString = "Free For All"; break;
-    default: modeString = "Unknown"; break;
-  }
-
   lobbyNameText.textContent = lobby.listEntry.name;
-  lobbyModeText.innerHTML = "&nbsp;- " + modeString;
+  lobbyModeText.innerHTML = "&nbsp;- " + lobbyModeStrings[lobby.listEntry.mode];
   if (lobby.data.maxplayers !== null) {
     lobbyPlayerCountText.textContent = `(${lobby.listEntry.players.length - lobby.data.spectators.length} / ${lobby.data.maxplayers})`;
   } else {
@@ -747,6 +757,57 @@ async function lobbyInit () {
 
   }
 
+    // Handle the lobby change mode button
+  window.changeLobbyMode = function () {
+
+    // Exit early if we don't have host permissions
+    if (!amHost) return;
+
+    let lobbyModes = "";
+    for (const mode in lobbyModeStrings) {
+      lobbyModes += `<option value="${mode}" ${mode === lobby.listEntry.mode ? 'selected=""' : ""}>${lobbyModeStrings[mode]}</option>`;
+    }
+
+    // Display a popup to change the lobby mode
+    showPopup("Change Mode", `
+      Select the new lobby mode<br>
+      <select id="new-lobby-mode" style="margin-top:5px">
+        ${lobbyModes}
+      </select>
+    `, POPUP_INFO, true);
+
+    popupOnOkay = async function () {
+
+      hidePopup();
+
+      const newMode = encodeURIComponent(document.querySelector("#new-lobby-mode").value);
+
+      // Fetch the api to change the lobby mode
+      const request = await fetch(`/api/lobbies/mode/${lobbyid}/${newMode}`);
+      let requestData;
+      try {
+        requestData = await request.json();
+      } catch (e) {
+        return showPopup("Unknown error", "The server returned an unexpected response. Error code: " + request.status, POPUP_ERROR);
+      }
+
+      switch (requestData) {
+        case "SUCCESS":
+          showPopup("Success", "The lobby mode has been successfully updated.");
+          return;
+
+        case "ERR_LOGIN": return showPopup("Not logged in", "Please log in via Steam before editing lobby details.", POPUP_ERROR);
+        case "ERR_STEAMID": return showPopup("Unrecognized user", "Your SteamID is not present in the users database. WTF?", POPUP_ERROR);
+        case "ERR_LOBBYID": return showPopup("Lobby not found", "An open lobby with this ID does not exist.", POPUP_ERROR);
+        case "ERR_PERMS": return showPopup("Permission denied", "You do not have permission to perform this action.", POPUP_ERROR);
+
+        default: return showPopup("Unknown error", "The server returned an unexpected response: " + requestData, POPUP_ERROR);
+      }
+
+    };
+
+  };
+
   // Requests a map change from API with the given workshop link
   window.requestLobbyMapChange = async function (link) {
 
@@ -785,7 +846,7 @@ async function lobbyInit () {
   window.selectLobbyMap = function () {
 
     // Prompt for a workshop map link
-    showPopup("Select a map", `<p>Enter a workshop link, or a map name from the single-player campaign, or enter "random" for an endless queue of random workshop maps.</p>
+    showPopup("Select a map", `<p>Enter a workshop link, or a map name from the single-player campaign, or enter "random" for a truly random workshop map.</p>
       <div id="lobby-settings-map-list">
         <input type="text" placeholder="Workshop Link" class="lobby-settings-map-input"></input>
         <i class="fa-solid fa-plus" onmouseover="showTooltip('Add another map to queue')" onmouseleave="hideTooltip()" onclick="addMapInput()" style="cursor:pointer"></i></a>
@@ -802,16 +863,6 @@ async function lobbyInit () {
 
       // Get all link input fields
       const inputs = document.querySelectorAll(".lobby-settings-map-input");
-
-      // If user entered "random", activate list of random maps
-      if (inputs[0].value.trim().toLowerCase() === "random") {
-        doRandomMaps = true;
-        requestLobbyMapChange("random");
-        updateLobbyMap();
-        return;
-      } else {
-        doRandomMaps = false;
-      }
 
       // Update the current map to the first input
       requestLobbyMapChange(inputs[0].value);

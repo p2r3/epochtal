@@ -43,6 +43,50 @@ function createLobbyContext (name) {
 }
 
 /**
+ * Handles the lobby state changing by firing events based on the lobby
+ * mode, effectively implementing different gamemodes.
+ *
+ * @param {string} id The lobby's unique ID string
+ * @param {object} context The Epochtal context in which the lobby resides
+ * @param {boolean} init Whether we're just initializing a mew lobby mode
+ */
+async function handleStateChange (id, context, init = false) {
+
+  const listEntry = context.data.lobbies.list[id];
+  const dataEntry = context.data.lobbies.data[id];
+
+  const { mode } = listEntry;
+  const { state } = dataEntry;
+
+  switch (mode) {
+    case "ffa": break;
+    case "random": {
+      if (state === LOBBY_INGAME) break;
+      // Pick a random map whenever the lobby becomes idle
+      await module.exports(["map", id, "random"], context);
+      break;
+    }
+    case "battle_royale": {
+      if (state === LOBBY_INGAME) break;
+      const playerCount = listEntry.players.length;
+      // If only initializing, shrink lobby to smallest accommodating size
+      if (init) {
+        await module.exports(["maxplayers", id, playerCount], context);
+        break;
+      }
+      // Reduce the lobby size by 1
+      await module.exports(["maxplayers", id, playerCount - 1], context);
+      // Kick the slowest player with a time
+      const lb = await leaderboard(["get", mode], dataEntry.context);
+      const slowest = lb[lb.length - 1].steamid;
+      await module.exports(["leave", id, slowest], context);
+      break;
+    }
+  }
+
+}
+
+/**
  * Handles the `lobbies` utility call. This utility is used to manage game lobbies.
  *
  * The following subcommands are available:
@@ -55,6 +99,7 @@ function createLobbyContext (name) {
  * - `password`: Set a lobby password
  * - `maxplayers`: Set the maximum player count of the lobby
  * - `map`: Set the active lobby map
+ * - `mode`: Set the lobby mode
  * - `ready`: Set the ready state of the specified player
  * - `host`: Transfer the host role to the specified player
  * - `leave`: Remove the specified player from the lobby
@@ -478,6 +523,31 @@ module.exports = async function (args, context = epochtal) {
 
     }
 
+    case "mode": {
+
+      const newMode = args[2].trim().toLowerCase();
+
+      const listEntry = lobbies.list[lobbyid];
+      const dataEntry = lobbies.data[lobbyid];
+      const eventName = "lobby_" + lobbyid;
+
+      // Ensure the lobby exists
+      if (!listEntry || !dataEntry) throw new UtilError("ERR_LOBBYID", args, context);
+
+      // Switch the lobby mode
+      listEntry.mode = newMode;
+      await handleStateChange(lobbyid, context, true);
+
+      // Brodcast mode change to clients
+      await events(["send", eventName, { type: "lobby_mode", newMode }], context);
+
+      // Write the lobbies to file if it exists
+      if (file) Bun.write(file, JSON.stringify(lobbies));
+
+      return "SUCCESS";
+
+    }
+
     case "ready": {
 
       // Ensure that readyState is a boolean
@@ -602,10 +672,12 @@ module.exports = async function (args, context = epochtal) {
         }
         if (nobodyReady) {
           // Broadcast the lobby state change to clients
-          if (dataEntry.state === LOBBY_INGAME) {
-            await events(["send", eventName, { type: "lobby_finish" }], context);
-          }
+          const previousState = dataEntry.state;
           dataEntry.state = LOBBY_IDLE;
+          if (previousState === LOBBY_INGAME) {
+            await events(["send", eventName, { type: "lobby_finish" }], context);
+            await handleStateChange(lobbyid, context);
+          }
         }
 
       }
@@ -749,6 +821,7 @@ module.exports = async function (args, context = epochtal) {
 
       // Change the lobby state
       dataEntry.state = LOBBY_INGAME;
+      await handleStateChange(lobbyid, context);
       // Broadcast game start to clients
       await events(["send", eventName, { type: "lobby_start", map: mapFile }], context);
 
