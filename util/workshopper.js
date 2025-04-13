@@ -278,16 +278,45 @@ async function fetchRandomMap (node = null) {
     };
     const baseQuery = `${STEAM_API}/IPublishedFileService/QueryFiles/v1/?key=${process.env.STEAM_API_KEY}&input_json=${encodeURIComponent(JSON.stringify(queryParams))}`;
     const { response } = await (await fetch(baseQuery)).json();
-    // Some queries don't return anything, reroll the current range
-    if (!("publishedfiledetails" in response)) return await fetchRandomMap(node);
+    // Some queries don't return anything, reroll
+    if (!("publishedfiledetails" in response)) return await fetchRandomMap(null);
     const data = response.publishedfiledetails[0];
 
-    // If we've picked a deleted map, reroll the current range
-    if (data.result !== 1) return await fetchRandomMap(node);
+    // If we've picked a deleted map, reroll
+    if (data.result !== 1) return await fetchRandomMap(null);
 
-    // Some maps can't be downloaded, reroll the full range
+    // Some maps can't be downloaded, reroll
     const fileFetch = await fetch(data.file_url);
     if (fileFetch.status !== 200) return await fetchRandomMap(null);
+
+    // Reject PTI maps with an unconnected and closed exit door
+    // If the map wasn't published with PTI, this check doesn't apply
+    if (data.creator_appid !== 620) return data;
+
+    // Download the map's entity lump and extract an array of entities
+    const entities = await curator(["entities", data]);
+    // If there's no standard exit proxy, this check doesn't apply
+    if (!entities.find(e => e.targetname === "doorexit2-proxy")) return data;
+    // If the exit door is open by default, this check doesn't apply
+    if (!entities.find(e => e.targetname === "doorexit2-branch_toggle" && e.initialvalue == 0)) return data;
+
+    // Start by assuming that the exit is disconnected, then try to disprove that
+    let exitConnected = false;
+    // Iterate over all map entities, looking for their outputs
+    for (const entity of entities) {
+      if (!("outputs" in entity)) continue;
+      if (typeof entity.outputs !== "object") continue;
+      // Look for outputs that mention the exit door proxy
+      for (const output in entity.outputs) {
+        if (entity.outputs[output].find(c => c[0] === "doorexit2-proxy")) {
+          exitConnected = true;
+          break;
+        }
+      }
+      if (exitConnected) break;
+    }
+    // If no exit door connection was found, reroll
+    if (!exitConnected) return await fetchRandomMap(null);
 
     return data;
 
