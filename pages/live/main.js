@@ -84,6 +84,8 @@ var lobbyListInit = async function () {
       let modeString;
       switch (lobby.mode) {
         case "ffa": modeString = "Free For All"; break;
+        case "random": modeString = "Random Workshop Maps"; break;
+        case "battle_royale": modeString = "Battle Royale"; break;
         default: modeString = "Unknown"; break;
       }
 
