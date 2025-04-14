@@ -299,6 +299,8 @@ async function fetchRandomMap (node = null) {
     if (entities.find(e => e.targetname === "@stop_for_pellets")) return await fetchRandomMap(null);
     // If there's no standard exit proxy, this check doesn't apply
     if (!entities.find(e => e.targetname === "doorexit2-proxy")) return data;
+    // If there's no standard exit world portal setup, this check doesn't apply
+    if (!entities.find(e => e.targetname === "@exit_portal_chamber_side")) return data;
     // If the exit door is open by default, this check doesn't apply
     if (!entities.find(e => e.targetname === "doorexit2-branch_toggle" && e.initialvalue == 0)) return data;
 
