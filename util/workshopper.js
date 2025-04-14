@@ -295,6 +295,8 @@ async function fetchRandomMap (node = null) {
 
     // Download the map's entity lump and extract an array of entities
     const entities = await curator(["entities", data]);
+    // Some BEEmod maps refuse to run without pellet models - reroll those
+    if (entities.find(e => e.targetname === "@stop_for_pellets")) return await fetchRandomMap(null);
     // If there's no standard exit proxy, this check doesn't apply
     if (!entities.find(e => e.targetname === "doorexit2-proxy")) return data;
     // If the exit door is open by default, this check doesn't apply

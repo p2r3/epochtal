@@ -50,6 +50,9 @@ if (!("Entities" in this)) return;
   // Connect outputs to run finish events
   EntFire("@relay_pti_level_end", "AddOutput", "OnTrigger !self:RunScriptCode:__elFinish():0:1");
   EntFire("@changelevel", "AddOutput", "OnChangeLevel !self:RunScriptCode:__elFinish():0:1");
+  // Fix BEEmod maps with pellet dependency
+  local pelletWarning = Entities.FindByName(null, "@stop_for_pellets");
+  if (pelletWarning) pelletWarning.Destroy();
 };
 
 // Called after the map has finished loading, on every load
