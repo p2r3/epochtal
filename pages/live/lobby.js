@@ -87,6 +87,8 @@ async function updatePlayerList () {
 
     // Get the player's last run in this mode, if they have one
     const run = leaderboard.find(c => c.steamid === steamid);
+    // Get the player's win count
+    const wins = lobby.data.players[steamid].wins || 0;
 
     // Get the player's ready state
     const ready = lobby.data.players[steamid].ready;
@@ -113,7 +115,7 @@ async function updatePlayerList () {
       onmouseover="showTooltip('Click to transfer host role')"
       onmouseleave="hideTooltip()"
       onclick="transferHost('${steamid}')"
-      ` : "")}
+  <p class="lobby-player-name">${username}${run ? ` - ${ticksToString(run.time)}` : ""}<br><span class="lobby-player-wins">${wins} win${wins === 1 ? "" : "s"}</span></p>
   >
   <p class="lobby-player-name">${username}${run ? ` - ${ticksToString(run.time)}` : ""}</p>
   <i
@@ -423,6 +425,16 @@ async function lobbyEventHandler (event) {
 
       leaderboard.push(run);
 
+      // Sort leaderboard to get placement
+      leaderboard.sort(function (a, b) {
+        return a.time - b.time;
+      });
+      let placement = 1;
+      for (let i = 0; i < leaderboard.length; i ++) {
+        if (leaderboard[i - 1] && leaderboard[i].time > leaderboard[i - 1].time) placement ++;
+        leaderboard[i].placement = placement;
+      }
+
       return;
     }
 
@@ -468,6 +480,14 @@ async function lobbyEventHandler (event) {
     case "lobby_finish": {
 
       // Handle game finishing
+      // Increment win count of players in first place
+      for (const run of lobby.data.context.leaderboard["lobby"]) {
+        if (run.placement !== 1) continue;
+        if (!(run.steamid in lobby.data.players)) continue;
+        lobby.data.players[run.steamid].wins ++;
+      }
+      updatePlayerList();
+
       // Switch to the next map in the local queue
       if (amHost && localMapQueue.length > 0) {
         requestLobbyMapChange(localMapQueue.shift());

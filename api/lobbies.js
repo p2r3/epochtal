@@ -129,7 +129,7 @@ module.exports = async function (args, request) {
       // Filter returned data to omit unwanted properties
       const clientData = {
         players: Object.fromEntries(
-          Object.entries(data.players).map(([key, player]) => [key, { ready: player.ready }])
+          Object.entries(data.players).map(([key, player]) => [key, { ready: player.ready, wins: player.wins }])
         ),
         maxplayers: data.maxplayers,
         host: data.host,
@@ -140,8 +140,8 @@ module.exports = async function (args, request) {
       /** The above results in an object with the following pseudo-structure:
        * {
        *   players: {
-       *     steamid: { ready },
-       *     steamid: { ready },
+       *     steamid: { ready, wins },
+       *     steamid: { ready, wins },
        *     ...
        *   },
        *   maxplayers,

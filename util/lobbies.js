@@ -64,6 +64,15 @@ async function handleStateChange (id, context, init = false) {
     delete dataEntry.roundTimeout;
   }
 
+  // Increment win count of players in first place
+  if (state === LOBBY_INGAME) {
+    for (const run of dataEntry.context.data.leaderboard.lobby) {
+      if (run.placement !== 1) continue;
+      if (!(run.steamid in dataEntry.players)) continue;
+      dataEntry.players[run.steamid].wins ++;
+    }
+  }
+
   switch (mode) {
     case "ffa": break;
     case "random": {
@@ -371,9 +380,19 @@ module.exports = async function (args, context = epochtal) {
       // If the player is already in the lobby, pretend the join was successful
       if (listEntry.players.includes(steamid)) return "SUCCESS";
 
+      // Count the amount of wins this player had before leaving
+      let wins = 0;
+      for (const cat in dataEntry.context.data.leaderboard) {
+        // Skip current leaderboard if players are in-game
+        if (dataEntry.state === LOBBY_INGAME && cat === "lobby") continue;
+        // For every 1st place placement, add one win
+        const lb = dataEntry.context.data.leaderboard[cat];
+        if (lb.find(c => c.steamid === steamid && c.placement === 1)) wins ++;
+      }
+
       // Add the player to the lobby
       listEntry.players.push(steamid);
-      dataEntry.players[steamid] = {};
+      dataEntry.players[steamid] = { wins };
 
       // The first player to join is given the role of host
       if (!dataEntry.host) dataEntry.host = steamid;
@@ -847,8 +866,11 @@ module.exports = async function (args, context = epochtal) {
       if (dataEntry.context.data.map === null) throw new UtilError("ERR_NOMAP", args, context);
       const mapFile = dataEntry.context.data.map.file;
 
-      // Remove all runs from the leaderboard
-      dataEntry.context.data.leaderboard["lobby"] = [];
+      // Clear and archive current lobby leaderboard
+      const lobbyLeaderboard = dataEntry.context.data.leaderboard;
+      const leaderboardCount = Object.keys(lobbyLeaderboard).length;
+      lobbyLeaderboard["lobby" + leaderboardCount] = lobbyLeaderboard["lobby"];
+      lobbyLeaderboard["lobby"] = [];
 
       // Change the lobby state
       dataEntry.state = LOBBY_INGAME;
