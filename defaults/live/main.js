@@ -1,6 +1,9 @@
 // Require latest spplice-cpp version
 if (!("game" in this)) {
   SendToConsole('disconnect "Epochtal Live requires the latest version of SppliceCPP. Update here: github.com/p2r3/spplice-cpp/releases"');
+  sleep(3000).then(function () {
+    SendToConsole('disconnect "Epochtal Live requires the latest version of SppliceCPP. Update here: github.com/p2r3/spplice-cpp/releases"');
+  });
   throw new Error("Terminating script due to version mismatch.");
 }
 
@@ -121,7 +124,7 @@ var spectatorData = {
  * a warning if not.
  */
 function processVersionCheck () {
-  // Use existance of game.status as a heuristic for spplice-cpp version
+  // Use existence of game.status as a heuristic for spplice-cpp version
   if (!("status" in game)) {
     sendToConsole(gameSocket, 'disconnect "Epochtal Live requires the latest version of SppliceCPP. Update here: github.com/p2r3/spplice-cpp/releases"');
     doCleanup();
