@@ -183,6 +183,11 @@
 #lobby-ready-button {
   transition: opacity 0.2s;
 }
+#lobby-autoready-button {
+  width: 0;
+  margin-left: 10px;
+  cursor: pointer;
+}
 
 #lobby-force-button {
   display: none;

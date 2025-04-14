@@ -1,7 +1,7 @@
 var lobby, users, whoami;
 var avatarCache = {};
 var lobbySocket = null, lobbySocketDisconnected = false;
-var readyState = false;
+var readyState = false, autoReady = false;
 var amHost = false, amSpectator = false;
 var localMapQueue = [];
 
@@ -237,6 +237,7 @@ function displayChatMessage (message, from = null) {
 var eventHandlerConnected = false;
 
 const lobbyReadyButton = document.querySelector("#lobby-ready-button");
+const lobbyAutoReadyButton = document.querySelector("#lobby-autoready-button");
 
 /**
  * Handle incoming WebSocket events
@@ -370,8 +371,8 @@ async function lobbyEventHandler (event) {
       readyState = false;
       lobbyReadyButton.innerHTML = "I'm ready!";
 
-      // If we're a spectator, automatically ready up for any new map
-      if (amSpectator) {
+      // If we're a spectator, or if autoReady is enabled, automatically ready up
+      if (amSpectator || autoReady) {
         const lobbyid = window.location.href.split("#")[1];
         fetch(`/api/lobbies/ready/${lobbyid}/true`);
       }
@@ -962,6 +963,25 @@ async function lobbyInit () {
       default: return showPopup("Unknown error", "The server returned an unexpected response: " + requestData, POPUP_ERROR);
     }
 
+  };
+
+  lobbyAutoReadyButton.onmouseover = () => showTooltip("Auto-ready: Disabled");
+  lobbyAutoReadyButton.onmouseleave = () => hideTooltip();
+  lobbyAutoReadyButton.style.opacity = 0.5;
+
+  // Toggles the auto-ready feature
+  window.toggleAutoReady = function () {
+    autoReady = !autoReady;
+    if (autoReady) {
+      showTooltip("Auto-ready: Enabled");
+      lobbyAutoReadyButton.onmouseover = () => showTooltip("Auto-ready: Enabled");
+      lobbyAutoReadyButton.style.opacity = 1;
+      if (!readyState && lobby.data.context.map) window.toggleReadyState();
+    } else {
+      showTooltip("Auto-ready: Disabled");
+      lobbyAutoReadyButton.onmouseover = () => showTooltip("Auto-ready: Disabled");
+      lobbyAutoReadyButton.style.opacity = 0.5;
+    }
   };
 
   window.transferHost = async function (steamid) {
