@@ -2,6 +2,7 @@ const fs = require("node:fs");
 
 const spplice = require("../util/spplice.js");
 const tmppath = require("../util/tmppath.js");
+const lobbies = require("../util/lobbies.js");
 
 /**
  * Builds the Epochtal Live Spplice package
@@ -26,9 +27,13 @@ async function rebuildPackage (context) {
   // Create required directories
   fs.mkdirSync(`${portal2}/maps`);
   fs.mkdirSync(`${portal2}/maps/workshop`);
+  fs.mkdirSync(`${portal2}/cfg`);
+  fs.mkdirSync(`${portal2}/scripts`);
+  fs.mkdirSync(`${portal2}/scripts/vscripts`);
   // Copy game files to temporary directory
   fs.copyFileSync(`${defaults}/main.js`, `${portal2}/main.js`);
-  fs.copyFileSync(`${defaults}/polyfill.js`, `${portal2}/polyfill.js`);
+  fs.copyFileSync(`${defaults}/valve.rc`, `${portal2}/cfg/valve.rc`);
+  fs.copyFileSync(`${defaults}/mapspawn.nut`, `${portal2}/scripts/vscripts/mapspawn.nut`);
   // Write the server's HTTP address to a file
   await Bun.write(`${portal2}/address.txt`, `${gconfig.https ? "https" : "http"}://${gconfig.domain}`);
 
@@ -54,6 +59,71 @@ async function rebuildPackage (context) {
 
 }
 
+/**
+ * Creates a lobby for the "Chamber Of The Day"
+ *
+ * @param {unknown} context An Epochtal context object
+ * @returns {string} The result of the routine
+ */
+async function createCOTD (context) {
+
+  // Create the lobby
+  const createResponse = await lobbies(["create", "Chamber Of The Day", ""], context);
+  const lobbyid = createResponse.split(" ")[1];
+
+  // Set the lobby mode to Chamber Of The Day
+  await lobbies(["mode", lobbyid, "cotd"], context);
+  // Since COTD inherits Battle Royale properties, the lobby size gets
+  // automatically restricted to zero. We unrestrict it here:
+  await lobbies(["maxplayers", lobbyid, null], context);
+
+  // Permanently remove the lobby host
+  await lobbies(["host", lobbyid, null], context);
+
+  // Set the lobby map to a random workshop map
+  let mapInterval;
+  mapInterval = setInterval(async function () {
+    try {
+      await lobbies(["map", lobbyid, "random"], context);
+      clearInterval(mapInterval);
+    } catch {
+      // Keep trying until we succeed
+    }
+  }, 3000);
+
+  // Warn players of game start in lobby chat
+  setTimeout(async function () {
+    try {
+      await lobbies(["chat", lobbyid, `<br>Get ready! The game starts in 1 minute.<br>
+        Make sure you've <a href="https://docs.google.com/document/d/1gcWvwEjzJaKfgOEGpGPFGvtNV_LQCbSC3OE84dARMYE">linked your game client with a token</a>.`, null], context);
+    } catch { }
+  }, 19 * 60 * 1000);
+  setTimeout(async function () {
+    try {
+      await lobbies(["chat", lobbyid, "Game starts in 15 seconds.", null], context);
+    } catch { }
+  }, 20 * 60 * 1000 - 15 * 1000);
+  for (let i = 1; i <= 5; i ++) {
+    const time = i;
+    setTimeout(async function () {
+      try {
+        await lobbies(["chat", lobbyid, `Game starts in ${time} seconds.`, null], context);
+      } catch { }
+    }, 20 * 60 * 1000 - time * 1000);
+  }
+
+  // Schedule game start for 20 minutes from lobby creation
+  setTimeout(async function () {
+    try {
+      await lobbies(["start", lobbyid], context);
+    } catch { }
+  }, 20 * 60 * 1000);
+
+  return "SUCCESS";
+
+}
+
 module.exports = {
-  rebuildPackage
+  rebuildPackage,
+  createCOTD
 };

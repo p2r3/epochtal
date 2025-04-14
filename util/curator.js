@@ -39,17 +39,19 @@ async function getWorkshopData (mapid) {
 }
 
 /**
- * Fetches the entity lump for a given map ID and ignores everything else.
+ * Fetches the entity lump for a given map and ignores everything else.
  *
  * @author PancakeTAS
- * @param {string} mapid The map ID to fetch the entity lump for.
+ * @param {string|object} data The map to fetch the entity lump for.
  * @returns {Promise<string>} The entity lump for the map.
  */
-async function downloadEntityLump (mapid) {
+async function downloadEntityLump (data) {
 
   // Fetch the workshop data for the map
-  const data = await getWorkshopData(mapid);
-  if (typeof data === "string") return data;
+  if (typeof data !== "object") {
+    data = await getWorkshopData(data);
+    if (typeof data === "string") return data;
+  }
 
   // Ensure the map is a Portal 2 map
   if (data.file_url === undefined) return "ERR_BADMAP";
@@ -158,7 +160,7 @@ function parseLump (inputString) {
   for (let i = 0; i < entityStrings.length; i ++) {
 
     const entity = { outputs: {} };
-    const keyvals = entityStrings[i].split("\n").slice(0, -2);
+    const keyvals = entityStrings[i].split("\n");
 
     for (const keyval of keyvals) {
 
@@ -169,7 +171,7 @@ function parseLump (inputString) {
       const lowerCaseKey = key.toLowerCase();
       const valArray = val.split(" ");
 
-      if (key.startsWith("On")) {
+      if (val.includes("\x1B")) {
         if (!(lowerCaseKey in entity.outputs)) {
           entity.outputs[lowerCaseKey] = [];
         }
@@ -281,6 +283,7 @@ function calculateDensities (entities) {
  * The following subcommands are available:
  * - `v1`: The "original" Epochtal metadata curation algorithm.
  * - `v2`: The "new" Repochtal object density curation algorithm.
+ * - `entities`: Returns an array of entities in the given workshop map.
  *
  * The mapid is specified in `args[1]`.
  *
@@ -502,6 +505,13 @@ module.exports = async function (args, context = epochtal) {
       const finalScoreRoot = Math.pow(Math.abs(score / maxNameCount), 1 / weights.v2.SCORE_EXPONENT) * (scoreAverage < 0 ? -1 : 1);
 
       return (finalScoreRoot * 2 + totalDensityScore) / 3;
+
+    }
+
+    case "entities": {
+
+      // Return a parsed entity lump from the map BSP
+      return parseLump(await downloadEntityLump(mapid));
 
     }
 

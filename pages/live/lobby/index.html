@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="/live/style.css">
     <script src="https://kit.fontawesome.com/fc2642e2d1.js" crossorigin="anonymous"></script>
   </head>
-  <body>
+  <body onkeypress="redirectEventToChat(event)">
 
     <div id="bg-anim-container">
       <div id="bg-anim-bg"></div>
@@ -54,6 +54,8 @@
           <button onclick="changeLobbyPassword()" id="lobby-password-button">Change lobby password</button>
           <br><br>
           <button onclick="changeLobbyMaxplayers()" id="lobby-maxplayers-button">Change lobby size</button>
+            &nbsp;&nbsp;
+          <button onclick="changeLobbyMode()" id="lobby-mode-button">Change lobby mode</button>
 
           <br><br>
 
@@ -65,13 +67,32 @@
           <br><br>
 
           <h3 class="marginb_small">Are you ready?</h3>
-          <button id="lobby-ready-button" onclick="toggleReadyState()">I'm ready!</button>
+          <button id="lobby-ready-button" onclick="toggleReadyState()">I'm ready!</button><i class="fa-solid fa-repeat" id="lobby-autoready-button" onclick="toggleAutoReady()"></i>
           <br><br>
-          <a href="javascript:forceStart()" id="lobby-forcestart-button">Force start</a>
+          <a href="javascript:forceStart()" id="lobby-force-button">Force start</a>
 
         </div>
 
       </div>
+
+      <div id="lobby-chat-container">
+        <input type="text"
+          name="el_lobby_chat_input"
+          id="lobby-chat-input"
+          autocomplete="off"
+          autocorrect="off"
+          autocapitalize="off"
+          spellcheck="false"
+          maxlength="200"
+          onkeypress="sendChatMessageFromInput(event)"></input>
+        <div id="lobby-chat-output">
+
+        </div>
+      </div>
+
+      <button id="lobby-spectate-button" onclick="spectate()">Spectate</button>
+
+      <div id="lobby-map-history-container"></div>
 
       <footer></footer>
 

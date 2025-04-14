@@ -1,0 +1,9 @@
+// Default valve.rc configuration
+exec joystick.cfg
+exec autoexec.cfg
+stuffcmds
+startupmenu
+
+// Filter out spectator position spew
+con_filter_enable 1
+con_filter_text_out "spec_goto"

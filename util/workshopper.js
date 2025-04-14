@@ -150,6 +150,215 @@ async function curateWorkshop (maps = []) {
 
 }
 
+// Contains a tree structure for buckets of random maps
+const randomMapCache = {
+  created: 0,
+  map: null
+};
+
+/**
+ * Rebuilds the random map total count cache tree.
+ *
+ * This is a binary tree, where each node represents the total amount of
+ * maps published to the workshop in a given timespan. The tree generates
+ * until a child node has less than 50'000 total maps, which is the upper
+ * workshop API query limit.
+ */
+async function rebuildRandomMapCache (node = null) {
+
+  if (!node) {
+    // Start iteration with global tree cache
+    node = randomMapCache;
+    // Store cache creation date for expiry checks later
+    randomMapCache.created = Date.now();
+    // Use date range between PTI release and today
+    node.start = Math.floor(new Date("2012-05-08").getTime() / 1000);
+    node.end = Math.floor(new Date().getTime() / 1000);
+  }
+
+  // Calculate midpoint of this node's date range
+  const half = Math.floor((node.start + node.end) / 2);
+
+  // Create branches for this node containing timestamp ranges
+  node.left = {
+    start: node.start,
+    end: half
+  };
+  node.right = {
+    start: half,
+    end: node.end
+  };
+
+  // Set up base parameters for querying map totals
+  const baseParams = {
+    query_type: 1,
+    appid: 620,
+    requiredtags: ["Singleplayer"],
+    excludedtags: ["Cooperative"],
+    totalonly: true
+  };
+  const baseQuery = `${STEAM_API}/IPublishedFileService/QueryFiles/v1/?key=${process.env.STEAM_API_KEY}`;
+
+  // Set up parameters for the left and right branches
+  const leftParams = structuredClone(baseParams);
+  leftParams.date_range_created = {
+    timestamp_start: node.start,
+    timestamp_end: half
+  };
+  const rightParams = structuredClone(baseParams);
+  rightParams.date_range_created = {
+    timestamp_start: half,
+    timestamp_end: node.end
+  };
+
+  // Fetch totals for both the left and right branches in parallel
+  const [leftData, rightData] = await Promise.all([
+    fetch(`${baseQuery}&input_json=${encodeURIComponent(JSON.stringify(leftParams))}`).then(res => res.json()),
+    fetch(`${baseQuery}&input_json=${encodeURIComponent(JSON.stringify(rightParams))}`).then(res => res.json())
+  ]);
+
+  // Assign totals to each of the branch nodes
+  node.left.total = leftData.response.total;
+  node.right.total = leftData.response.total;
+  // If necessary, assign a total for this node too
+  if (!("total" in node)) node.total = node.left.total + node.right.total;
+
+  // Recursively (and asynchronously) generate caches for the rest of the tree
+  const remaining = [];
+  if (node.left.total > 50000) remaining.push(rebuildRandomMapCache(node.left));
+  if (node.right.total > 50000) remaining.push(rebuildRandomMapCache(node.right));
+  await Promise.all(remaining);
+
+}
+
+// Automatically schedules a cache rebuild once it expires
+async function autoRebuildRandomMapCache () {
+  // If the cache has expired, rebuild it
+  const cacheAge = Date.now() - randomMapCache.created;
+  if (cacheAge > 86400000) {
+    await rebuildRandomMapCache();
+  }
+  // Schedule a rebuild for a minute after the cache expires
+  const untilExpiry = Math.max(0, 86400000 - cacheAge);
+  setTimeout(autoRebuildRandomMapCache, untilExpiry + 60000);
+}
+autoRebuildRandomMapCache();
+
+// Fetches a truly random singleplayer map from the Steam workshop
+async function fetchRandomMap (node = null) {
+
+  // Start the recursion with the top of the cached tree
+  if (!node) {
+    // Rebuild bucket cache tree if it has expired
+    if (Date.now() - randomMapCache.created > 86400000) {
+      await rebuildRandomMapCache();
+    }
+    node = randomMapCache;
+  }
+
+  // If no maps found in this node, reroll the entire selection
+  if (node.total === 0) return await fetchRandomMap(null);
+
+  // If the map count in this node is within the query limit, pick a map
+  if (node.total <= 50000) {
+
+    // Query for exactly one random map in this node's time range
+    const queryParams = {
+      query_type: 1,
+      appid: 620,
+      requiredtags: ["Singleplayer"],
+      excludedtags: ["Cooperative"],
+      numperpage: 1,
+      page: Math.floor(Math.random() * node.total) + 1,
+      return_details: true,
+      date_range_created: {
+        timestamp_start: node.start,
+        timestamp_end: node.end
+      }
+    };
+    const baseQuery = `${STEAM_API}/IPublishedFileService/QueryFiles/v1/?key=${process.env.STEAM_API_KEY}&input_json=${encodeURIComponent(JSON.stringify(queryParams))}`;
+    const { response } = await (await fetch(baseQuery)).json();
+    // Some queries don't return anything, reroll
+    if (!("publishedfiledetails" in response)) return await fetchRandomMap(null);
+    const data = response.publishedfiledetails[0];
+
+    // If we've picked a deleted map, reroll
+    if (data.result !== 1) return await fetchRandomMap(null);
+
+    // Some maps can't be downloaded, reroll
+    const fileFetch = await fetch(data.file_url);
+    if (fileFetch.status !== 200) return await fetchRandomMap(null);
+
+    // Download the map's entity lump and extract an array of entities
+    // This is used to reject maps that are verifiably unsolvable
+    const entities = await curator(["entities", data]);
+
+    // In Hammer maps, the only risk is a missing PTI level end output
+    if (data.creator_appid !== 620) {
+      // Reroll maps that have no entities pointing to the level end relay
+      if (!entities.find(function (entity) {
+        if (!("outputs" in entity)) return false;
+        if (typeof entity.outputs !== "object") return false;
+        return Object.values(entity.outputs).find(output => {
+          return output.find(c => c[0].toString().toLowerCase() === "@relay_pti_level_end");
+        });
+      })) return await fetchRandomMap(null);
+      // Otherwise, all Hammer maps are accepted
+      return data;
+    }
+
+    // Start by assuming that the exit is disconnected, then try to disprove that
+    let exitConnected = false;
+    // Some other checks have to be proven for a softlock to count
+    let exitProxy = false, exitPortal = false;
+
+    // Iterate over all map entities, trying to prove/disprove softlock checks
+    for (const entity of entities) {
+
+      // Reroll BEEmod maps that check for pellet launcher models
+      if (entity.targetname === "@stop_for_pellets") return await fetchRandomMap(null);
+      // If the exit door is open by default, this check doesn't apply
+      if (entity.targetname === "doorexit2-branch_toggle" && entity.initialvalue == 1) return data;
+
+      // For a softlock to count, there must be a standard exit proxy
+      if (entity.targetname === "doorexit2-proxy") exitProxy = true;
+      // For a softlock to count, there must be a standard exit world portal
+      if (entity.targetname === "@exit_portal_chamber_side") exitPortal = true;
+
+      // Further processing happens for entities with outputs
+      if (!("outputs" in entity)) continue;
+      if (typeof entity.outputs !== "object") continue;
+
+      // Look for outputs that mention the exit door proxy
+      for (const output in entity.outputs) {
+        if (entity.outputs[output].find(c => c[0].toString().toLowerCase() === "doorexit2-proxy")) {
+          exitConnected = true;
+          break;
+        }
+      }
+      if (exitConnected) break;
+
+    }
+
+    // If no exit door connection was found, reroll
+    if (!exitConnected && exitProxy && exitPortal) return await fetchRandomMap(null);
+
+    return data;
+
+  }
+
+  // If a branch node is missing its map total, assume incomplete cache
+  if (!("total" in node.left)) return "ERR_CACHE";
+
+  // Pick the left or right branch of the tree with a weighted probability
+  if (Math.random() < node.left.total / node.total) {
+    return await fetchRandomMap(node.left);
+  } else {
+    return await fetchRandomMap(node.right);
+  }
+
+}
+
 /**
  * Handles the `workshopper` utility call. This utility is used to interact and curate the Steam Workshop.
  *
@@ -193,6 +402,34 @@ module.exports = async function (args, context = epochtal) {
 
       // Curate the workshop for the past week
       return await curateWorkshop(maps);
+
+    }
+
+    case "random": {
+
+      // Save the precached query result and clear it
+      const cachedMap = randomMapCache.map;
+      const cacheAge = Date.now() - randomMapCache.created;
+      randomMapCache.map = null;
+
+      // Cache a result for the next query
+      fetchRandomMap().then(result => {
+        // Leave cache blank in case of an error
+        if (typeof result === "string") return;
+        randomMapCache.map = result;
+      }).catch(e => {});
+
+      // Return the previously cached result if it is valid
+      if (cachedMap && cacheAge < 86400000) {
+        return cachedMap;
+      }
+
+      // Otherwise, perform the query on the spot
+      const output = await fetchRandomMap();
+      if (typeof output === "string") {
+        throw new UtilError(output, args, context);
+      }
+      return output;
 
     }
 
