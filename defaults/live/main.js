@@ -95,9 +95,8 @@ function sendToConsole (socket, command) {
 var totalTicks = 0;
 // Last tick count reported by the VScript
 var lastTicksReport = 0;
-// Expected session time report:
-// 0 - none, 1 - load start, 2 - load end, 3 - run end
-var expectReport = 0;
+// Whether to expect an elStart event
+var expectRoundStart = false;
 // Name of the map we're running
 var runMap = null;
 // Name of the map we were just running
@@ -183,7 +182,8 @@ function processConsoleOutput () {
     if (!webSocket) return;
 
     // Process map start event - reset timer
-    if (line.indexOf("elStart") !== -1) {
+    if (expectRoundStart && line.indexOf("elStart") !== -1) {
+      expectRoundStart = false;
       totalTicks = 0;
       lastTicksReport = 0;
       return;
@@ -354,6 +354,7 @@ function processServerEvent (data) {
       totalTicks = 0;
       lastTicksReport = 0;
       // Start the requested map
+      expectRoundStart = true;
       sendToConsole(gameSocket, "disconnect;map " + runMap);
 
       // Clear spectator state
