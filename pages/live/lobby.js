@@ -219,7 +219,7 @@ function updateLobbyHost () {
  */
 function displayChatMessage (message, from = null) {
 
-  message = message.toString().replaceAll("&quot;", '"')
+  if (from) message = message.toString().replaceAll("&quot;", '"')
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;");
