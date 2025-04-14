@@ -339,6 +339,8 @@ function processServerEvent (data) {
         ws.send(webSocket, '{"type":"getMap","value":-1}');
         // Log the error to the Portal 2 console
         sendToConsole(gameSocket, 'echo "' + e.toString().replace(/\"/g, "'") + '"');
+        // Remove the partially downloaded file
+        if (pathExists(fullPath)) fs.unlink(fullPath);
 
       }
 
