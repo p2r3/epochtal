@@ -289,38 +289,59 @@ async function fetchRandomMap (node = null) {
     const fileFetch = await fetch(data.file_url);
     if (fileFetch.status !== 200) return await fetchRandomMap(null);
 
-    // Reject PTI maps with an unconnected and closed exit door
-    // If the map wasn't published with PTI, this check doesn't apply
-    if (data.creator_appid !== 620) return data;
-
     // Download the map's entity lump and extract an array of entities
+    // This is used to reject maps that are verifiably unsolvable
     const entities = await curator(["entities", data]);
-    // Some BEEmod maps refuse to run without pellet models - reroll those
-    if (entities.find(e => e.targetname === "@stop_for_pellets")) return await fetchRandomMap(null);
-    // If there's no standard exit proxy, this check doesn't apply
-    if (!entities.find(e => e.targetname === "doorexit2-proxy")) return data;
-    // If there's no standard exit world portal setup, this check doesn't apply
-    if (!entities.find(e => e.targetname === "@exit_portal_chamber_side")) return data;
-    // If the exit door is open by default, this check doesn't apply
-    if (!entities.find(e => e.targetname === "doorexit2-branch_toggle" && e.initialvalue == 0)) return data;
+
+    // In Hammer maps, the only risk is a missing PTI level end output
+    if (data.creator_appid !== 620) {
+      // Reroll maps that have no entities pointing to the level end relay
+      if (!entities.find(function (entity) {
+        if (!("outputs" in entity)) return false;
+        if (typeof entity.outputs !== "object") return false;
+        return Object.values(entity.outputs).find(output => {
+          return output.find(c => c[0].toString().toLowerCase() === "@relay_pti_level_end");
+        });
+      })) return await fetchRandomMap(null);
+      // Otherwise, all Hammer maps are accepted
+      return data;
+    }
 
     // Start by assuming that the exit is disconnected, then try to disprove that
     let exitConnected = false;
-    // Iterate over all map entities, looking for their outputs
+    // Some other checks have to be proven for a softlock to count
+    let exitProxy = false, exitPortal = false;
+
+    // Iterate over all map entities, trying to prove/disprove softlock checks
     for (const entity of entities) {
+
+      // Reroll BEEmod maps that check for pellet launcher models
+      if (entity.targetname === "@stop_for_pellets") return await fetchRandomMap(null);
+      // If the exit door is open by default, this check doesn't apply
+      if (entity.targetname === "doorexit2-branch_toggle" && entity.initialvalue == 1) return data;
+
+      // For a softlock to count, there must be a standard exit proxy
+      if (entity.targetname === "doorexit2-proxy") exitProxy = true;
+      // For a softlock to count, there must be a standard exit world portal
+      if (entity.targetname === "@exit_portal_chamber_side") exitPortal = true;
+
+      // Further processing happens for entities with outputs
       if (!("outputs" in entity)) continue;
       if (typeof entity.outputs !== "object") continue;
+
       // Look for outputs that mention the exit door proxy
       for (const output in entity.outputs) {
-        if (entity.outputs[output].find(c => c[0] === "doorexit2-proxy")) {
+        if (entity.outputs[output].find(c => c[0].toString().toLowerCase() === "doorexit2-proxy")) {
           exitConnected = true;
           break;
         }
       }
       if (exitConnected) break;
+
     }
+
     // If no exit door connection was found, reroll
-    if (!exitConnected) return await fetchRandomMap(null);
+    if (!exitConnected && exitProxy && exitPortal) return await fetchRandomMap(null);
 
     return data;
 
