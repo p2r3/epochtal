@@ -58,6 +58,12 @@ async function handleStateChange (id, context, init = false) {
   const { mode } = listEntry;
   const { state } = dataEntry;
 
+  // Delete any round timeouts on state or mode change
+  if ("roundTimeout" in dataEntry) {
+    clearTimeout(dataEntry.roundTimeout);
+    delete dataEntry.roundTimeout;
+  }
+
   switch (mode) {
     case "ffa": break;
     case "random": {
@@ -65,6 +71,28 @@ async function handleStateChange (id, context, init = false) {
       // Pick a random map whenever the lobby becomes idle
       await module.exports(["map", id, "random"], context);
       break;
+    }
+    case "cotd": {
+      if (state === LOBBY_INGAME) {
+        // After starting a round, schedule force-abort in 8 minutes
+        dataEntry.roundTimeout = setTimeout(async function () {
+          try {
+            if (dataEntry.state === LOBBY_IDLE) return;
+            await module.exports(["abort", id], context);
+            delete dataEntry.roundTimeout;
+          } catch { }
+        }, 8*60*1000);
+      } else if (!init) {
+        // After finishing a round, give runners 5 minutes to get ready
+        dataEntry.roundTimeout = setTimeout(async function () {
+          try {
+            if (dataEntry.state === LOBBY_INGAME) return;
+            await module.exports(["start", id], context);
+            delete dataEntry.roundTimeout;
+          } catch { }
+        }, 5*60*1000);
+      }
+      // Fall through to "Battle Royale" case, inheriting its behavior
     }
     case "battle_royale": {
       if (state === LOBBY_INGAME) {
@@ -74,6 +102,7 @@ async function handleStateChange (id, context, init = false) {
           if (dataEntry.players[player].gameSocket) continue;
           await module.exports(["leave", id, player], context);
         }
+        break;
       }
       // Kick players with no time, and the player with the slowest time
       // Don't do this when initializing, because no one has a time then
@@ -645,7 +674,10 @@ module.exports = async function (args, context = epochtal) {
           }
         }
         if (everyoneReady) {
-          await module.exports(["start", lobbyid], context);
+          // Don't auto-start the very first round of a COTD lobby
+          if (!(listEntry.mode === "cotd" && !("roundTimeout" in dataEntry))) {
+            await module.exports(["start", lobbyid], context);
+          }
         }
 
       } else {
@@ -688,8 +720,10 @@ module.exports = async function (args, context = epochtal) {
       const newHost = args[2];
 
       // Ensure a valid user SteamID was provided
-      const user = await users(["get", newHost], context);
-      if (!user) throw new UtilError("ERR_STEAMID", args, context);
+      if (newHost) {
+        const user = await users(["get", newHost], context);
+        if (!user) throw new UtilError("ERR_STEAMID", args, context);
+      }
 
       const listEntry = lobbies.list[lobbyid];
       const dataEntry = lobbies.data[lobbyid];
@@ -698,10 +732,14 @@ module.exports = async function (args, context = epochtal) {
       // Ensure the lobby exists
       if (!listEntry || !dataEntry) throw new UtilError("ERR_LOBBYID", args, context);
       // Ensure the new host is in the lobby
-      if (!listEntry.players.includes(newHost)) throw new UtilError("ERR_STEAMID", args, context);
+      if (newHost && !listEntry.players.includes(newHost)) throw new UtilError("ERR_STEAMID", args, context);
 
-      // Assign the new host
-      dataEntry.host = newHost;
+      /**
+       * Assign the new host. If a falsy value was provided, use a string
+       * that cannot be translated into a SteamID to instead permanently
+       * remove any host from the lobby.
+       */
+      dataEntry.host = newHost || "nobody";
 
       // Brodcast host change to clients
       await events(["send", eventName, { type: "lobby_host", steamid: newHost }], context);
@@ -750,7 +788,9 @@ module.exports = async function (args, context = epochtal) {
       await events(["send", eventName, { type: "lobby_leave", steamid }], context);
 
       // Delete the lobby if it is still empty 10 seconds after all players have left
-      if (listEntry.players.length === 0) {
+      // These checks are bypassed on the very first round of a COTD lobby
+      const isCOTDFirstRound = listEntry.mode === "cotd" && !("roundTimeout" in dataEntry);
+      if (listEntry.players.length === 0 && !isCOTDFirstRound) {
 
         setTimeout(async function () {
           if (listEntry.players.length !== 0) return;
@@ -766,7 +806,7 @@ module.exports = async function (args, context = epochtal) {
           }
         }, 10000);
 
-      } else {
+      } else if (!isCOTDFirstRound) {
 
         // If everyone remaining is ready, start the game
         let everyoneReady = true;

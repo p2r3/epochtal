@@ -315,6 +315,7 @@ console.log(`Listening on ${gconfig.tls ? "https" : "http"}://localhost:${server
 // Schedule routines
 utils.routine(["schedule", "epochtal", "concludeWeek", "0 0 15 * * 7"]);
 utils.routine(["schedule", "epochtal", "releaseMap", "0 0 12 * * 1"]);
+utils.routine(["schedule", "live", "createCOTD", "0 0 19 * * *"]);
 
 // Register events
 utils.events(["create", "utilError", steamid => epochtal.data.users[steamid].admin]);

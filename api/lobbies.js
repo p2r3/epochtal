@@ -72,6 +72,8 @@ module.exports = async function (args, request) {
     case "create": {
 
       const name = args[1];
+      // Disallow imitations of the "Chamber Of The Day"
+      if (name.trim().toLowerCase() === "chamber of the day") return "ERR_NAME";
 
       // Get the active user and throw ERR_LOGIN if not logged in
       const user = await api_users(["whoami"], request);
@@ -162,6 +164,8 @@ module.exports = async function (args, request) {
     case "rename": {
 
       const newName = args[2];
+      // Disallow imitations of the "Chamber Of The Day"
+      if (newName.trim().toLowerCase() === "chamber of the day") return "ERR_NAME";
 
       // Check if the player is the host of this lobby
       const permsCheck = await checkUserPerms(request, lobbyid, true);
@@ -212,6 +216,8 @@ module.exports = async function (args, request) {
     case "mode": {
 
       const newMode = args[2];
+      // Disallow imitations of the "Chamber Of The Day"
+      if (newMode === "cotd") return "ERR_MODE";
 
       // Check if the player is the host of this lobby
       const permsCheck = await checkUserPerms(request, lobbyid, true);

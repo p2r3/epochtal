@@ -8,7 +8,8 @@ var localMapQueue = [];
 const lobbyModeStrings = {
   "ffa": "Free For All",
   "random": "Random Workshop Maps",
-  "battle_royale": "Battle Royale"
+  "battle_royale": "Battle Royale",
+  "cotd": "Chamber Of The Day",
 };
 
 const [LOBBY_IDLE, LOBBY_INGAME] = [0, 1];
@@ -583,6 +584,15 @@ async function lobbyInit () {
   // Display a notification for this player joining the lobby
   displayChatMessage(`${whoami.username} joined the lobby.`);
 
+  if (lobby.listEntry.name === "Chamber Of The Day") {
+    displayChatMessage(`<br>
+      Welcome to Chamber Of The Day!<br><br>
+      You're given up to 20 minutes from the creation of this lobby to
+      practice and route a completely random workshop chamber.<br>
+      <a href="https://docs.google.com/document/d/1gcWvwEjzJaKfgOEGpGPFGvtNV_LQCbSC3OE84dARMYE" target="_blank">Click here for a quick setup guide.</a>
+    `);
+  }
+
   const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
 
   // Sets up the lobby WebSocket and its associated event handlers
@@ -764,8 +774,10 @@ async function lobbyInit () {
     // Exit early if we don't have host permissions
     if (!amHost) return;
 
+    // Build list of dropdown options, omitting special COTD mode
     let lobbyModes = "";
     for (const mode in lobbyModeStrings) {
+      if (mode === "cotd") continue;
       lobbyModes += `<option value="${mode}" ${mode === lobby.listEntry.mode ? 'selected=""' : ""}>${lobbyModeStrings[mode]}</option>`;
     }
 

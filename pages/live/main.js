@@ -86,6 +86,7 @@ var lobbyListInit = async function () {
         case "ffa": modeString = "Free For All"; break;
         case "random": modeString = "Random Workshop Maps"; break;
         case "battle_royale": modeString = "Battle Royale"; break;
+        case "cotd": modeString = "Chamber Of The Day"; break;
         default: modeString = "Unknown"; break;
       }
 
