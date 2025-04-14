@@ -67,19 +67,32 @@ async function handleStateChange (id, context, init = false) {
       break;
     }
     case "battle_royale": {
-      if (state === LOBBY_INGAME) break;
-      const playerCount = listEntry.players.length;
-      // If only initializing, shrink lobby to smallest accommodating size
-      if (init) {
-        await module.exports(["maxplayers", id, playerCount], context);
-        break;
+      if (state === LOBBY_INGAME) {
+        // Kick players who aren't connected by the time that the game starts
+        for (const player in dataEntry.players) {
+          if (dataEntry.host === player) continue;
+          if (dataEntry.players[player].gameSocket) continue;
+          await module.exports(["leave", id, player], context);
+        }
       }
-      // Reduce the lobby size by 1
-      await module.exports(["maxplayers", id, playerCount - 1], context);
-      // Kick the slowest player with a time
-      const lb = await leaderboard(["get", mode], dataEntry.context);
-      const slowest = lb[lb.length - 1].steamid;
-      await module.exports(["leave", id, slowest], context);
+      // Kick players with no time, and the player with the slowest time
+      // Don't do this when initializing, because no one has a time then
+      if (!init) {
+        // Get leaderboard of runs
+        const lb = await leaderboard(["get", "lobby"], dataEntry.context);
+        // Kick non-hosts without times
+        for (const player of listEntry.players) {
+          if (lb.find(c => c.steamid === player)) continue;
+          if (dataEntry.host === player) continue;
+          await module.exports(["leave", id, player], context);
+        }
+        // Kick slowest player with a time
+        const slowest = lb[lb.length - 1].steamid;
+        await module.exports(["leave", id, slowest], context);
+      }
+      // Shrink lobby to smallest size accommodating remaining players
+      const playerCount = listEntry.players.length;
+      await module.exports(["maxplayers", id, playerCount], context);
       break;
     }
   }
