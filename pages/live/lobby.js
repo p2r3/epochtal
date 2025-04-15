@@ -115,9 +115,9 @@ async function updatePlayerList () {
       onmouseover="showTooltip('Click to transfer host role')"
       onmouseleave="hideTooltip()"
       onclick="transferHost('${steamid}')"
-  <p class="lobby-player-name">${username}${run ? ` - ${ticksToString(run.time)}` : ""}<br><span class="lobby-player-wins">${wins} win${wins === 1 ? "" : "s"}</span></p>
+      ` : "")}
   >
-  <p class="lobby-player-name">${username}${run ? ` - ${ticksToString(run.time)}` : ""}</p>
+  <p class="lobby-player-name">${username}${run ? ` - ${ticksToString(run.time)}` : ""}<br><span class="lobby-player-wins">${wins} win${wins === 1 ? "" : "s"}</span></p>
   <i
     class="${isSpectator ? "fa-regular fa-eye" : (ready ? (ingame ? "fa-solid fa-circle-play" : "fa-solid fa-circle-check") : "fa-regular fa-circle")} lobby-player-ready"
     onmouseover="showTooltip('${isSpectator ? "Spectating" : (ready ? (ingame ? "Playing" : "Ready") : "Not ready")}')"
