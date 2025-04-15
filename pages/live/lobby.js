@@ -8,6 +8,7 @@ var localMapQueue = [];
 const lobbyModeStrings = {
   "ffa": "Free For All",
   "random": "Random Workshop Maps",
+  "random_ranked": "Random Maps Ranked",
   "battle_royale": "Battle Royale",
   "cotd": "Chamber Of The Day",
 };
@@ -149,6 +150,8 @@ async function updateLobbyMap () {
 
   const lobbyMap = lobby.data.context.map;
 
+  const hidden = lobby.listEntry.mode === "random_ranked" && lobby.data.state === LOBBY_IDLE;
+
   // If no map is selected, display a placeholder
   if (!lobbyMap) {
     lobbyMapContainer.innerHTML = `
@@ -163,8 +166,8 @@ async function updateLobbyMap () {
     <a href="https://steamcommunity.com/sharedfiles/filedetails/?id=${lobbyMap.id}" target="_blank">
       <img class="votes-image" alt="thumbnail" src="${lobbyMap.thumbnail}?impolicy=Letterbox&imw=640&imh=360">
       <p class="votes-text">
-        ${lobbyMap.title}<br>
-        <i class="font-light">by ${lobbyMap.author}</i>
+        ${hidden ? "Title hidden" : lobbyMap.title}<br>
+        <i class="font-light">${hidden ? "author hidden" : `by ${lobbyMap.author}`}</i>
       </p>
     </a>
     <button id="lobby-map-button" onclick="selectLobbyMap()" ${amHost ? "" : `style="display: none"`}>Select</button>
@@ -388,6 +391,11 @@ async function lobbyEventHandler (event) {
       // Update lobby mode
       lobby.listEntry.mode = data.newMode;
 
+      // In Random Maps Ranked mode, make sure map details are hidden
+      if (lobby.listEntry.mode === "random_ranked") {
+        updateLobbyMap();
+      }
+
       // Change the lobby mode text
       const modeString = lobbyModeStrings[lobby.listEntry.mode];
       const lobbyModeText = document.querySelector("#lobby-mode");
@@ -462,6 +470,11 @@ async function lobbyEventHandler (event) {
 
       // Update local lobby state
       lobby.data.state = LOBBY_INGAME;
+
+      // In Random Maps Ranked mode, reveal name and author on game start
+      if (lobby.listEntry.mode === "random_ranked") {
+        updateLobbyMap();
+      }
 
       // Clear previous run times from player list
       lobby.data.context.leaderboard["lobby"] = [];

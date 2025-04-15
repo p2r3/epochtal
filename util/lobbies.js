@@ -75,10 +75,12 @@ async function handleStateChange (id, context, init = false) {
 
   switch (mode) {
     case "ffa": break;
+    case "random_ranked":
     case "random": {
       if (state === LOBBY_INGAME) break;
       // Pick a random map whenever the lobby becomes idle
-      await module.exports(["map", id, "random"], context);
+      const hidden = mode === "random_ranked";
+      await module.exports(["map", id, "random", hidden], context);
       break;
     }
     case "cotd": {
@@ -487,7 +489,7 @@ module.exports = async function (args, context = epochtal) {
 
     case "map": {
 
-      const mapid = args[2];
+      const [ mapid, hidden ] = args.slice(2);
 
       const listEntry = lobbies.list[lobbyid];
       const dataEntry = lobbies.data[lobbyid];
@@ -530,6 +532,11 @@ module.exports = async function (args, context = epochtal) {
           thumbnail: details.preview_url,
           link: details.file_url
         };
+
+        // If marked as hidden, don't store the map thumbnail
+        if (hidden) {
+          newMap.thumbnail = "https://epochtal.p2r3.com/icons/unknown-wide.jpg";
+        }
 
         // Fetch the map author's username
         try {
