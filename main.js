@@ -1,23 +1,21 @@
 const fs = require("node:fs");
 const path = require("node:path");
+const { CONFIG } = require("./config.ts");
 
 // Get environment variables from .env file
 require("dotenv").config();
 
 // Ensure main config exists
 const gconfigpath = `${__dirname}/config.json`;
-if (!fs.existsSync(gconfigpath)) {
-  console.log("No global config file found. Deploying default config...");
-  await Bun.write(gconfigpath, JSON.stringify({
-    domain: process.env.WEB_URL || "localhost:8080",
-    port: 8080,
-    tls: process.env.USE_TLS === "true",
-    https: process.env.USE_HTTPS === "true",
-    secretsdir: `${__dirname}/secrets`,
-    datadir: `${__dirname}/data`,
-    bindir: `${__dirname}/bin`
-  }));
-}
+await Bun.write(gconfigpath, JSON.stringify({
+  domain: CONFIG.WEB_URL,
+  port: CONFIG.PORT,
+  tls: CONFIG.USE_TLS,
+  https: CONFIG.USE_HTTPS,
+  secretsdir: CONFIG.DIR.SECRETS,
+  datadir: CONFIG.DIR.DATA,
+  bindir: CONFIG.DIR.BIN
+}));
 
 // Load the global config
 const gconfig = await Bun.file(gconfigpath).json();
