@@ -1,0 +1,30 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/marcosgomesneto/bun-devcontainers/tree/main/src/basic-bun
+{
+  "name": "Bun",
+  "dockerFile": "Dockerfile",
+  forwardPorts: [
+    8080
+  ],
+  // Configure tool-specific properties.
+  containerEnv: {
+    "BIN_DIR": "/home/bun/app"
+  },
+  "customizations": {
+    "jetbrains": {
+      "plugins": [
+        "intellij.javascript.bun"
+      ],
+      "settings": {
+        "com.intellij:app:EditorSettings.is_ensure_newline_at_eof": true
+      },
+      "backend": "WebStorm"
+    },
+    "vscode": {
+      // Add the IDs of extensions you want installed when the container is created.
+      "extensions": [
+        "oven.bun-vscode"
+      ]
+    }
+  }
+}
