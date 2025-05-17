@@ -4,6 +4,7 @@
 // - PancakeTAS
 
 const fs = require("fs");
+const { CONFIG } = require("./config.ts");
 
 /**
  * Ensure a directory exists, creating it if it doesn't.
@@ -37,79 +38,91 @@ async function ensureFile(file, content) {
  * @returns {boolean} Whether the setup is valid or not.
  */
 async function validate() {
-  // Validate the global config
-  if (!gconfig.domain || !gconfig.secretsdir || !gconfig.datadir || !gconfig.bindir || !gconfig.port) {
-    console.log("Global config is missing required fields: [domain, tls, https, secretsdir, datadir, bindir]");
-    return false;
-  }
-
-  // Validate bindir
-  if (!fs.existsSync(`${gconfig.bindir}/bspsrc`)) {
+  // Make sure bspsrc exists
+  if (!fs.existsSync(`${CONFIG.DIR.BIN}/bspsrc`)) {
     console.log("BSPSource is not installed, epochtal will not function properly without it.");
     console.log("> https://github.com/ata4/bspsrc/releases");
     return false;
   }
 
-  if (!fs.existsSync(`${gconfig.bindir}/mdp-json`)) {
+  // Make sure mdp-json exists
+  if (!fs.existsSync(`${CONFIG.DIR.BIN}/mdp-json`)) {
     console.log("mdp-json is not installed, epochtal will not function properly without it.");
     console.log("> https://github.com/p2r3/mdp-json");
     return false;
   }
 
-  if (!fs.existsSync(`${gconfig.bindir}/UntitledParser`)) {
+  // Make sure UntitledParser exists
+  if (!fs.existsSync(`${CONFIG.DIR.BIN}/UntitledParser`)) {
     console.log("UntitledParser is not installed, epochtal will not function properly without it.");
     console.log("> https://github.com/UncraftedName/UntitledParser/releases");
     return false;
   }
 
   // Validate secretsdir
-  if (gconfig.tls && (!fs.existsSync(`${gconfig.secretsdir}/fullchain.pem`) || !fs.existsSync(`${gconfig.secretsdir}/privkey.pem`))) {
+  if (CONFIG.USE_TLS && (!fs.existsSync(`${CONFIG.DIR.SECRETS}/fullchain.pem`) || !fs.existsSync(`${CONFIG.DIR.SECRETS}/privkey.pem`))) {
     console.log("TLS is enabled, but fullchain.pem and privkey.pem are missing from secretsdir.");
     console.log("> Generate self-signed certificates or obtain them from a certificate authority.");
     return false;
   }
 
-  if (!fs.existsSync(`${gconfig.secretsdir}/weights.js`)) {
+  if (!fs.existsSync(`${CONFIG.DIR.SECRETS}/weights.js`)) {
     console.log("weights.js is missing from secretsdir. Dumping default weights...");
-    await Bun.write(`${gconfig.secretsdir}/weights.js`, `module.exports = ${JSON.stringify(WEIGHTS, null, 2)};`);
+    await Bun.write(`${CONFIG.DIR.SECRETS}/weights.js`, `module.exports = ${JSON.stringify(WEIGHTS, null, 2)};`);
   }
 
 
   // Validate basic datadir structure
 
-  ensureDir(`${gconfig.datadir}`);
-  ensureDir(`${gconfig.datadir}/.tmp`);
-  ensureDir(`${gconfig.datadir}/archives`);
-  ensureDir(`${gconfig.datadir}/profiles`);
-  ensureDir(`${gconfig.datadir}/spplice`);
-  ensureDir(`${gconfig.datadir}/week`);
-  ensureDir(`${gconfig.datadir}/week/proof`);
-  ensureDir(`${gconfig.datadir}/week/maps`);
-  ensureDir(`${gconfig.datadir}/week/mdp`);
+  ensureDir(`${CONFIG.DIR.DATA}`);
+  ensureDir(`${CONFIG.DIR.DATA}/.tmp`);
+  ensureDir(`${CONFIG.DIR.DATA}/archives`);
+  ensureDir(`${CONFIG.DIR.DATA}/profiles`);
+  ensureDir(`${CONFIG.DIR.DATA}/spplice`);
+  ensureDir(`${CONFIG.DIR.DATA}/week`);
+  ensureDir(`${CONFIG.DIR.DATA}/week/proof`);
+  ensureDir(`${CONFIG.DIR.DATA}/week/maps`);
+  ensureDir(`${CONFIG.DIR.DATA}/week/mdp`);
 
-  await ensureFile(`${gconfig.datadir}/users.json`, "{}");
-  await ensureFile(`${gconfig.datadir}/entgraphs.json`, "{}");
-  await ensureFile(`${gconfig.datadir}/suggestions.json`, "[]");
-  await ensureFile(`${gconfig.datadir}/util.error`, "");
-  await ensureFile(`${gconfig.datadir}/util.print`, "");
-  await ensureFile(`${gconfig.datadir}/spplice/index.json`, `{"packages":[]}`);
-  await ensureFile(`${gconfig.datadir}/week/config.json`, `{"categories":[],"votingmaps":[{"id":"140534764"}],"votes":{},"number":0,"date":0}`);
-  await ensureFile(`${gconfig.datadir}/week/leaderboard.json`, "{}");
-  await ensureFile(`${gconfig.datadir}/week/week.log`, "");
-  await ensureFile(`${gconfig.datadir}/week/mdp/filesum_whitelist.txt`, "");
-  await ensureFile(`${gconfig.datadir}/week/mdp/sar_whitelist.txt`, "");
+  await ensureFile(`${CONFIG.DIR.DATA}/users.json`, "{}");
+  await ensureFile(`${CONFIG.DIR.DATA}/entgraphs.json`, "{}");
+  await ensureFile(`${CONFIG.DIR.DATA}/suggestions.json`, "[]");
+  await ensureFile(`${CONFIG.DIR.DATA}/util.error`, "");
+  await ensureFile(`${CONFIG.DIR.DATA}/util.print`, "");
+  await ensureFile(`${CONFIG.DIR.DATA}/spplice/index.json`, `{"packages":[]}`);
+  await ensureFile(`${CONFIG.DIR.DATA}/week/config.json`, `{"categories":[],"votingmaps":[{"id":"140534764"}],"votes":{},"number":0,"date":0}`);
+  await ensureFile(`${CONFIG.DIR.DATA}/week/leaderboard.json`, "{}");
+  await ensureFile(`${CONFIG.DIR.DATA}/week/week.log`, "");
+  await ensureFile(`${CONFIG.DIR.DATA}/week/mdp/filesum_whitelist.txt`, "");
+  await ensureFile(`${CONFIG.DIR.DATA}/week/mdp/sar_whitelist.txt`, "");
 
   // Validate process environment
-  if (
-      !process.env.STEAM_API_KEY
-      || !process.env.DISCORD_API_KEY
-      || !process.env.JWT_SECRET
-      || !process.env.INTERNAL_SECRET
-      || !process.env.DISCORD_CHANNEL_ANNOUNCE
-      || !process.env.DISCORD_CHANNEL_REPORT
-      || !process.env.DISCORD_CHANNEL_UPDATE
-  ) {
-    console.error("One or more environment variables are missing. Epochtal cannot run unless all necessary variables are present.");
+  if (!process.env.STEAM_API_KEY) {
+    console.error("STEAM_API_KEY is missing. Epochtal cannot run unless this variable is present.");
+    return false;
+  }
+  if (!process.env.DISCORD_API_KEY) {
+    console.error("DISCORD_API_KEY is missing. Epochtal cannot run unless this variable is present.");
+    return false;
+  }
+  if (!process.env.JWT_SECRET) {
+    console.error("JWT_SECRET is missing. Epochtal cannot run unless this variable is present.");
+    return false;
+  }
+  if (!process.env.INTERNAL_SECRET) {
+    console.error("INTERNAL_SECRET is missing. Epochtal cannot run unless this variable is present.");
+    return false;
+  }
+  if (!process.env.DISCORD_CHANNEL_ANNOUNCE) {
+    console.error("DISCORD_CHANNEL_ANNOUNCE is missing. Epochtal cannot run unless this variable is present.");
+    return false;
+  }
+  if (!process.env.DISCORD_CHANNEL_REPORT) {
+    console.error("DISCORD_CHANNEL_REPORT is missing. Epochtal cannot run unless this variable is present.");
+    return false;
+  }
+  if (!process.env.DISCORD_CHANNEL_UPDATE) {
+    console.error("DISCORD_CHANNEL_UPDATE is missing. Epochtal cannot run unless this variable is present.");
     return false;
   }
 
@@ -139,13 +152,13 @@ async function setup () {
   await categories(["add", "coop", "Co-op Mode", false, true, false, "demo", true]);
 
   // Delete first archive
-  fs.rmSync(`${gconfig.datadir}/archives/week0`, { recursive: true, force: true });
+  fs.rmSync(`${CONFIG.DIR.DATA}/archives/week0`, { recursive: true, force: true });
 
   // Build the Epochtal Live package
   await routines(["run", "live", "rebuildPackage"]);
 
   // Create first run file
-  await Bun.write(`${gconfig.datadir}/.first-run`, "");
+  await Bun.write(`${CONFIG.DIR.DATA}/.first-run`, "");
 }
 
 module.exports = {
