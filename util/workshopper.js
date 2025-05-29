@@ -1,6 +1,7 @@
 const UtilError = require("./error.js");
 
 const curator = require("./curator.js");
+const {CONFIG} = require("../config.ts");
 
 const STEAM_API = "https://api.steampowered.com";
 
@@ -14,7 +15,7 @@ const STEAM_API = "https://api.steampowered.com";
 async function getData (mapid, raw) {
 
   // Fetch the map details
-  const detailsRequest = await fetch(`${STEAM_API}/IPublishedFileService/GetDetails/v1/?key=${process.env.STEAM_API_KEY}&publishedfileids[0]=${mapid}&includeadditionalpreviews=true`);
+  const detailsRequest = await fetch(`${STEAM_API}/IPublishedFileService/GetDetails/v1/?key=${CONFIG.API_KEY.STEAM}&publishedfileids[0]=${mapid}&includeadditionalpreviews=true`);
   if (detailsRequest.status !== 200) return "ERR_STEAMAPI";
 
   // Ensure the response is valid
@@ -28,7 +29,7 @@ async function getData (mapid, raw) {
   if (raw) return details;
 
   // Fetch the author details
-  const authorRequest = await fetch(`${STEAM_API}/ISteamUser/GetPlayerSummaries/v2/?key=${process.env.STEAM_API_KEY}&steamids=${details.creator}`);
+  const authorRequest = await fetch(`${STEAM_API}/ISteamUser/GetPlayerSummaries/v2/?key=${CONFIG.API_KEY.STEAM}&steamids=${details.creator}`);
   if (authorRequest.status !== 200) return "ERR_STEAMAPI";
 
   // Ensure the response is valid
@@ -68,7 +69,7 @@ async function getData (mapid, raw) {
 async function curateWorkshop (maps = []) {
 
   // Super long workshop API query requesting pretty much everything you can
-  const requestData = `${STEAM_API}/IPublishedFileService/QueryFiles/v1/?key=${process.env.STEAM_API_KEY}&query_type=1&numperpage=100&appid=620&requiredtags=Singleplayer&match_all_tags=true&filetype=0&return_vote_data=false&return_tags=true&return_kv_tags=true&return_previews=true&return_children=true&return_short_description=false&return_for_sale_data=false&return_metadata=true&return_playtime_stats=false`;
+  const requestData = `${STEAM_API}/IPublishedFileService/QueryFiles/v1/?key=${CONFIG.API_KEY.STEAM}&query_type=1&numperpage=100&appid=620&requiredtags=Singleplayer&match_all_tags=true&filetype=0&return_vote_data=false&return_tags=true&return_kv_tags=true&return_previews=true&return_children=true&return_short_description=false&return_for_sale_data=false&return_metadata=true&return_playtime_stats=false`;
 
   const weekSeconds = 604800; // one week
   const startDate = Date.now() / 1000;

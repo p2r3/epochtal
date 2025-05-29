@@ -9,6 +9,7 @@ const [LOBBY_IDLE, LOBBY_INGAME] = [0, 1];
 
 // TODO: Store screenshots locally?
 const campaignMaps = require("../defaults/maps_sp.json");
+const {CONFIG} = require("../config.ts");
 
 /**
  * Creates a default context for the lobby.
@@ -380,7 +381,7 @@ module.exports = async function (args, context = epochtal) {
 
         // Fetch the map author's username
         try {
-          const authorRequest = await fetch(`https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=${process.env.STEAM_API_KEY}&steamids=${details.creator}`);
+          const authorRequest = await fetch(`https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=${CONFIG.API_KEY.STEAM}&steamids=${details.creator}`);
           const authorData = await authorRequest.json();
           newMap.author = authorData.response.players[0].personaname;
         } catch {

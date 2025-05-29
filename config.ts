@@ -8,7 +8,33 @@
  */
 export const CONFIG: any = {
     /**
-     * The filesystem directories in which non-volatile data is stored.
+     * External API keys used by Epochtal
+     */
+    API_KEY: {
+        /**
+         * Steam API key
+         */
+        STEAM: process.env.STEAM_API_KEY,
+        /**
+         * Discord API key
+         */
+        DISCORD: process.env.DISCORD_API_KEY
+    },
+    /**
+     * Internal secrets
+     */
+    SECRET: {
+        /**
+         * JWT (cookie) data encoding secret
+         */
+        JWT: process.env.JWT_SECRET,
+        /**
+         * Internal request authentication secret
+         */
+        INTERNAL: process.env.INTERNAL_SECRET
+    },
+    /**
+     * The filesystem directories in which non-volatile data is stored
      */
     DIR: {
         /**
@@ -49,5 +75,22 @@ export const CONFIG: any = {
      * (whether redirect URLs should be written with HTTPS instead of HTTP).
      * This will likely be the same as USE_TLS unless this deployment is exposed through a reverse proxy that terminates TLS.
      */
-    USE_HTTPS: process.env.USE_HTTPS === "true"
+    USE_HTTPS: process.env.USE_HTTPS === "true",
+    /**
+     * The Discord channels used for this deployment
+     */
+    DISCORD_CHANNEL: {
+        /**
+         * The channel ID of the Discord announcement channel
+         */
+        ANNOUNCEMENTS: process.env.DISCORD_CHANNEL_ANNOUNCE,
+        /**
+         * The channel ID of the Discord report channel
+         */
+        REPORTS: process.env.DISCORD_CHANNEL_REPORT,
+        /**
+         * The channel ID of the Discord update channel
+         */
+        UPDATES: process.env.DISCORD_CHANNEL_UPDATE
+    }
 }

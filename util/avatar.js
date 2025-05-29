@@ -1,6 +1,7 @@
 const UtilError = require("./error.js");
 
 const profiledata = require("./profiledata.js");
+const {CONFIG} = require("../config.ts");
 
 /**
  * Handles the `avatar` utility call. This utility is used to interact with player avatars.
@@ -29,7 +30,7 @@ module.exports = async function (args, context = epochtal) {
     case "fetch": {
 
       // Get user data from Steam API
-      const apiRequest = await fetch(`https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2?key=${process.env.STEAM_API_KEY}&steamids=${steamid}`);
+      const apiRequest = await fetch(`https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2?key=${CONFIG.API_KEY.STEAM}&steamids=${steamid}`);
       if (apiRequest.status !== 200) throw new UtilError("ERR_STEAMAPI", args, context);
 
       // Try to get the medium avatar from the API response

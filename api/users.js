@@ -3,6 +3,7 @@ const fs = require("node:fs");
 
 const users = require("../util/users.js");
 const profiledata = require("../util/profiledata.js");
+const {CONFIG} = require("../config.ts");
 
 /**
  * Decrypt the user token cookie from the request headers.
@@ -17,7 +18,7 @@ function getUserToken (request) {
     // Get the token from the request headers
     const token = request.headers.get("Cookie").split("steam_token=")[1].split(";")[0];
     // Verify the token and return the data
-    const data = jwt.verify(token, process.env.JWT_SECRET);
+    const data = jwt.verify(token, CONFIG.SECRET.JWT);
 
     if (!data) return null;
     return data;
@@ -65,7 +66,7 @@ module.exports = async function (args, request) {
     case "whoami": {
 
       // Check if the request is internal and return the server user
-      if (request.headers.get("Authentication") === process.env.INTERNAL_SECRET) {
+      if (request.headers.get("Authentication") === CONFIG.SECRET.INTERNAL) {
         return serverUser;
       }
 
