@@ -1,11 +1,13 @@
 const { appendFileSync } = require("node:fs");
+const {CONFIG} = require("../config.ts");
 
 /**
  * This class represents an error that occurred during the execution of a utility.
  * When constructed, it logs the error to the console and a file as well as publish it to the user.
+ *
+ * @author p2r3
  */
 module.exports = class UtilError extends Error {
-
   args = null;
   context = null;
   util = null;
@@ -36,7 +38,7 @@ module.exports = class UtilError extends Error {
 
     // Log the error to the console, a file and publish it to the user
     console.error(str);
-    appendFileSync(`${gconfig.datadir}/util.error`, str);
+    appendFileSync(`${CONFIG.DIR.DATA}/util.error`, str);
     epochtal.data.events.server.publish("utilError", JSON.stringify(str));
 
   }
@@ -48,5 +50,4 @@ module.exports = class UtilError extends Error {
 - Context: "${this.context.name}"`;
 
   }
-
 };

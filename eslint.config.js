@@ -74,7 +74,6 @@ const bunGlobals = {
 // Globals set up by epochtal
 const epochtalGlobals = {
   "epochtal": true,
-  "gconfig": true,
   "discordClient": true,
   "isFirstLaunch": true
 };
