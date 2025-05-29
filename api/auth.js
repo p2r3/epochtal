@@ -15,7 +15,7 @@ const {CONFIG} = require("../config.ts");
 const steam = new SteamAuth({
   realm: `${CONFIG.USE_HTTPS ? "https" : "http"}://${CONFIG.WEB_URL}`, // Site name displayed to users on logon
   returnUrl: `${CONFIG.USE_HTTPS ? "https" : "http"}://${CONFIG.WEB_URL}/api/auth/return`, // Return route after authentication
-  apiKey: process.env.STEAM_API_KEY // Steam API key
+  apiKey: CONFIG.API_KEY.STEAM // Steam API key
 });
 
 /**
@@ -59,7 +59,7 @@ module.exports = async function (args, request) {
 
       // Sign the user data and set a session cookie
       // and redirect the user to the home page
-      const token = jwt.sign(authuser, process.env.JWT_SECRET);
+      const token = jwt.sign(authuser, CONFIG.SECRET.JWT);
       const headers = new Headers({
         "Set-Cookie": `steam_token=${token};path=/;max-age=604800;HttpOnly;`,
         "Location": "/"

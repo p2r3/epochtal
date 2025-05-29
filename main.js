@@ -56,9 +56,9 @@ epochtal.data = {
   profiles: {},
   week: await epochtal.file.week.json(),
   discord: {
-    announce: process.env.DISCORD_CHANNEL_ANNOUNCE,
-    report: process.env.DISCORD_CHANNEL_REPORT,
-    update: process.env.DISCORD_CHANNEL_UPDATE
+    announce: CONFIG.DISCORD_CHANNEL.ANNOUNCEMENTS,
+    report: CONFIG.DISCORD_CHANNEL.REPORTS,
+    update: CONFIG.DISCORD_CHANNEL.UPDATES
   },
   spplice: {
     address: `${CONFIG.USE_HTTPS ? "https" : "http"}://${CONFIG.WEB_URL}`,
@@ -85,7 +85,7 @@ global.discordClient = new Discord.Client({
 });
 
 // Log in to the Discord client and set its state
-discordClient.login(process.env.DISCORD_API_KEY);
+discordClient.login(CONFIG.API_KEY.DISCORD);
 discordClient.once("ready", function () {
   discordClient.user.setActivity("Portal 2", { type: 5 });
 });
