@@ -7,6 +7,7 @@ const { $ } = require("bun");
 const tmppath = require("./tmppath.js");
 const workshopper = require("./workshopper.js");
 const coopifier = require("./coopifier.js");
+const {CONFIG} = require("../config.ts");
 
 /**
  * Generates a checksum from the contents of a file.
@@ -156,10 +157,10 @@ async function buildFiles (context) {
   // Write map command and script to epochtal_map
   await Bun.write(`${portal2}/cfg/epochtal_map.cfg`, `map "${mapPaths[0]}"`);
   await Bun.write(`${portal2}/scripts/vscripts/epochtal_map.nut`, `::epochtal_map <- ["${mapPaths.join('", "')}"]`);
-  // Write current week number to epochtal_week.cfg as an svar
+  // Write the current week number to epochtal_week.cfg as an svar
   await Bun.write(`${portal2}/cfg/epochtal_week.cfg`, `svar_set epochtal_week ${week.number}`);
   // Write the server's address to allow for API access from Spplice JS interface
-  await Bun.write(`${portal2}/address.txt`, `${gconfig.https ? "https" : "http"}://${gconfig.domain}`);
+  await Bun.write(`${portal2}/address.txt`, `${CONFIG.USE_HTTPS ? "https" : "http"}://${CONFIG.WEB_URL}`);
 
   // Create checksums for all created files if checksum list output paths exist
   if (context.file.mdp) {
@@ -220,7 +221,7 @@ async function getVMF (path, compress = false) {
 
   // Decompile map
   const flags = "--no_cubemaps --no_areaportals --no_occluders --no_ladders --no_visgroups --no_cams";
-  await $`${gconfig.bindir}/bspsrc/bspsrc.sh ${flags} ${path}.bsp`.quiet();
+  await $`${CONFIG.DIR.BIN}/bspsrc/bspsrc.sh ${flags} ${path}.bsp`.quiet();
 
   // Compress decompiled VMF
   if (compress) {

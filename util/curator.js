@@ -1,9 +1,10 @@
 const UtilError = require("./error.js");
 const UtilPrint = require("./print.js");
 
+const {CONFIG} = require("../config.ts");
 const https = require("https");
 const fs = require("node:fs");
-const weights = require(`${gconfig.secretsdir}/weights.js`);
+const weights = require(`${CONFIG.DIR.SECRETS}/weights.js`);
 
 const weeklog = require("./weeklog.js");
 const archive = require("./archive.js");
@@ -442,7 +443,7 @@ module.exports = async function (args, context = epochtal) {
       const density = calculateDensities(entities);
 
       // Fetch graphs against which to compare the map
-      const graphs = await Bun.file(`${gconfig.datadir}/entgraphs.json`).json();
+      const graphs = await Bun.file(`${CONFIG.DIR.DATA}/entgraphs.json`).json();
       const maxNameCount = Object.keys(graphs).length;
 
       // Calculate curation score by checking map entities against precomputed graphs
@@ -545,7 +546,7 @@ module.exports = async function (args, context = epochtal) {
         }
 
         let mapDensity;
-        const densityCachePath = `${gconfig.datadir}/archives/${archiveName}/entdensity.json`;
+        const densityCachePath = `${CONFIG.DIR.DATA}/archives/${archiveName}/entdensity.json`;
 
         // Check the archive directory for a potential entity density cache
         if (fs.existsSync(densityCachePath)) {
@@ -703,7 +704,7 @@ module.exports = async function (args, context = epochtal) {
         };
       }
 
-      Bun.write(`${gconfig.datadir}/entgraphs.json`, JSON.stringify(output));
+      Bun.write(`${CONFIG.DIR.DATA}/entgraphs.json`, JSON.stringify(output));
       return output;
 
     }

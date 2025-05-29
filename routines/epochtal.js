@@ -16,6 +16,7 @@ const profiledata = require("../util/profiledata.js");
 const profilelog = require("../util/profilelog.js");
 const points = require("../util/points.js");
 const curator = require("../util/curator.js");
+const {CONFIG} = require("../config.ts");
 
 // Scheduled routines are designed to revert all changes upon failing or to fail invisibly
 // This causes messy try/catches, but is better than leaving the system in a half-broken state
@@ -81,7 +82,7 @@ async function concludeWeek (context) {
   await Bun.write(context.file.week, JSON.stringify(week));
 
   // Parse suggested maps (remove those which have been picked)
-  const suggestions = await Bun.file(`${gconfig.datadir}/suggestions.json`).json();
+  const suggestions = await Bun.file(`${CONFIG.DIR.DATA}/suggestions.json`).json();
   for (let i = 0; i < suggestions.length; i ++) {
     if (!("v1" in suggestions[i] && "v2" in suggestions[i])) {
       suggestions.splice(i, 1);
@@ -95,7 +96,7 @@ async function concludeWeek (context) {
 
   UtilPrint("epochtal(concludeWeek): Curating workshop maps...");
   const allmaps = await workshopper(["curateweek", suggestions], context);
-  await Bun.write(`${gconfig.datadir}/maps.json`, JSON.stringify(allmaps));
+  await Bun.write(`${CONFIG.DIR.DATA}/maps.json`, JSON.stringify(allmaps));
 
   return "SUCCESS";
 
@@ -120,7 +121,7 @@ async function releaseMap (context) {
   }
 
   // Load the curated workshop map set, pick 5 for voting
-  const allmaps = await Bun.file(`${gconfig.datadir}/maps.json`).json();
+  const allmaps = await Bun.file(`${CONFIG.DIR.DATA}/maps.json`).json();
   const VOTING_MAPS_COUNT = 5;
 
   UtilPrint("epochtal(releaseMap): Building voting map list...");
@@ -320,7 +321,7 @@ async function releaseMap (context) {
   // Update the suggestions file
   try {
 
-    const suggestionsFile = Bun.file(`${gconfig.datadir}/suggestions.json`);
+    const suggestionsFile = Bun.file(`${CONFIG.DIR.DATA}/suggestions.json`);
     const suggestions = await suggestionsFile.json();
 
     // Remove the suggestions that were voted on

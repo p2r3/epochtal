@@ -3,6 +3,7 @@ const UtilPrint = require("../util/print.js");
 
 const fs = require("node:fs");
 const proof = require("./proof.js");
+const {CONFIG} = require("../config.ts");
 
 /**
  * Checks if the given name is valid.
@@ -30,7 +31,7 @@ async function getArchiveContext (name) {
   if (!isValidName(name)) return "ERR_NAME";
 
   // Get the full path of the archive
-  const path = `${gconfig.datadir}/archives/${name}`;
+  const path = `${CONFIG.DIR.DATA}/archives/${name}`;
   if (!fs.existsSync(path)) return "ERR_NAME";
 
   const context = { file: {}, data: {} };
@@ -107,7 +108,7 @@ module.exports = async function (args, context = epochtal) {
       };
 
       // List and sort archive names
-      const list = fs.readdirSync(`${gconfig.datadir}/archives`);
+      const list = fs.readdirSync(`${CONFIG.DIR.DATA}/archives`);
       list.sort(function (a, b) {
         return getWeekNumber(b) - getWeekNumber(a);
       });
@@ -155,7 +156,7 @@ module.exports = async function (args, context = epochtal) {
       if (name && !isValidName(name)) throw new UtilError("ERR_NAME", args, context);
 
       // Get the path of the archive to create
-      let archivePath = `${gconfig.datadir}/archives/${name || ("week" + context.data.week.number)}`;
+      let archivePath = `${CONFIG.DIR.DATA}/archives/${name || ("week" + context.data.week.number)}`;
 
       /**
        * Whether to force the archive creation. If this is `true` and the filesystem path of the archive

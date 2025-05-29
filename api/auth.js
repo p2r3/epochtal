@@ -3,6 +3,7 @@ const SteamAuth = require("../steamauth.js");
 
 const users = require("../util/users.js");
 const validate = require("../validate.js");
+const {CONFIG} = require("../config.ts");
 
 /**
  * Steam authentication instance.
@@ -12,8 +13,8 @@ const validate = require("../validate.js");
  * @type {SteamAuth}
  */
 const steam = new SteamAuth({
-  realm: `${gconfig.https ? "https" : "http"}://${gconfig.domain}`, // Site name displayed to users on logon
-  returnUrl: `${gconfig.https ? "https" : "http"}://${gconfig.domain}/api/auth/return`, // Return route after authentication
+  realm: `${CONFIG.USE_HTTPS ? "https" : "http"}://${CONFIG.WEB_URL}`, // Site name displayed to users on logon
+  returnUrl: `${CONFIG.USE_HTTPS ? "https" : "http"}://${CONFIG.WEB_URL}/api/auth/return`, // Return route after authentication
   apiKey: process.env.STEAM_API_KEY // Steam API key
 });
 

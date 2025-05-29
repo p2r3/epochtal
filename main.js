@@ -2,27 +2,11 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { CONFIG } = require("./config.ts");
 
-// Get environment variables from .env file
+// Read environment variables from the .env file
 require("dotenv").config();
 
-// Ensure main config exists
-const gconfigpath = `${__dirname}/config.json`;
-await Bun.write(gconfigpath, JSON.stringify({
-  domain: CONFIG.WEB_URL,
-  port: CONFIG.PORT,
-  tls: CONFIG.USE_TLS,
-  https: CONFIG.USE_HTTPS,
-  secretsdir: CONFIG.DIR.SECRETS,
-  datadir: CONFIG.DIR.DATA,
-  bindir: CONFIG.DIR.BIN
-}));
-
-// Load the global config
-const gconfig = await Bun.file(gconfigpath).json();
-global.isFirstLaunch = !fs.existsSync(`${gconfig.datadir}/.first-run`);
-global.gconfig = gconfig;
-
 // Validate the global config
+global.isFirstLaunch = !fs.existsSync(`${CONFIG.DIR.DATA}/.first-run`);
 const validate = require(`${__dirname}/validate.js`);
 if (!await validate.validate()) {
   console.log("Validation failed. Exiting...");
@@ -38,7 +22,7 @@ if (!await validate.validate()) {
  * The `data` entry parses a lot of these files into a more readable object format for better integration
  * with the code.
  *
- * The `name` field can be omitted, but helps keeping track of different contexts in environments where
+ * The `name` field can be omitted but helps keep track of different contexts in environments where
  * that's necessary.
  *
  * @type {{file: {}, data: {}, name: string}}
@@ -47,21 +31,21 @@ global.epochtal = { file: {}, data: {}, name: "epochtal" };
 
 // Load files into the global context
 epochtal.file = {
-  leaderboard: Bun.file(`${gconfig.datadir}/week/leaderboard.json`),
-  users: Bun.file(`${gconfig.datadir}/users.json`),
-  profiles: `${gconfig.datadir}/profiles`,
-  week: Bun.file(`${gconfig.datadir}/week/config.json`),
-  log: `${gconfig.datadir}/week/week.log`,
-  vmfs: `${gconfig.datadir}/week/maps`,
+  leaderboard: Bun.file(`${CONFIG.DIR.DATA}/week/leaderboard.json`),
+  users: Bun.file(`${CONFIG.DIR.DATA}/users.json`),
+  profiles: `${CONFIG.DIR.DATA}/profiles`,
+  week: Bun.file(`${CONFIG.DIR.DATA}/week/config.json`),
+  log: `${CONFIG.DIR.DATA}/week/week.log`,
+  vmfs: `${CONFIG.DIR.DATA}/week/maps`,
   portal2: `${__dirname}/defaults/portal2`,
-  demos: `${gconfig.datadir}/week/proof`,
+  demos: `${CONFIG.DIR.DATA}/week/proof`,
   spplice: {
-    repository: `${gconfig.datadir}/spplice`,
-    index: Bun.file(`${gconfig.datadir}/spplice/index.json`)
+    repository: `${CONFIG.DIR.DATA}/spplice`,
+    index: Bun.file(`${CONFIG.DIR.DATA}/spplice/index.json`)
   },
   mdp: {
-    filesums: `${gconfig.datadir}/week/mdp/filesum_whitelist.txt`,
-    sarsums: `${gconfig.datadir}/week/mdp/sar_whitelist.txt`
+    filesums: `${CONFIG.DIR.DATA}/week/mdp/filesum_whitelist.txt`,
+    sarsums: `${CONFIG.DIR.DATA}/week/mdp/sar_whitelist.txt`
   }
 };
 
@@ -77,7 +61,7 @@ epochtal.data = {
     update: process.env.DISCORD_CHANNEL_UPDATE
   },
   spplice: {
-    address: `${gconfig.https ? "https" : "http"}://${gconfig.domain}`,
+    address: `${CONFIG.USE_HTTPS ? "https" : "http"}://${CONFIG.WEB_URL}`,
     index: await epochtal.file.spplice.index.json()
   },
   // Epochtal Live
@@ -289,7 +273,7 @@ const fetchHandler = async function (req) {
 
 // Start a Bun web server with fetchHandler() as the function to handle requests
 const servercfg = {
-  port: gconfig.port,
+  port: CONFIG.PORT,
   fetch: fetchHandler,
   websocket: {
     open: await utils.events(["wshandler", "open"]),
@@ -298,17 +282,17 @@ const servercfg = {
   }
 };
 
-if (gconfig.tls) {
+if (CONFIG.USE_TLS) {
   servercfg.tls = {
-    key: Bun.file(`${gconfig.secretsdir}/privkey.pem`),
-    cert: Bun.file(`${gconfig.secretsdir}/fullchain.pem`)
+    key: Bun.file(`${CONFIG.DIR.SECRETS}/privkey.pem`),
+    cert: Bun.file(`${CONFIG.DIR.SECRETS}/fullchain.pem`)
   };
 }
 
 const server = Bun.serve(servercfg);
 epochtal.data.events.server = server;
 
-console.log(`Listening on ${gconfig.tls ? "https" : "http"}://localhost:${server.port}...`);
+console.log(`Listening on ${CONFIG.USE_TLS ? "https" : "http"}://localhost:${server.port}...`);
 
 // Schedule routines
 utils.routine(["schedule", "epochtal", "concludeWeek", "0 0 15 * * 7"]);

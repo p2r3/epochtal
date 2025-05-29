@@ -2,6 +2,7 @@ const fs = require("node:fs");
 
 const spplice = require("../util/spplice.js");
 const tmppath = require("../util/tmppath.js");
+const {CONFIG} = require("../config.ts");
 
 /**
  * Builds the Epochtal Live Spplice package
@@ -26,11 +27,11 @@ async function rebuildPackage (context) {
   // Create required directories
   fs.mkdirSync(`${portal2}/maps`);
   fs.mkdirSync(`${portal2}/maps/workshop`);
-  // Copy game files to temporary directory
+  // Copy game files to a temporary directory
   fs.copyFileSync(`${defaults}/main.js`, `${portal2}/main.js`);
   fs.copyFileSync(`${defaults}/polyfill.js`, `${portal2}/polyfill.js`);
   // Write the server's HTTP address to a file
-  await Bun.write(`${portal2}/address.txt`, `${gconfig.https ? "https" : "http"}://${gconfig.domain}`);
+  await Bun.write(`${portal2}/address.txt`, `${CONFIG.USE_HTTPS ? "https" : "http"}://${CONFIG.WEB_URL}`);
 
   try {
     // Build the new package
