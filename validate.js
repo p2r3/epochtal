@@ -1,5 +1,5 @@
-// > The plan is to have the user setup only the bare minimum, and then have the server create the rest.
-// > Once secrets, binaries and some basic configuration is set up, the first launch will put epochtal into
+// > The plan is to have the user set up only the bare minimum and then have the server create the rest.
+// > Once secrets, binaries and some basic configuration are set up, the first launch will put epochtal into
 // > a fully usable state, having a first week and everything set up.
 // - PancakeTAS
 
@@ -40,40 +40,38 @@ async function ensureFile(file, content) {
 async function validate() {
   // Make sure bspsrc exists
   if (!fs.existsSync(`${CONFIG.DIR.BIN}/bspsrc`)) {
-    console.log("BSPSource is not installed, epochtal will not function properly without it.");
-    console.log("> https://github.com/ata4/bspsrc/releases");
+    console.log("Required dependency BSPSource not found in BIN_DIR. (filename 'bspsrc')");
+    console.log("> Download from https://github.com/ata4/bspsrc/releases");
     return false;
   }
 
   // Make sure mdp-json exists
   if (!fs.existsSync(`${CONFIG.DIR.BIN}/mdp-json`)) {
-    console.log("mdp-json is not installed, epochtal will not function properly without it.");
-    console.log("> https://github.com/p2r3/mdp-json");
+    console.log("Required dependency mdp-json not found in BIN_DIR. (filename 'mdp-json')");
+    console.log("> Download from https://github.com/p2r3/mdp-json");
     return false;
   }
 
   // Make sure UntitledParser exists
   if (!fs.existsSync(`${CONFIG.DIR.BIN}/UntitledParser`)) {
-    console.log("UntitledParser is not installed, epochtal will not function properly without it.");
-    console.log("> https://github.com/UncraftedName/UntitledParser/releases");
+    console.log("Required dependency UntitledParser not found in BIN_DIR. (filename 'UntitledParser')");
+    console.log("> Download from https://github.com/UncraftedName/UntitledParser/releases");
     return false;
   }
 
-  // Validate secretsdir
+  // Validate secrets directory
   if (CONFIG.USE_TLS && (!fs.existsSync(`${CONFIG.DIR.SECRETS}/fullchain.pem`) || !fs.existsSync(`${CONFIG.DIR.SECRETS}/privkey.pem`))) {
-    console.log("TLS is enabled, but fullchain.pem and privkey.pem are missing from secretsdir.");
-    console.log("> Generate self-signed certificates or obtain them from a certificate authority.");
+    console.log("TLS is enabled, but 'fullchain.pem' and/or 'privkey.pem' are missing from SECRETS_DIR.");
+    console.log("> Please generate or obtain valid certificates and populate SECRETS_DIR.");
     return false;
   }
 
   if (!fs.existsSync(`${CONFIG.DIR.SECRETS}/weights.js`)) {
-    console.log("weights.js is missing from secretsdir. Dumping default weights...");
+    console.log("'weights.js' is missing from SECRETS_DIR. Dumping default weights...");
     await Bun.write(`${CONFIG.DIR.SECRETS}/weights.js`, `module.exports = ${JSON.stringify(WEIGHTS, null, 2)};`);
   }
 
-
-  // Validate basic datadir structure
-
+  // Validate basic data directory structure
   ensureDir(`${CONFIG.DIR.DATA}`);
   ensureDir(`${CONFIG.DIR.DATA}/.tmp`);
   ensureDir(`${CONFIG.DIR.DATA}/archives`);
@@ -130,16 +128,15 @@ async function validate() {
 }
 
 /**
- * Setup the epochtal server on first launch.
+ * Set up the Epochtal server on the first launch.
  *
  * @author PancakeTAS
  */
 async function setup () {
-
   const routines = require("./util/routine.js");
   const categories = require("./util/categories.js");
 
-  // Get epochtal up and running
+  // Get Epochtal up and running
   await routines(["run", "epochtal", "concludeWeek"]);
   await routines(["run", "epochtal", "releaseMap"]);
 
@@ -157,7 +154,7 @@ async function setup () {
   // Build the Epochtal Live package
   await routines(["run", "live", "rebuildPackage"]);
 
-  // Create first run file
+  // Create a first-run file
   await Bun.write(`${CONFIG.DIR.DATA}/.first-run`, "");
 }
 
