@@ -181,6 +181,7 @@ bin/
 config.json
 
 # Bun lockfile
+bun.lock
 bun.lockb
 
 # External software
