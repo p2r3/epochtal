@@ -9,18 +9,22 @@ for adaptability in any Portal 2 tournament context.
 ## Contributing to Epochtal
 
 Epochtal is an open source project, and encourages contributions. If you want to contribute to the project, or create
-your own derivative, here's a quick start guide:
+your own derivative, clone this repository and get going!
 
-```shell
-git clone https://github.com/p2r3/epochtal
-cd epochtal
-bun install
-```
+Epochtal supports [Development Containers](https://containers.dev/), which is the recommended way to develop as it sets
+up everything needed for a smooth development and testing experience. Most modern IDEs support Dev Containers out of the
+box and will ask you whether you want to launch a container when you open the project. For development in Visual Studio
+Code, you might need to install the [Dev Containers extension](https://containers.dev/) before opening the project.
 
-Make sure you have the required dependencies `tar`, `xz` and `wget` when running Epochtal with `bun run main.js`.
+If you don't want to use Dev Containers, make sure to install all runtime dependencies as described in the manual
+installation below before running Epochtal. You also need the system dependencies `tar`, `xz` and `wget`.
 
-You're also going to make your life a lot easier by reading [the contribution guidelines](CONTRIBUTING.md) before making
-any changes.
+Regardless of which approach you choose, make sure to install the most up-to-date Bun dependencies with `bun install`.
+Running Epochtal is as simple as `bun run main.js`, provided all dependencies are properly installed.
+
+> [!TIP]
+> If you're planning to make code contributions to Epochtal, you're also going to make your life a lot easier by reading
+> [the contribution guidelines](CONTRIBUTING.md) before making any changes.
 
 ## Deploying Epochtal
 
