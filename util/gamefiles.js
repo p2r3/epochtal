@@ -184,7 +184,7 @@ async function buildFiles (context) {
     }
 
     // Write additional checksums to MDP whitelist
-    const filesum = await Bun.file(`./defaults/filesum_whitelist.txt`).text();
+    const filesum = await Bun.file("./defaults/filesum_whitelist.txt").text();
     await Bun.write(context.file.mdp.filesums, filesum + checksums);
 
     // Write SAR checksums to MDP whitelist

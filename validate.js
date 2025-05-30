@@ -12,7 +12,7 @@ const { CONFIG } = require("./config.ts");
  * @author PancakeTAS
  * @param {string} dir The directory to ensure.
  */
-function ensureDir(dir) {
+function ensureDir (dir) {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir);
   }
@@ -25,7 +25,7 @@ function ensureDir(dir) {
  * @param {string} file The file to ensure.
  * @param {string} content The content to write to the file if it doesn't exist
  */
-async function ensureFile(file, content) {
+async function ensureFile (file, content) {
   if (!fs.existsSync(file)) {
     await Bun.write(file, content);
   }
@@ -37,7 +37,7 @@ async function ensureFile(file, content) {
  * @author PancakeTAS
  * @returns {boolean} Whether the setup is valid or not.
  */
-async function validate() {
+async function validate () {
   // Make sure bspsrc exists
   if (!fs.existsSync(`${CONFIG.DIR.BIN}/bspsrc`)) {
     console.log("Required dependency BSPSource not found in BIN_DIR. (filename 'bspsrc')");
@@ -87,8 +87,8 @@ async function validate() {
   await ensureFile(`${CONFIG.DIR.DATA}/suggestions.json`, "[]");
   await ensureFile(`${CONFIG.DIR.DATA}/util.error`, "");
   await ensureFile(`${CONFIG.DIR.DATA}/util.print`, "");
-  await ensureFile(`${CONFIG.DIR.DATA}/spplice/index.json`, `{"packages":[]}`);
-  await ensureFile(`${CONFIG.DIR.DATA}/week/config.json`, `{"categories":[],"votingmaps":[{"id":"140534764"}],"votes":{},"number":0,"date":0}`);
+  await ensureFile(`${CONFIG.DIR.DATA}/spplice/index.json`, '{"packages":[]}');
+  await ensureFile(`${CONFIG.DIR.DATA}/week/config.json`, '{"categories":[],"votingmaps":[{"id":"140534764"}],"votes":{},"number":0,"date":0}');
   await ensureFile(`${CONFIG.DIR.DATA}/week/leaderboard.json`, "{}");
   await ensureFile(`${CONFIG.DIR.DATA}/week/week.log`, "");
   await ensureFile(`${CONFIG.DIR.DATA}/week/mdp/filesum_whitelist.txt`, "");

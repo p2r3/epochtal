@@ -86,7 +86,7 @@ module.exports = async function (args, request) {
       // Overwrite the session cookie with an empty value
       // and redirect the user to the home page
       const headers = new Headers({
-        "Set-Cookie": `steam_token=;path=/;max-age=0;HttpOnly;`,
+        "Set-Cookie": "steam_token=;path=/;max-age=0;HttpOnly;",
         "Location": "/"
       });
 

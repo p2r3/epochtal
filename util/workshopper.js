@@ -112,7 +112,7 @@ async function curateWorkshop (maps = []) {
 
       } catch (err) {
         // If an individual map failed to be curated, too bad. Plenty of fish in the sea.
-        console.error(`Curation error:`, err);
+        console.error("Curation error:", err);
       }
 
     }
