@@ -94,36 +94,6 @@ async function validate() {
   await ensureFile(`${CONFIG.DIR.DATA}/week/mdp/filesum_whitelist.txt`, "");
   await ensureFile(`${CONFIG.DIR.DATA}/week/mdp/sar_whitelist.txt`, "");
 
-  // Validate process environment
-  if (!process.env.STEAM_API_KEY) {
-    console.error("STEAM_API_KEY is missing. Epochtal cannot run unless this variable is present.");
-    return false;
-  }
-  if (!process.env.DISCORD_API_KEY) {
-    console.error("DISCORD_API_KEY is missing. Epochtal cannot run unless this variable is present.");
-    return false;
-  }
-  if (!process.env.JWT_SECRET) {
-    console.error("JWT_SECRET is missing. Epochtal cannot run unless this variable is present.");
-    return false;
-  }
-  if (!process.env.INTERNAL_SECRET) {
-    console.error("INTERNAL_SECRET is missing. Epochtal cannot run unless this variable is present.");
-    return false;
-  }
-  if (!process.env.DISCORD_CHANNEL_ANNOUNCE) {
-    console.error("DISCORD_CHANNEL_ANNOUNCE is missing. Epochtal cannot run unless this variable is present.");
-    return false;
-  }
-  if (!process.env.DISCORD_CHANNEL_REPORT) {
-    console.error("DISCORD_CHANNEL_REPORT is missing. Epochtal cannot run unless this variable is present.");
-    return false;
-  }
-  if (!process.env.DISCORD_CHANNEL_UPDATE) {
-    console.error("DISCORD_CHANNEL_UPDATE is missing. Epochtal cannot run unless this variable is present.");
-    return false;
-  }
-
   return true;
 }
 
