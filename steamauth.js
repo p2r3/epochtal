@@ -6,11 +6,12 @@ const openid = require("openid"); // OpenID is used together with Steam for auth
  * @see https://steamcommunity.com/dev
  */
 class SteamAuth {
-  constructor({ realm, returnUrl, apiKey }) {
-    if (!realm || !returnUrl || !apiKey)
+  constructor ({ realm, returnUrl, apiKey }) {
+    if (!realm || !returnUrl || !apiKey) {
       throw new Error(
         "Missing realm, returnURL or apiKey parameter(s). These are required."
       );
+    }
 
     // These two attributes seem to never be used. Should they be removed?
     this.realm = realm;
@@ -33,7 +34,7 @@ class SteamAuth {
    *
    * @returns {Promise<unknown>} The Steam redirect URL
    */
-  async getRedirectUrl() {
+  async getRedirectUrl () {
     return new Promise((resolve, reject) => {
       this.relyingParty.authenticate(
         "https://steamcommunity.com/openid",
@@ -65,7 +66,7 @@ class SteamAuth {
    *
    * @see https://developer.valvesoftware.com/wiki/Steam_Web_API#GetPlayerSummaries_.28v0002.29
    */
-  async fetchIdentifier(steamOpenId) {
+  async fetchIdentifier (steamOpenId) {
     return new Promise(async (resolve, reject) => {
       // Parse SteamID from the URL
       const steamId = steamOpenId.replace(
@@ -117,21 +118,23 @@ class SteamAuth {
    * @param {HttpRequest} req The request to verify
    * @returns {Promise<unknown>} The authenticated user and all relevant user data
    */
-  async authenticate(req) {
+  async authenticate (req) {
     return new Promise((resolve, reject) => {
       // Verify assertion
       this.relyingParty.verifyAssertion(req, async (error, result) => {
         if (error) return reject(error.message);
-        if (!result || !result.authenticated)
+        if (!result || !result.authenticated) {
           return reject("Failed to authenticate user.");
+        }
 
         // Check if the claimed identity is valid
         if (
           !/^https?:\/\/steamcommunity\.com\/openid\/id\/\d+$/.test(
             result.claimedIdentifier
           )
-        )
+        ) {
           return reject("Claimed identity is not valid.");
+        }
 
         // Try to get the user data
         try {

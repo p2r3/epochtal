@@ -213,8 +213,7 @@ module.exports = async function (args, context = epochtal) {
       await events(["create", eventName, auth, message, null, disconnect], context);
 
       // Broadcast a heartbeat ping every 30 seconds
-      let lobbyHeartbeat;
-      lobbyHeartbeat = setInterval(async function () {
+      const lobbyHeartbeat = setInterval(async function () {
         if (!(await events(["get", eventName], context))) return clearInterval(lobbyHeartbeat);
         await events(["send", eventName, { type: "ping" }], context);
       }, 30000);
@@ -293,7 +292,7 @@ module.exports = async function (args, context = epochtal) {
 
       const listEntry = lobbies.list[lobbyid];
       const dataEntry = lobbies.data[lobbyid];
-      const eventName = "lobby_" + lobbyid;
+      // const eventName = "lobby_" + lobbyid; // FIXME: Never used?
 
       // Ensure the lobby exists
       if (!listEntry || !dataEntry) throw new UtilError("ERR_LOBBYID", args, context);

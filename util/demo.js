@@ -234,7 +234,7 @@ module.exports = async function (args, context = epochtal) {
           case "timestamp": {
 
             if (timestampNow - Date.parse(event.value) > EXPIRY_TIME) {
-              return `Demo was recorded more than 1h ago, according to system clock.`;
+              return "Demo was recorded more than 1h ago, according to system clock.";
             }
             break;
 
@@ -256,7 +256,7 @@ module.exports = async function (args, context = epochtal) {
 
           // Ensure no sar or demo mismatches are present
           case "sarsum": return `SAR checksum mismatch, got \`${event.value}\`.`;
-          case "demosum": return `Demo checksum mismatch.`;
+          case "demosum": return "Demo checksum mismatch.";
 
           // Handle console commands and cvars
           case "cvar":
@@ -320,7 +320,7 @@ module.exports = async function (args, context = epochtal) {
       if (speedrunTimer === null) return "Speedrun timer not stopped.";
 
       if (timestampNow - lastTimestamp > EXPIRY_TIME) {
-        return `Demo was recorded more than 1h ago, according to server clock.`;
+        return "Demo was recorded more than 1h ago, according to server clock.";
       }
       if (lastTimestamp > timestampNow) {
         return `Demo was recorded in the future, server timestamp is \`${lastTimestamp}\`.`;
