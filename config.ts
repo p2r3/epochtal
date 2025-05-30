@@ -110,5 +110,10 @@ export const CONFIG: any = {
          * The channel ID of the Discord update channel
          */
         UPDATES: requireEnv("DISCORD_CHANNEL_UPDATE")
-    }
+    },
+    /**
+     * The time span for the curation algorithm to curate for, in seconds.
+     * This defines how far back in time the curation algorithm fetches maps from.
+     */
+    CURATE_SECONDS: process.env.CURATE_SECONDS ?? 604800 // Defaults to one week
 }
