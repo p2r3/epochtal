@@ -1,4 +1,22 @@
 /**
+ * This function tries to fetch an environment variable with the given name.
+ * If it doesn't exist, it exits the application.
+ *
+ * @author Soni
+ *
+ * @param name The name of the environment variable to fetch
+ * @returns The value of the environment variable if it exists
+ */
+function requireEnv(name: string): string {
+    // Stop process if the environment variable isn't present
+    if (!process.env[name]) {
+        console.error(`Required environment variable ${name} not present, exiting...`);
+        process.exit(1);
+    }
+    return process.env[name];
+}
+
+/**
  * This object holds the global configuration of Epochtal that all parts of the application read from.
  * When Epochtal is started, this configuration is populated with data inherited from environment variables.
  * If parts of the configuration are not available as environment variables,
@@ -14,11 +32,11 @@ export const CONFIG: any = {
         /**
          * Steam API key
          */
-        STEAM: process.env.STEAM_API_KEY,
+        STEAM: requireEnv("STEAM_API_KEY"),
         /**
          * Discord API key
          */
-        DISCORD: process.env.DISCORD_API_KEY
+        DISCORD: requireEnv("DISCORD_API_KEY")
     },
     /**
      * Internal secrets
@@ -27,11 +45,11 @@ export const CONFIG: any = {
         /**
          * JWT (cookie) data encoding secret
          */
-        JWT: process.env.JWT_SECRET,
+        JWT: requireEnv("JWT_SECRET"),
         /**
          * Internal request authentication secret
          */
-        INTERNAL: process.env.INTERNAL_SECRET
+        INTERNAL: requireEnv("INTERNAL_SECRET")
     },
     /**
      * The filesystem directories in which non-volatile data is stored
@@ -83,14 +101,14 @@ export const CONFIG: any = {
         /**
          * The channel ID of the Discord announcement channel
          */
-        ANNOUNCEMENTS: process.env.DISCORD_CHANNEL_ANNOUNCE,
+        ANNOUNCEMENTS: requireEnv("DISCORD_CHANNEL_ANNOUNCE"),
         /**
          * The channel ID of the Discord report channel
          */
-        REPORTS: process.env.DISCORD_CHANNEL_REPORT,
+        REPORTS: requireEnv("DISCORD_CHANNEL_REPORT"),
         /**
          * The channel ID of the Discord update channel
          */
-        UPDATES: process.env.DISCORD_CHANNEL_UPDATE
+        UPDATES: requireEnv("DISCORD_CHANNEL_UPDATE")
     }
 }
