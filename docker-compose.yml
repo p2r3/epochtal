@@ -14,9 +14,7 @@ services:
     #  DISCORD_CHANNEL_ANNOUNCE:
     #  DISCORD_CHANNEL_REPORT:
     #  DISCORD_CHANNEL_UPDATE:
-    #  WEB_URL: # This is optional
-    #  USE_TLS: # This is optional
-    #  USE_HTTPS: # This is optional
+    #  Check .env.example for environment variable documentation and optional variables
     volumes:
       # You can bind the data directory of epochtal to your host (recommended).
       # Comment out the following line if you don't want that.
