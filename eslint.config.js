@@ -63,7 +63,14 @@ const jsRules = {
   "no-trailing-spaces": "warn",
   "semi": ["warn", "always"],
   "no-var": "warn",
-  "prefer-const": "warn"
+  "prefer-const": "warn",
+  "curly": ["error", "multi-line"],
+  "space-before-function-paren": ["warn", "always"],
+  "quotes": ["error", "double", { "avoidEscape": true }],
+  "camelcase": ["error", { "properties": "always", "ignoreDestructuring": false, "allow": ["^[A-Z0-9_]+$"] }],
+  "new-cap": ["error", { "newIsCap": true, "capIsNew": false, "properties": true }],
+  "spaced-comment": ["error", "always"],
+  "operator-linebreak": ["warn", "before"]
 };
 
 // Globals set up by Bun
