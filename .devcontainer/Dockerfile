@@ -5,13 +5,13 @@ ENV PATH="~/.bun/bin:${PATH}"
 RUN ln -s /usr/local/bin/bun /usr/local/bin/node
 
 # Update packages
-RUN if [ "debian" == "alpine" ] ; then apk update ; else apt-get update ; fi
+RUN apt update
 
 # Install Git
-RUN if [ "debian" == "alpine" ] ; then apk add git ; else apt-get install -y git ; fi
+RUN apt install -y git
 
 # Install build dependencies
-RUN apt install wget unzip -y
+RUN apt install wget unzip xz-utils -y
 
 # Install bspsrc
 RUN wget https://github.com/ata4/bspsrc/releases/download/v1.4.5/bspsrc-linux.zip
