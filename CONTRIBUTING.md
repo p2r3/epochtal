@@ -86,15 +86,18 @@ make sure your commit name would make sense in the sentence `This commit will <c
 
 ## Additional notes
 
+Many of the code style guidelines will be enforced by ESLint, but not all of them. Be sure to keep the general code
+style in the back of your mind and double-check if you're unsure.
+
 When submitting a contribution of any form to this project, you consent to the use of your work as described in the
-project's license file. Once a contribution has been accepted, it is legally protected by said license, and will be
-subject to the license terms. Make sure to know this before submitting any pull requests in order to save yourself from
-any potential hassle in the future.
+project's license file. Once a contribution has been accepted, it is legally protected by said license and will be
+subject to the license terms. Make sure to know this before submitting any pull requests to save yourself from any
+potential hassle in the future.
 
 Remember that not all contributions will be accepted. Make sure your idea integrates well with the spirit of the project
 if you want it to be approved. It is also a good idea to discuss your thoughts with others throughout your work, to get
 some more varied opinions. When you feel satisfied with your contributions, submit them by opening a pull request. It's
-likely that a project maintainer will request some minor changes to your code in order to fit the project better.
+likely that a project maintainer will request some minor changes to your code to fit the project better.
 
 > [!TIP]
 > To make it more likely for your code to be approved, try to match the code style of existing code in the project and
