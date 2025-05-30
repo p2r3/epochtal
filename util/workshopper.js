@@ -71,14 +71,21 @@ async function curateWorkshop (maps = []) {
   // Super long workshop API query requesting pretty much everything you can
   const requestData = `${STEAM_API}/IPublishedFileService/QueryFiles/v1/?key=${CONFIG.API_KEY.STEAM}&query_type=1&numperpage=100&appid=620&requiredtags=Singleplayer&match_all_tags=true&filetype=0&return_vote_data=false&return_tags=true&return_kv_tags=true&return_previews=true&return_children=true&return_short_description=false&return_for_sale_data=false&return_metadata=true&return_playtime_stats=false`;
 
-  const weekSeconds = 604800; // one week
+  /**
+   * The time span of which to curate maps for, in seconds.
+   * The curation algorithm starts on the current day, then goes back in time as far as specified here.
+   *
+   * @type {number}
+   */
+  const curateSpan = CONFIG.CURATE_SECONDS;
   const startDate = Date.now() / 1000;
 
   const authorcache = {};
-  let page = 1, lastDate = startDate;
+  let page = 1;
+  let lastDate = startDate;
 
   // Ensure we're not going back more than a week
-  while (startDate - lastDate < weekSeconds) {
+  while (startDate - lastDate < curateSpan) {
 
     // Fetch page of workshop data
     const response = (await (await fetch(`${requestData}&page=${page++}`)).json()).response;
@@ -87,7 +94,7 @@ async function curateWorkshop (maps = []) {
     // Curate each result
     for (const data of results) {
 
-      if (startDate - data.time_created >= weekSeconds) break;
+      if (startDate - data.time_created >= curateSpan) break;
 
       try {
 
