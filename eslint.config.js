@@ -1,5 +1,6 @@
 // Globals set up by node (overlap mostly with Bun)
 import globals from "globals";
+import tseslint from "typescript-eslint";
 
 // Common JS rules
 const jsRules = {
@@ -120,9 +121,14 @@ const streamUIGlobals = {
   "musicTogglePause": false
 };
 
-export default [
-  { // Bun files
-    files: ["*.js", "**/*.js"],
+export default tseslint.config(
+  {
+    files: ["*.ts", "**/*.ts"],
+    extends: [tseslint.configs.recommended]
+  },
+  // Bun files
+  {
+    files: ["*.js", "**/*.js", "*.ts", "**/*.ts"],
     ignores: ["**/pages/*.js", "**/pages/live/*.js", "**/pages/profile/*.js", "**/defaults/portal2/main.js"],
     languageOptions: {
       globals: {
@@ -138,7 +144,9 @@ export default [
         "varsIgnorePattern": "^(VERDICT_SAFE|VERDICT_UNSURE|VERDICT_ILLEGAL|_.*)$" // ignore verdicts
       }],
     }
-  }, { // HTML files
+  },
+  // HTML files
+  {
     files: ["**/pages/*.js", "**/pages/admin/*.js", "**/pages/live/*.js", "**/pages/profile/*.js", "**/pages/stream/*.js"],
     languageOptions: {
       sourceType: "script",
@@ -147,7 +155,9 @@ export default [
         ...toolsGlobals
       }
     }
-  }, { // Spplice files
+  },
+  // Spplice files
+  {
     files: ["**/defaults/portal2/main.js"],
     languageOptions: {
       sourceType: "commonjs",
@@ -158,7 +168,9 @@ export default [
     rules: {
       ...jsRules
     }
-  }, { // Stream UI files
+  },
+  // Stream UI files
+  {
     files: ["**/pages/stream/*.js"],
     languageOptions: {
       sourceType: "script",
@@ -167,4 +179,4 @@ export default [
       }
     }
   }
-];
+);
