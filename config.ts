@@ -7,7 +7,7 @@
  * @param name The name of the environment variable to fetch
  * @returns The value of the environment variable if it exists
  */
-function requireEnv(name: string): string {
+function requireEnv (name: string): string {
     // Stop process if the environment variable isn't present
     if (!process.env[name]) {
         console.error(`Required environment variable ${name} not present, exiting...`);
@@ -24,7 +24,7 @@ function requireEnv(name: string): string {
  *
  * @author Soni
  */
-export const CONFIG: any = {
+export const CONFIG: object = {
     /**
      * External API keys used by Epochtal
      */
@@ -116,4 +116,4 @@ export const CONFIG: any = {
      * This defines how far back in time the curation algorithm fetches maps from.
      */
     CURATE_SECONDS: process.env.CURATE_SECONDS ?? 604800 // Defaults to one week
-}
+};
