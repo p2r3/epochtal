@@ -99,6 +99,16 @@ var profilePageInit = async function () {
     generateGraph("points in main");
   };
 
+  graphLegend.onclick = function () {
+    if (graphLegendDropdown.style.opacity == 0) {
+      graphLegendDropdown.style.opacity = 1;
+      graphLegendDropdown.style.pointerEvents = "auto";
+    } else {
+      graphLegendDropdown.style.opacity = "";
+      graphLegendDropdown.style.pointerEvents = "";
+    }
+  };
+
   var profileLog, leaderboards = {};
 
   /**
@@ -157,6 +167,10 @@ var profilePageInit = async function () {
   window.generateGraph = async function (graphName) {
 
     graphLegendText.innerHTML = graphName;
+
+    // Clear any forced styles on the dropdown
+    graphLegendDropdown.style.opacity = "";
+    graphLegendDropdown.style.pointerEvents = "";
 
     // Setup graph type dropdown
     let dropdownOutput = "";
