@@ -24,6 +24,9 @@ async function rebuildPackage (context) {
   const portal2 = await tmppath();
   fs.mkdirSync(portal2);
 
+  // Get the server's HTTP(S) address
+  const address = `${gconfig.https ? "https" : "http"}://${gconfig.domain}`;
+
   // Create required directories
   fs.mkdirSync(`${portal2}/maps`);
   fs.mkdirSync(`${portal2}/maps/workshop`);
@@ -33,9 +36,13 @@ async function rebuildPackage (context) {
   // Copy game files to temporary directory
   fs.copyFileSync(`${defaults}/main.js`, `${portal2}/main.js`);
   fs.copyFileSync(`${defaults}/valve.rc`, `${portal2}/cfg/valve.rc`);
-  fs.copyFileSync(`${defaults}/mapspawn.nut`, `${portal2}/scripts/vscripts/mapspawn.nut`);
+  // Copy mapspawn.nut, include server URL as a constant
+  let mapspawn = await Bun.file(`${defaults}/mapspawn.nut`).text();
+  mapspawn = `const EPOCHTAL_URL = "${address}";\n\n` + mapspawn;
+  await Bun.write(`${portal2}/scripts/vscripts/mapspawn.nut`, mapspawn);
+
   // Write the server's HTTP address to a file
-  await Bun.write(`${portal2}/address.txt`, `${gconfig.https ? "https" : "http"}://${gconfig.domain}`);
+  await Bun.write(`${portal2}/address.txt`, address);
 
   try {
     // Build the new package
