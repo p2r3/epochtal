@@ -527,6 +527,12 @@ async function lobbyEventHandler (event) {
       forceButton.textContent = "Force start";
       forceButton.href = "javascript:forceStart()";
 
+      // If we're a spectator, or if autoReady is enabled, automatically ready up
+      if (amSpectator || autoReady) setTimeout(function () {
+        const lobbyid = window.location.href.split("#")[1];
+        fetch(`/api/lobbies/ready/${lobbyid}/true`);
+      }, 3000);
+
       return;
     }
 
