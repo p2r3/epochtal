@@ -308,6 +308,11 @@ module.exports = async function (args, request) {
 
       const message = args[2];
 
+      // Ensure the message is within 200 characters
+      if (message.length > 200) return "ERR_LENGTH";
+      // Ensure the message isn't empty
+      if (message.trim().length === 0) return "ERR_EMPTY";
+
       // Check if the player is a member of this lobby
       const permsCheck = await checkUserPerms(request, lobbyid);
       if (typeof permsCheck === "string") return permsCheck;
