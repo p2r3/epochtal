@@ -20,13 +20,15 @@ module.exports = async function (args, request) {
   const file = Bun.file(`${gconfig.datadir}/suggestions.json`);
   const maps = await file.json();
 
-  // Get the active user and throw ERR_LOGIN if not logged in
-  const user = await api_users(["whoami"], request);
-  if (!user) return "ERR_LOGIN";
+  const randomMapSources = await Bun.file(`${__dirname}/../data/random-sources.json`).json();
 
   switch (command) {
 
     case "suggest": {
+
+      // Get the active user and throw ERR_LOGIN if not logged in
+      const user = await api_users(["whoami"], request);
+      if (!user) return "ERR_LOGIN";
 
       // Verify mapid and check if it has already been suggested
       if (!mapid || isNaN(mapid)) return "ERR_MAPID";
@@ -45,7 +47,25 @@ module.exports = async function (args, request) {
     }
 
     case "random": {
-      return await workshopper(["random"]);
+      const source = args[1];
+      const map = await workshopper(["random"]);
+
+      if (source) {
+        if (!(source in randomMapSources)) {
+          randomMapSources[source] = [null, null];
+        } else {
+          randomMapSources[source][0] = randomMapSources[source][1];
+          randomMapSources[source][1] = map;
+        }
+        await Bun.write(`${__dirname}/../data/random-sources.json`, JSON.stringify(randomMapSources));
+      }
+
+      return map;
+    }
+
+    case "randomsource": {
+      const source = args[1];
+      return randomMapSources[source];
     }
 
   }
