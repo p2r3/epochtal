@@ -68,7 +68,7 @@ async function getData (mapid, raw) {
 async function curateWorkshop (maps = []) {
 
   // Super long workshop API query requesting pretty much everything you can
-  const requestData = `${STEAM_API}/IPublishedFileService/QueryFiles/v1/?key=${process.env.STEAM_API_KEY}&query_type=1&numperpage=100&appid=620&requiredtags=Singleplayer&match_all_tags=true&filetype=0&return_vote_data=false&return_tags=true&return_kv_tags=true&return_previews=true&return_children=true&return_short_description=false&return_for_sale_data=false&return_metadata=true&return_playtime_stats=false`;
+  const requestData = `${STEAM_API}/IPublishedFileService/QueryFiles/v1/?key=${process.env.STEAM_API_KEY}&query_type=1&numperpage=100&appid=620&requiredtags[0]=Singleplayer&excludedtags[0]=Cooperative&filetype=0&return_vote_data=false&return_tags=true&return_kv_tags=true&return_previews=true&return_children=true&return_short_description=false&return_for_sale_data=false&return_metadata=true&return_playtime_stats=false`;
 
   const weekSeconds = 604800; // one week
   const startDate = Date.now() / 1000;
@@ -92,9 +92,6 @@ async function curateWorkshop (maps = []) {
 
         // Files over 128MiB are too big to be worth considering
         if (Number(data.file_size) > 134217728) continue;
-
-        // Make sure we're not picking a co-op map
-        if (data.tags.find(c => c.tag === "Cooperative")) continue;
 
         maps.push({
           id: data.publishedfileid,
