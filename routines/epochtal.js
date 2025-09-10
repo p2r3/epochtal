@@ -71,7 +71,9 @@ async function concludeWeek (context) {
   try {
     await discord(["report", `Week ${week.number} demo report summary:`, [finalReportPath, demoTarPath]], context);
   } catch (e) {
-    throw e;
+    try {
+      await discord(["report", `Failed to send demo report summary for week ${week.number}: \`\`\`${e.toString()}\`\`\``], context);
+    } catch { /* Discord being down shouldn't prevent us from concluding the week */ }
   } finally {
     fs.unlinkSync(finalReportPath);
     fs.unlinkSync(demoTarPath);
