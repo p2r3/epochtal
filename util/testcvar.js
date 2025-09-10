@@ -600,11 +600,11 @@ const cvarTestSafe = {
   "cm_open_vote_dialog": (val) => false, // cmd opens the map voting dialog for testing purposes
   "cm_play_intro_video": (val) => val == 0, //
   "cm_reset_vo_progress": (val) => true, // cmd reset the progress of the peti storyline.
-  "cmd": (val) => cvarTestSafe[val.split(" ")[0]](val.split(" ").slice(1).join(" ")), //cmd  forward command to server.
-  "cmd1": (val) => cvarTestSafe[val.split(" ")[0]](val.split(" ").slice(1).join(" ")), //cmd  sets userinfo string for split screen player in slot 1
-  "cmd2": (val) => cvarTestSafe[val.split(" ")[0]](val.split(" ").slice(1).join(" ")), //cmd  sets userinfo string for split screen player in slot 2
-  "cmd3": (val) => cvarTestSafe[val.split(" ")[0]](val.split(" ").slice(1).join(" ")), //cmd  sets userinfo string for split screen player in slot 3
-  "cmd4": (val) => cvarTestSafe[val.split(" ")[0]](val.split(" ").slice(1).join(" ")), //cmd  sets userinfo string for split screen player in slot 4
+  "cmd": (val) => cvarTestSafe[val.split(" ")[0]](val.split(" ").slice(1).join(" ")), // cmd forward command to server.
+  "cmd1": (val) => cvarTestSafe[val.split(" ")[0]](val.split(" ").slice(1).join(" ")), // cmd sets userinfo string for split screen player in slot 1
+  "cmd2": (val) => cvarTestSafe[val.split(" ")[0]](val.split(" ").slice(1).join(" ")), // cmd sets userinfo string for split screen player in slot 2
+  "cmd3": (val) => cvarTestSafe[val.split(" ")[0]](val.split(" ").slice(1).join(" ")), // cmd sets userinfo string for split screen player in slot 3
+  "cmd4": (val) => cvarTestSafe[val.split(" ")[0]](val.split(" ").slice(1).join(" ")), // cmd sets userinfo string for split screen player in slot 4
   "collision_shake_amp": (val) => val == 0, //
   "collision_shake_freq": (val) => val == 0, //
   "collision_shake_time": (val) => val == 0, //

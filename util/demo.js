@@ -4,6 +4,7 @@ const { $ } = require("bun");
 const fs = require("node:fs");
 const tmppath = require("./tmppath.js");
 const testcvar = require("./testcvar.js");
+const {CONFIG} = require("../config.ts");
 
 /**
  * Extends the demo file path if it is not already an absolute path.
@@ -14,7 +15,7 @@ const testcvar = require("./testcvar.js");
  */
 function extendFilePath (file) {
   if (!fs.existsSync(file)) {
-    return `${gconfig.datadir}/week/proof/${file}`;
+    return `${CONFIG.DIR.DATA}/week/proof/${file}`;
   }
   return file;
 }
@@ -48,7 +49,7 @@ async function parseDump (file) {
   const outputPath = await tmppath();
   fs.mkdirSync(outputPath);
 
-  await $`${`${gconfig.bindir}/UntitledParser`} -o ${outputPath} -D ${file}`.quiet();
+  await $`${`${CONFIG.DIR.BIN}/UntitledParser`} -o ${outputPath} -D ${file}`.quiet();
   const outputFile = (fs.readdirSync(outputPath))[0];
   const dump = await Bun.file(`${outputPath}/${outputFile}`).text();
 
@@ -98,8 +99,8 @@ async function parseMDP (file, context) {
   // Get SAR and file checksum list paths from context
   const { filesums, sarsums } = context.file.mdp;
 
-  // Parse the demo into json
-  const stdout = await $`cd "${gconfig.bindir}/mdp-json" && ./mdp "${file}" --filesum-path "${filesums}" --sarsum-path "${sarsums}"`.text();
+  // Parse the demo into JSON
+  const stdout = await $`cd "${CONFIG.DIR.BIN}/mdp-json" && ./mdp "${file}" --filesum-path "${filesums}" --sarsum-path "${sarsums}"`.text();
   const json = JSON.parse(stdout.replaceAll("\\", "\\\\"));
   if (originalFile !== file) fs.unlinkSync(file);
 
@@ -246,7 +247,7 @@ module.exports = async function (args, context = epochtal) {
           case "timestamp": {
 
             if (timestampNow - Date.parse(event.value) > EXPIRY_TIME) {
-              return `Demo was recorded more than 1h ago, according to system clock.`;
+              return "Demo was recorded more than 1h ago, according to system clock.";
             }
             break;
 
@@ -268,7 +269,7 @@ module.exports = async function (args, context = epochtal) {
 
           // Ensure no sar or demo mismatches are present
           case "sarsum": return `SAR checksum mismatch, got \`${event.value}\`.`;
-          case "demosum": return `Demo checksum mismatch.`;
+          case "demosum": return "Demo checksum mismatch.";
 
           // Handle console commands and cvars
           case "cvar":
@@ -332,7 +333,7 @@ module.exports = async function (args, context = epochtal) {
       if (speedrunTimer === null) return "Speedrun timer not stopped.";
 
       if (timestampNow - lastTimestamp > EXPIRY_TIME) {
-        return `Demo was recorded more than 1h ago, according to server clock.`;
+        return "Demo was recorded more than 1h ago, according to server clock.";
       }
       if (lastTimestamp > timestampNow) {
         return `Demo was recorded in the future, server timestamp is \`${lastTimestamp}\`.`;

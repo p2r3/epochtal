@@ -1,5 +1,6 @@
 const { appendFileSync } = require("node:fs");
 const events = require("./events.js");
+const {CONFIG} = require("../config.ts");
 
 /**
  * Handles the `utilPrint` utility call. This utility is used to print a message to the console.
@@ -17,7 +18,7 @@ module.exports = function UtilPrint (message, context = epochtal) {
   const str = `[${(new Date()).toUTCString()}]\n${message}\n`;
 
   console.log(str);
-  appendFileSync(`${gconfig.datadir}/util.print`, str);
+  appendFileSync(`${CONFIG.DIR.DATA}/util.print`, str);
   events(["send", "utilPrint", str]);
 
 };

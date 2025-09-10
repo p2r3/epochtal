@@ -9,30 +9,34 @@ for adaptability in any Portal 2 tournament context.
 ## Contributing to Epochtal
 
 Epochtal is an open source project, and encourages contributions. If you want to contribute to the project, or create
-your own derivative, here's a quick start guide:
+your own derivative, clone this repository and get going!
 
-```shell
-git clone https://github.com/p2r3/epochtal
-cd epochtal
-bun install
-```
+Epochtal supports [Development Containers](https://containers.dev/), which is the recommended way to develop as it sets
+up everything needed for a smooth development and testing experience. Most modern IDEs support Dev Containers out of the
+box and will ask you whether you want to launch a container when you open the project. For development in Visual Studio
+Code, you might need to install the [Dev Containers extension](https://containers.dev/) before opening the project.
 
-Make sure you have the required dependencies `tar`, `xz` and `wget` when running epochtal with `bun run main.js`.
+If you don't want to use Dev Containers, make sure to install all runtime dependencies as described in the manual
+installation below before running Epochtal. You also need the system dependencies `tar`, `xz` and `wget`.
 
-You're also going to make your life a lot easier by reading [the contribution guidelines](CONTRIBUTING.md) before making
-any changes.
+Regardless of which approach you choose, make sure to install the most up-to-date Bun dependencies with `bun install`.
+Running Epochtal is as simple as `bun run main.js`, provided all dependencies are properly installed.
+
+> [!TIP]
+> If you're planning to make code contributions to Epochtal, you're also going to make your life a lot easier by reading
+> [the contribution guidelines](CONTRIBUTING.md) before making any changes.
 
 ## Deploying Epochtal
 
 This project is written for the [Bun runtime](https://bun.sh/), and will not work on other runtimes such as Node or Deno.
 
-There are two primary ways in which you can deploy epochtal for your own tournament:
+There are two primary ways in which you can deploy Epochtal for your own tournament:
 
 ### Using Docker (recommended)
 
 Epochtal builds and publishes a Docker image every time a changes are pushed to the `main` branch.
 
-To run epochtal through Docker compose, use the provided [docker-compose.yml](docker-compose.yml) file.
+To run Epochtal through Docker compose, use the provided [docker-compose.yml](docker-compose.yml) file.
 
 If you want to use 'Plain Docker', you should first create a volume to persistently store data between updates:
 
@@ -61,9 +65,9 @@ The `/app/secrets` bind is optional, and not recommended unless you need to edit
 
 ### Manual installation
 
-If you don't want to use Docker, ~~use docker~~ you can run epochtal locally on your machine:
+If you don't want to use Docker, ~~use docker~~ you can run Epochtal locally on your machine:
 
-1. Install the required dependencies; epochtal needs `tar`, `xz` and `wget` to be available to the Bun process.
+1. Install the required dependencies; Epochtal needs `tar`, `xz` and `wget` to be available to the Bun process.
 2. Clone the repository
    ```shell
    git clone --depth 1 https://github.com/p2r3/epochtal
@@ -85,7 +89,7 @@ If you don't want to use Docker, ~~use docker~~ you can run epochtal locally on 
    chmod +x UntitledParser
    ```
 4. Copy `.env.example` to `.env` and populate the necessary fields
-5. Install bun packages and run epochtal!
+5. Install bun packages and run Epochtal!
    ```shell
    bun install --production
    bun run main.js

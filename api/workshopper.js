@@ -1,6 +1,7 @@
 const workshopper = require("../util/workshopper.js");
 const curator = require("../util/curator.js");
 const api_users = require("./users.js");
+const {CONFIG} = require("../config.ts");
 
 /**
  * Handles `/api/workshopper/` endpoint requests. This endpoint supports only the `suggest` command:
@@ -17,7 +18,7 @@ module.exports = async function (args, request) {
   const [command, mapid] = args;
 
   // Fetch the list of suggestions
-  const file = Bun.file(`${gconfig.datadir}/suggestions.json`);
+  const file = Bun.file(`${CONFIG.DIR.DATA}/suggestions.json`);
   const maps = await file.json();
 
   const randomMapSources = await Bun.file(`${__dirname}/../data/random-sources.json`).json();

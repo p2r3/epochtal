@@ -9,6 +9,7 @@ const [LOBBY_IDLE, LOBBY_INGAME] = [0, 1];
 
 // TODO: Store screenshots locally?
 const campaignMaps = require("../defaults/maps_sp.json");
+const {CONFIG} = require("../config.ts");
 
 /**
  * Creates a default context for the lobby.
@@ -69,7 +70,7 @@ async function createMapEntry (details, hidden = false) {
 
   // Fetch the map author's username
   try {
-    const authorRequest = await fetch(`https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=${process.env.STEAM_API_KEY}&steamids=${details.creator}`);
+    const authorRequest = await fetch(`https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=${CONFIG.API_KEY.STEAM}&steamids=${details.creator}`);
     const authorData = await authorRequest.json();
     map.author = authorData.response.players[0].personaname;
   } catch {
@@ -460,8 +461,7 @@ module.exports = async function (args, context = epochtal) {
       await events(["create", eventName, auth, message, null, disconnect], context);
 
       // Broadcast a heartbeat ping every 30 seconds
-      let lobbyHeartbeat;
-      lobbyHeartbeat = setInterval(async function () {
+      const lobbyHeartbeat = setInterval(async function () {
         if (!(await events(["get", eventName], context))) return clearInterval(lobbyHeartbeat);
         await events(["send", eventName, { type: "ping" }], context);
       }, 30000);
@@ -553,7 +553,7 @@ module.exports = async function (args, context = epochtal) {
 
       const listEntry = lobbies.list[lobbyid];
       const dataEntry = lobbies.data[lobbyid];
-      const eventName = "lobby_" + lobbyid;
+      // const eventName = "lobby_" + lobbyid; // FIXME: Never used?
 
       // Ensure the lobby exists
       if (!listEntry || !dataEntry) throw new UtilError("ERR_LOBBYID", args, context);

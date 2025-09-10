@@ -1,5 +1,6 @@
 const { existsSync } = require("node:fs");
 const path = require("path");
+const {CONFIG} = require("../config.ts");
 
 /**
  * Generates a random alphanumeric string of a given length
@@ -34,7 +35,7 @@ module.exports = async function (len = 8, context = null) {
 
   let output;
   do {
-    output = path.join(`${gconfig.datadir}/.tmp/${randomString(len)}`);
+    output = path.join(`${CONFIG.DIR.DATA}/.tmp/${randomString(len)}`);
   } while (existsSync(output));
 
   return output;

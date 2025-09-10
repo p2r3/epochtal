@@ -1,9 +1,10 @@
 const UtilError = require("./error.js");
 const UtilPrint = require("./print.js");
 
+const {CONFIG} = require("../config.ts");
 const https = require("https");
 const fs = require("node:fs");
-const weights = require(`${gconfig.secretsdir}/weights.js`);
+const weights = require(`${CONFIG.DIR.SECRETS}/weights.js`);
 
 const weeklog = require("./weeklog.js");
 const archive = require("./archive.js");
@@ -22,7 +23,7 @@ const STEAM_API = "https://api.steampowered.com";
 async function getWorkshopData (mapid) {
 
   // Fetch the workshop data for the map
-  const detailsRequest = await fetch(`${STEAM_API}/IPublishedFileService/GetDetails/v1/?key=${process.env.STEAM_API_KEY}&publishedfileids[0]=${mapid}&includeadditionalpreviews=true`);
+  const detailsRequest = await fetch(`${STEAM_API}/IPublishedFileService/GetDetails/v1/?key=${CONFIG.API_KEY.STEAM}&publishedfileids[0]=${mapid}&includeadditionalpreviews=true`);
   if (detailsRequest.status !== 200) return "ERR_STEAMAPI";
 
   // Parse the response, throwing an error if the data is invalid
@@ -377,7 +378,7 @@ module.exports = async function (args, context = epochtal) {
       let gamesList = 0;
       for (let tries = 0; tries <= 10; tries ++) {
 
-        const response = await fetch(`${STEAM_API}/IPlayerService/GetOwnedGames/v1/?key=${process.env.STEAM_API_KEY}&steamid=${data.creator}`);
+        const response = await fetch(`${STEAM_API}/IPlayerService/GetOwnedGames/v1/?key=${CONFIG.API_KEY.STEAM}&steamid=${data.creator}`);
 
         if (response.status === 200) {
           gamesList = (await response.json()).response.games;
@@ -409,7 +410,7 @@ module.exports = async function (args, context = epochtal) {
       let userMaps;
       for (let tries = 0; tries <= 10; tries ++) {
 
-        const response = await fetch(`${STEAM_API}/IPublishedFileService/GetUserFileCount/v1/?key=${process.env.STEAM_API_KEY}&steamid=${data.creator}&appid=620&totalonly=true`);
+        const response = await fetch(`${STEAM_API}/IPublishedFileService/GetUserFileCount/v1/?key=${CONFIG.API_KEY.STEAM}&steamid=${data.creator}&appid=620&totalonly=true`);
 
         if (response.status === 200) {
           userMaps = (await response.json()).response.total;
@@ -445,7 +446,7 @@ module.exports = async function (args, context = epochtal) {
       const density = calculateDensities(entities);
 
       // Fetch graphs against which to compare the map
-      const graphs = await Bun.file(`${gconfig.datadir}/entgraphs.json`).json();
+      const graphs = await Bun.file(`${CONFIG.DIR.DATA}/entgraphs.json`).json();
       const maxNameCount = Object.keys(graphs).length;
 
       // Calculate curation score by checking map entities against precomputed graphs
@@ -555,7 +556,7 @@ module.exports = async function (args, context = epochtal) {
         }
 
         let mapDensity;
-        const densityCachePath = `${gconfig.datadir}/archives/${archiveName}/entdensity.json`;
+        const densityCachePath = `${CONFIG.DIR.DATA}/archives/${archiveName}/entdensity.json`;
 
         // Check the archive directory for a potential entity density cache
         if (fs.existsSync(densityCachePath)) {
@@ -713,7 +714,7 @@ module.exports = async function (args, context = epochtal) {
         };
       }
 
-      Bun.write(`${gconfig.datadir}/entgraphs.json`, JSON.stringify(output));
+      Bun.write(`${CONFIG.DIR.DATA}/entgraphs.json`, JSON.stringify(output));
       return output;
 
     }

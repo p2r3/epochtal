@@ -1,6 +1,7 @@
 const UtilError = require("./error.js");
 
 const curator = require("./curator.js");
+const {CONFIG} = require("../config.ts");
 
 const STEAM_API = "https://api.steampowered.com";
 
@@ -14,7 +15,7 @@ const STEAM_API = "https://api.steampowered.com";
 async function getData (mapid, raw) {
 
   // Fetch the map details
-  const detailsRequest = await fetch(`${STEAM_API}/IPublishedFileService/GetDetails/v1/?key=${process.env.STEAM_API_KEY}&publishedfileids[0]=${mapid}&includeadditionalpreviews=true`);
+  const detailsRequest = await fetch(`${STEAM_API}/IPublishedFileService/GetDetails/v1/?key=${CONFIG.API_KEY.STEAM}&publishedfileids[0]=${mapid}&includeadditionalpreviews=true`);
   if (detailsRequest.status !== 200) return "ERR_STEAMAPI";
 
   // Ensure the response is valid
@@ -28,7 +29,7 @@ async function getData (mapid, raw) {
   if (raw) return details;
 
   // Fetch the author details
-  const authorRequest = await fetch(`${STEAM_API}/ISteamUser/GetPlayerSummaries/v2/?key=${process.env.STEAM_API_KEY}&steamids=${details.creator}`);
+  const authorRequest = await fetch(`${STEAM_API}/ISteamUser/GetPlayerSummaries/v2/?key=${CONFIG.API_KEY.STEAM}&steamids=${details.creator}`);
   if (authorRequest.status !== 200) return "ERR_STEAMAPI";
 
   // Ensure the response is valid
@@ -68,16 +69,23 @@ async function getData (mapid, raw) {
 async function curateWorkshop (maps = []) {
 
   // Super long workshop API query requesting pretty much everything you can
-  const requestData = `${STEAM_API}/IPublishedFileService/QueryFiles/v1/?key=${process.env.STEAM_API_KEY}&query_type=1&numperpage=100&appid=620&requiredtags[0]=Singleplayer&excludedtags[0]=Cooperative&filetype=0&return_vote_data=false&return_tags=true&return_kv_tags=true&return_previews=true&return_children=true&return_short_description=false&return_for_sale_data=false&return_metadata=true&return_playtime_stats=false`;
+  const requestData = `${STEAM_API}/IPublishedFileService/QueryFiles/v1/?key=${CONFIG.API_KEY.STEAM}&query_type=1&numperpage=100&appid=620&requiredtags[0]=Singleplayer&excludedtags[0]=Cooperative&filetype=0&return_vote_data=false&return_tags=true&return_kv_tags=true&return_previews=true&return_children=true&return_short_description=false&return_for_sale_data=false&return_metadata=true&return_playtime_stats=false`;
 
-  const weekSeconds = 604800; // one week
+  /**
+   * The time span of which to curate maps for, in seconds.
+   * The curation algorithm starts on the current day, then goes back in time as far as specified here.
+   *
+   * @type {number}
+   */
+  const curateSpan = CONFIG.CURATE_SECONDS;
   const startDate = Date.now() / 1000;
 
   const authorcache = {};
-  let page = 1, lastDate = startDate;
+  let page = 1;
+  let lastDate = startDate;
 
   // Ensure we're not going back more than a week
-  while (startDate - lastDate < weekSeconds) {
+  while (startDate - lastDate < curateSpan) {
 
     // Fetch page of workshop data
     const response = (await (await fetch(`${requestData}&page=${page++}`)).json()).response;
@@ -86,7 +94,7 @@ async function curateWorkshop (maps = []) {
     // Curate each result
     for (const data of results) {
 
-      if (startDate - data.time_created >= weekSeconds) break;
+      if (startDate - data.time_created >= curateSpan) break;
 
       try {
 
@@ -101,7 +109,7 @@ async function curateWorkshop (maps = []) {
 
       } catch (err) {
         // If an individual map failed to be curated, too bad. Plenty of fish in the sea.
-        console.error(`Curation error:`, err);
+        console.error("Curation error:", err);
       }
 
     }
@@ -194,7 +202,7 @@ async function rebuildRandomMapCache (node = null) {
     excludedtags: ["Cooperative"],
     totalonly: true
   };
-  const baseQuery = `${STEAM_API}/IPublishedFileService/QueryFiles/v1/?key=${process.env.STEAM_API_KEY}`;
+  const baseQuery = `${STEAM_API}/IPublishedFileService/QueryFiles/v1/?key=${CONFIG.API_KEY.STEAM}`;
 
   // Set up parameters for the left and right branches
   const leftParams = structuredClone(baseParams);
@@ -438,7 +446,7 @@ async function fetchRandomMap (node = null) {
         timestamp_end: node.end
       }
     };
-    const baseQuery = `${STEAM_API}/IPublishedFileService/QueryFiles/v1/?key=${process.env.STEAM_API_KEY}&input_json=${encodeURIComponent(JSON.stringify(queryParams))}`;
+    const baseQuery = `${STEAM_API}/IPublishedFileService/QueryFiles/v1/?key=${CONFIG.API_KEY.STEAM}&input_json=${encodeURIComponent(JSON.stringify(queryParams))}`;
     const { response } = await (await fetch(baseQuery)).json();
     // Some queries don't return anything, reroll
     if (!("publishedfiledetails" in response)) return await fetchRandomMap(null);

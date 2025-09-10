@@ -4,6 +4,7 @@ const spplice = require("../util/spplice.js");
 const tmppath = require("../util/tmppath.js");
 const lobbies = require("../util/lobbies.js");
 const discord = require("../util/discord.js");
+const {CONFIG} = require("../config.ts");
 
 /**
  * Builds the Epochtal Live Spplice package
@@ -26,7 +27,7 @@ async function rebuildPackage (context) {
   fs.mkdirSync(portal2);
 
   // Get the server's HTTP(S) address
-  const address = `${gconfig.https ? "https" : "http"}://${gconfig.domain}`;
+  const address = `${CONFIG.USE_HTTPS ? "https" : "http"}://${CONFIG.WEB_URL}`;
 
   // Create required directories
   fs.mkdirSync(`${portal2}/maps`);
@@ -34,7 +35,7 @@ async function rebuildPackage (context) {
   fs.mkdirSync(`${portal2}/cfg`);
   fs.mkdirSync(`${portal2}/scripts`);
   fs.mkdirSync(`${portal2}/scripts/vscripts`);
-  // Copy game files to temporary directory
+  // Copy game files to a temporary directory
   fs.copyFileSync(`${defaults}/main.js`, `${portal2}/main.js`);
   fs.copyFileSync(`${defaults}/valve.rc`, `${portal2}/cfg/valve.rc`);
   // Copy mapspawn.nut, include server URL as a constant
