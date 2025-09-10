@@ -1260,8 +1260,8 @@ async function lobbyInit () {
       const link = `https://steamcommunity.com/sharedfiles/filedetails/?id=${map.id}`;
       output += `<p>•&nbsp;&nbsp;<b><a href="${link}" target="_blank">${map.title}</a></b> by <b>${map.author}</b></p>`;
     }
-    output += `<i class="fa-solid fa-xmark" id="lobby-map-history-close" onclick="toggleMapHistoryWindow()"></i>`;
-    container.innerHTML = output;
+    const list = document.querySelector("#lobby-map-history-list");
+    list.innerHTML = output;
 
     // Bring up the container and enable interaction with it
     container.style.opacity = 1;

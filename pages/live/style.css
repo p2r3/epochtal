@@ -166,7 +166,6 @@
   left: 30%;
   width: 40%;
   top: 50%;
-  padding: 15px 30px;
   box-sizing: border-box;
   background-color: rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(10px);
@@ -179,6 +178,11 @@
 }
 #lobby-map-history-container {
   transition: transform 0.5s, opacity 0.5s;
+}
+#lobby-map-history-list {
+  max-height: 50vh;
+  overflow-y: scroll;
+  padding: 15px 30px;
 }
 #lobby-map-history-close {
   position: absolute;
