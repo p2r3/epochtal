@@ -499,8 +499,7 @@ function processWebSocket () {
     }
   } catch (_) {
     // If we've dropped down here, the socket has thrown an error
-    sendToConsole(gameSocket, 'echo "Connection error! WebSocket disconnected."');
-    sendToConsole(gameSocket, 'echo "Please reconnect to the lobby with a new token."');
+    sendToConsole(gameSocket, 'disconnect "Connection error! WebSocket disconnected. Please reconnect to the lobby with a new token."');
     ws.disconnect(webSocket);
     webSocket = null;
   }
