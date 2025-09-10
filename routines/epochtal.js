@@ -352,7 +352,7 @@ async function releaseMap (context) {
   await Bun.write(context.file.log, "");
 
   // Announce the new week on Discord
-  await discord(["announce", "@everyone " + announceText.replaceAll("\\", "\\\\").replaceAll("@", "\\@")], context);
+  await discord(["announce", "@everyone " + announceText.replaceAll(/[*@_~`#[\]()\-.>\\:]/g, "\\$&")], context);
 
   return "SUCCESS";
 
