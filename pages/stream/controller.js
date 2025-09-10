@@ -29,6 +29,11 @@ const controllerInit = async function () {
 
   };
 
+  // HACK: i forgot that the game client needs keepalives too lol
+  setInterval(function () {
+    window.sendToController({ type: "ping" });
+  }, 30000);
+
   const playRunButton = document.querySelector("#button-play");
   /**
    * Sends a request to display the specified run details on-stream
