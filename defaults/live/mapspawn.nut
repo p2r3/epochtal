@@ -70,7 +70,7 @@ if (!("Entities" in this)) return;
 ::__elFinish <- function () {
   // Print run end signature followed by the session time in ticks
   // This is later detected by main.js and used for submitting the run
-  printl("elFinish " + ::__elGetSessionTicks());
+  printl("\nelFinish " + ::__elGetSessionTicks());
 };
 
 /**
