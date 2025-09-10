@@ -23,6 +23,7 @@ function createLobbyContext (name) {
     },
     data: {
       map: null,
+      nextMap: null,
       maps: [],
       leaderboard: {
         lobby: []
@@ -43,17 +44,64 @@ function createLobbyContext (name) {
 }
 
 /**
+ * Creates a "map" entry for an Epochtal context object.
+ *
+ * This is used instead of the workshopper to extract only the information
+ * that is relevant to lobbies.
+ *
+ * @param {object} details The JSON output of a Steam workshop API request
+ * @param {boolean} [hidden] Whether the map thumbnail should be hidden
+ * @returns {object} An object describing the map in an Epochtal context
+ */
+async function createMapEntry (details, hidden = false) {
+
+  const map = {
+    id: details.publishedfileid,
+    title: details.title,
+    thumbnail: details.preview_url,
+    link: details.file_url
+  };
+
+  // If marked as hidden, don't store the map thumbnail
+  if (hidden) {
+    map.thumbnail = "https://epochtal.p2r3.com/icons/unknown-wide.jpg";
+  }
+
+  // Fetch the map author's username
+  try {
+    const authorRequest = await fetch(`https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=${process.env.STEAM_API_KEY}&steamids=${details.creator}`);
+    const authorData = await authorRequest.json();
+    map.author = authorData.response.players[0].personaname;
+  } catch {
+    map.author = "unknown";
+  }
+
+  // Get the path to which the map is saved when subscribed to
+  const pathWorkshop = details.file_url.split("/ugc/").pop().split("/")[0];
+  const pathBSP = details.filename.split("/").pop().slice(0, -4);
+  map.file = `workshop/${pathWorkshop}/${pathBSP}`;
+
+  return map;
+
+}
+
+/**
  * Handles the lobby state changing by firing events based on the lobby
  * mode, effectively implementing different gamemodes.
  *
  * @param {string} id The lobby's unique ID string
  * @param {object} context The Epochtal context in which the lobby resides
- * @param {boolean} init Whether we're just initializing a mew lobby mode
+ * @param {boolean} init Whether we're just initializing a new lobby mode
  */
 async function handleStateChange (id, context, init = false) {
 
   const listEntry = context.data.lobbies.list[id];
   const dataEntry = context.data.lobbies.data[id];
+  const eventName = "lobby_" + id;
+
+  // Exit silently if the lobby no longer exists
+  // This is done to not assume anything about surrounding error handling
+  if (!listEntry || !dataEntry) return;
 
   const { mode } = listEntry;
   const { state } = dataEntry;
@@ -273,13 +321,21 @@ module.exports = async function (args, context = epochtal) {
               ws.send(JSON.stringify({ type: "lobby_start", map: file }));
             }
 
+            // Ask joining clients to predownload cached map (if any)
+            if (dataEntry.context.data.nextMap) {
+              const { file, link } = dataEntry.context.data.nextMap;
+              ws.send(JSON.stringify({ type: "getMap", value: { file, link } }));
+            }
+
             return;
           }
 
           // Returned by game clients as a response to the server's query
           case "getMap": {
-            dataEntry.players[steamid].getMapCallback(data.value);
-            delete dataEntry.players[steamid].getMapCallback;
+            if ("getMapCallback" in dataEntry.players[steamid]) {
+              dataEntry.players[steamid].getMapCallback(data.value);
+              delete dataEntry.players[steamid].getMapCallback;
+            }
             return;
           }
 
@@ -557,11 +613,40 @@ module.exports = async function (args, context = epochtal) {
       // The loose equality check here is intentional, as either ID might in rare cases be a number
       if (mapid == epochtal.data.week.map.id) throw new UtilError("ERR_WEEKMAP", args, context);
 
+      // Check if the string provided is a known campaign map name
+      const campaignMap = campaignMaps.find(c => c.id === mapid);
+
+      // The new lobby map is set in the branch below
       let newMap;
 
-      // Check if the string provided is a known campaign map name or a workshop map ID
-      const campaignMap = campaignMaps.find(c => c.id === mapid);
-      if (campaignMap) {
+      if (mapid === "random") {
+
+        if (dataEntry.context.data.nextMap) {
+          // If a precached map exists, use that one
+          newMap = dataEntry.context.data.nextMap;
+          dataEntry.context.data.nextMap = null;
+        } else {
+          // Otherwise, request a new random map from the workshopper
+          const details = await workshopper(["random"]);
+          newMap = await createMapEntry(details, hidden);
+        }
+
+        // Precache the next random map to make transitions seamless
+        workshopper(["random"]).then(async function (details) {
+          try {
+            dataEntry.context.data.nextMap = await createMapEntry(details, hidden);
+            // Ask all clients to predownload the cached map
+            const { file, link } = dataEntry.context.data.nextMap;
+            await events(["send", eventName, { type: "getMap", value: { file, link } }], context);
+          } catch { }
+        }).catch(e => {});
+
+      } else if (mapid === "") {
+
+        // If no map was provided, clear the lobby map
+        newMap = null;
+
+      } else if (campaignMap) {
 
         newMap = {
           id: campaignMap.id,
@@ -573,43 +658,16 @@ module.exports = async function (args, context = epochtal) {
 
       } else {
 
-        // We forge the map entry from a raw workshop request to extract only what we need
-        let details;
-        if (mapid === "random") details = await workshopper(["random"]);
-        else details = await workshopper(["get", mapid, true]);
-
-        newMap = {
-          id: details.publishedfileid,
-          title: details.title,
-          thumbnail: details.preview_url,
-          link: details.file_url
-        };
-
-        // If marked as hidden, don't store the map thumbnail
-        if (hidden) {
-          newMap.thumbnail = "https://epochtal.p2r3.com/icons/unknown-wide.jpg";
-        }
-
-        // Fetch the map author's username
-        try {
-          const authorRequest = await fetch(`https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=${process.env.STEAM_API_KEY}&steamids=${details.creator}`);
-          const authorData = await authorRequest.json();
-          newMap.author = authorData.response.players[0].personaname;
-        } catch {
-          newMap.author = "unknown";
-        }
-
-        // Get the path to which the map is saved when subscribed to
-        const pathWorkshop = details.file_url.split("/ugc/").pop().split("/")[0];
-        const pathBSP = details.filename.split("/").pop().slice(0, -4);
-        newMap.file = `workshop/${pathWorkshop}/${pathBSP}`;
+        // Request raw map details for passing into createMapEntry
+        const details = await workshopper(["get", mapid, true]);
+        newMap = await createMapEntry(details);
 
       }
 
       // Set the lobby map
       dataEntry.context.data.map = newMap;
       // Append map to lobby map history
-      dataEntry.context.data.maps.push(newMap);
+      if (newMap) dataEntry.context.data.maps.push(newMap);
 
       // Force all player ready states to false
       for (const player in dataEntry.players) dataEntry.players[player].ready = false;
