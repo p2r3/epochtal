@@ -244,6 +244,171 @@ async function autoRebuildRandomMapCache () {
 }
 autoRebuildRandomMapCache();
 
+// Log any impossible maps found, and re-fetch another map
+async function handleImpossibleMap (mapid) {
+  const impossible = await Bun.file(`${__dirname}/../data/impossible.json`).json();
+  impossible.push(mapid);
+  await Bun.write(`${__dirname}/../data/impossible.json`, JSON.stringify(impossible));
+  return await fetchRandomMap(null);
+}
+
+/**
+ * Traces an entity's I/O chain and returns an array of destination
+ * entities that it connects to.
+ *
+ * @param {object} outputs Table of a parseLump entity's outputs
+ * @param {object[]} entities All map entities returned by parseLump
+ * @param {Set} [current] Existing set of targets to append to
+ * @returns {Set} Destination entities - targets of I/O chain
+ */
+function traceConnections (outputs, entities, current = new Set()) {
+
+  // Ensure that the given table of outputs is valid
+  if (!outputs || typeof outputs !== "object") return current;
+
+  // Iterate over all outputs, building the list of target entities
+  for (const output in outputs) {
+    for (const connection of outputs[output]) {
+
+      // Destructure the connection parameters into labeled arguments
+      const [ targetQuery, input, value, delay ] = connection;
+      const target = targetQuery.toLowerCase();
+
+      // Find the targeted entities based on the target query
+      for (const entity of entities) {
+
+        if ( // Filter out entities that don't satisfy our target query
+          (!entity.targetname || entity.targetname.toLowerCase() !== target) &&
+          entity.classname !== target
+        ) continue;
+
+        // Add current target to output targets list
+        current.add(entity);
+
+        // Handle the entity based on its classname
+        switch (entity.classname) {
+          case "logic_relay":
+            // Relays map Trigger to OnTrigger
+            if (input.toLowerCase() === "trigger") {
+              current = traceConnections(entity.outputs.OnTrigger, entities, current);
+            }
+            break;
+          case "func_instance_io_proxy":
+            // Proxy outputs are forwarded directly
+            current = traceConnections(entity.outputs[input], entities, current);
+            break;
+          default:
+            // Fall back to checking for FireUser, which all entities can use
+            if (input.toLowerCase().startsWith("fireuser")) {
+              const index = input.slice(8);
+              current = traceConnections(entity.outputs["OnUser" + index], entities, current);
+              break;
+            }
+            // If output cannot be forwarded, assume we've found a destination
+            break;
+        }
+
+      }
+
+    }
+  }
+
+  // Return constructed list of connection targets
+  return current;
+
+}
+
+// Returns true if the given map can be completed, false otherwise
+async function isMapPossible (data) {
+
+  // Download the map's entity lump and extract an array of entities
+  // This is used to reject maps that are verifiably unsolvable
+  const entities = await curator(["entities", data]);
+
+  // If this specific entity starts enabled, it's the preview build of a PTI map
+  // These are unbeatable, because they'll restart once you cross the exit door
+  if (entities.find(e => e.targetname === "InstanceAuto3-player_start_rl" && e.startdisabled == 0)) return false;
+
+  // In Hammer maps, the only risk is a missing PTI level end output
+  if (data.creator_appid !== 620) {
+    // Reroll maps that have no entities pointing to the level end relay
+    if (!entities.find(function (entity) {
+      if (!("outputs" in entity)) return false;
+      if (typeof entity.outputs !== "object") return false;
+      return Object.values(entity.outputs).find(output => {
+        return output.find(c => c[0].toString().toLowerCase() === "@relay_pti_level_end");
+      });
+    })) return false;
+    // Otherwise, all Hammer maps are accepted
+    return true;
+  }
+
+  // Start by assuming that the exit is disconnected, then try to disprove that
+  let exitConnected = false;
+  // Some other checks have to be proven for a softlock to count
+  let exitProxy = false, exitPortal = false;
+  // Make sure exit conditions can be satisfied (e.g. ball button, no ball)
+  let hasBall = false, exitBallButton = false;
+  let hasCube = false, exitCubeButton = false;
+
+  // Iterate over all map entities, trying to prove/disprove softlock checks
+  for (const entity of entities) {
+
+    // if (entity.classname === "logic_auto" && typeof entity.outputs === "object" && "onmapspawn" in entity.outputs) {
+    //   // Reroll BEEmod maps that check for pellet launcher models
+    //   if (entity.outputs.onmapspawn.find(c => c[0] === "@contains_pellets" && c[1] === "SetValue" && c[2] == 1)) return false;
+    // }
+    // If the exit door is open by default, this check doesn't apply
+    if (entity.targetname === "doorexit2-branch_toggle" && entity.initialvalue == 1) return true;
+
+    // For a softlock to count, there must be a standard exit proxy
+    if (entity.targetname === "doorexit2-proxy") exitProxy = true;
+    // For a softlock to count, there must be a standard exit world portal
+    if (entity.targetname === "@exit_portal_chamber_side") exitPortal = true;
+
+    // If this is a cube, determine what kind, and flag it
+    if (entity.classname === "prop_weighted_cube") {
+      if (entity.cubetype == 3) hasBall = true;
+      else hasCube = true;
+    }
+
+    // Further processing happens for entities with outputs
+    if (!("outputs" in entity)) continue;
+    if (typeof entity.outputs !== "object") continue;
+
+    // Get the set of entities that this entity targets
+    const targets = traceConnections(entity.outputs, entities);
+
+    // Check whether this entity links to the exit door proxy
+    const doorConnection = targets.values().find(c => c.targetname === "doorexit2-proxy");
+
+    if (doorConnection) {
+      // If anything targets the door, the door is considered connected
+      exitConnected = true;
+      // Flag any ball/cube buttons targeting the door
+      if (entity.classname === "prop_floor_ball_button") exitBallButton = true;
+      else if (entity.classname === "prop_floor_cube_button") exitCubeButton = true;
+    }
+
+  }
+
+  // If the exit is non-standard, the softlock doesn't count
+  if (!exitPortal || !exitProxy) return true;
+
+  // Reroll if any of these conditions pass:
+  if (
+    // No exit door connection was found
+    !exitConnected ||
+    // The exit requires a ball, but the map has no ball
+    (exitBallButton && !hasBall) ||
+    // The exit requires a cube, but the map has no cube
+    (exitCubeButton && !hasCube)
+  ) return false;
+
+  return true;
+
+}
+
 // Fetches a truly random singleplayer map from the Steam workshop
 async function fetchRandomMap (node = null) {
 
@@ -289,61 +454,9 @@ async function fetchRandomMap (node = null) {
     const fileFetch = await fetch(data.file_url);
     if (fileFetch.status !== 200) return await fetchRandomMap(null);
 
-    // Download the map's entity lump and extract an array of entities
-    // This is used to reject maps that are verifiably unsolvable
-    const entities = await curator(["entities", data]);
-
-    // In Hammer maps, the only risk is a missing PTI level end output
-    if (data.creator_appid !== 620) {
-      // Reroll maps that have no entities pointing to the level end relay
-      if (!entities.find(function (entity) {
-        if (!("outputs" in entity)) return false;
-        if (typeof entity.outputs !== "object") return false;
-        return Object.values(entity.outputs).find(output => {
-          return output.find(c => c[0].toString().toLowerCase() === "@relay_pti_level_end");
-        });
-      })) return await fetchRandomMap(null);
-      // Otherwise, all Hammer maps are accepted
-      return data;
-    }
-
-    // Start by assuming that the exit is disconnected, then try to disprove that
-    let exitConnected = false;
-    // Some other checks have to be proven for a softlock to count
-    let exitProxy = false, exitPortal = false;
-
-    // Iterate over all map entities, trying to prove/disprove softlock checks
-    for (const entity of entities) {
-
-      // Reroll BEEmod maps that check for pellet launcher models
-      if (entity.targetname === "@stop_for_pellets") return await fetchRandomMap(null);
-      // If the exit door is open by default, this check doesn't apply
-      if (entity.targetname === "doorexit2-branch_toggle" && entity.initialvalue == 1) return data;
-
-      // For a softlock to count, there must be a standard exit proxy
-      if (entity.targetname === "doorexit2-proxy") exitProxy = true;
-      // For a softlock to count, there must be a standard exit world portal
-      if (entity.targetname === "@exit_portal_chamber_side") exitPortal = true;
-
-      // Further processing happens for entities with outputs
-      if (!("outputs" in entity)) continue;
-      if (typeof entity.outputs !== "object") continue;
-
-      // Look for outputs that mention the exit door proxy
-      for (const output in entity.outputs) {
-        if (entity.outputs[output].find(c => c[0].toString().toLowerCase() === "doorexit2-proxy")) {
-          exitConnected = true;
-          break;
-        }
-      }
-      if (exitConnected) break;
-
-    }
-
-    // If no exit door connection was found, reroll
-    if (!exitConnected && exitProxy && exitPortal) return await fetchRandomMap(null);
-
-    return data;
+    // Determine whether the map can be completed
+    if (await isMapPossible(data)) return data;
+    else return await handleImpossibleMap(data.publishedfileid);
 
   }
 
@@ -438,6 +551,10 @@ module.exports = async function (args, context = epochtal) {
       }
       return output;
 
+    }
+
+    case "possible": {
+      return await isMapPossible(await getData(mapid, true));
     }
 
   }
