@@ -383,9 +383,16 @@ module.exports = async function (args, context = epochtal) {
       const raw = args[2];
 
       // Fetch the map data
-      const output = await getData(mapid, raw);
+      let output = await getData(mapid, raw);
       if (typeof output === "string") {
-        throw new UtilError(output, args, context);
+        // If the Steam API failed, try one more time
+        let attempts = 0;
+        while (output === "ERR_STEAMAPI") {
+          await new Promise(resolve => setTimeout(resolve, 5000 + 1000 * attempts));
+          output = await getData(mapid, raw);
+          if (typeof output !== "string") return output;
+          if (++attempts == 10) throw new UtilError(output, args, context);
+        }
       }
 
       return output;
