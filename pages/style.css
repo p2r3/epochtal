@@ -212,7 +212,8 @@ button, input, textarea, select {
   font-size: 1rem;
   text-align: center;
   padding: 10px 15px;
-  border: 2px solid white;
+  border: 2px solid #424242;
+  box-shadow: 0 0 10px 5px rgba(255, 255, 255, 0.1);
   border-radius: 10px;
   box-sizing: border-box;
   outline: none;
@@ -254,7 +255,8 @@ button:hover, input:hover, textarea:hover, select:hover {
   right: 0;
   bottom: 0;
   background-color: rgba(0, 0, 0, 0.2);
-  border: 2px solid white;
+  border: 2px solid #424242;
+  box-shadow: 0 0 10px 5px rgba(255, 255, 255, 0.1);
   box-sizing: border-box;
   border-radius: 34px;
   transform: translateY(7px);
@@ -288,7 +290,8 @@ input:checked+.slider:before {
 .lb-entry {
   position: relative;
   background-color: rgba(0, 0, 0, 0.65);
-  border: 2px solid white;
+  border: 2px solid #424242;
+  box-shadow: 0 0 10px 5px rgba(255, 255, 255, 0.1);
   border-radius: 10px;
   box-sizing: border-box;
   text-align: left;
@@ -317,6 +320,18 @@ input:checked+.slider:before {
 .lb-rank1 { color: #f3d635 }
 .lb-rank2 { color: #95cbe1 }
 .lb-rank3 { color: #c88971 }
+
+.lb-badge {
+  font-size: 0.7rem;
+  padding: 0.2rem 0.3rem;
+  color: black;
+  background-color: #ae7fc2;
+  font-weight: bold;
+  border-radius: 5px;
+  margin: 0 0 0 10px;
+  vertical-align: 0.2rem;
+  cursor: default;
+}
 
 #leaderboard-container {
   position: relative;
@@ -359,7 +374,8 @@ input:checked+.slider:before {
 .votes-entry {
   position: relative;
   padding: 0.5vw;
-  border: 2px solid white;
+  border: 2px solid #424242;
+  box-shadow: 0 0 10px 5px rgba(255, 255, 255, 0.1);
   border-radius: 10px;
   background-color: rgba(0, 0, 0, 0.65);
   margin: 2% 25%;

@@ -72,7 +72,9 @@ async function concludeWeek (context) {
   try {
     await discord(["report", `Week ${week.number} demo report summary:`, [finalReportPath, demoTarPath]], context);
   } catch (e) {
-    throw e;
+    try {
+      await discord(["report", `Failed to send demo report summary for week ${week.number}: \`\`\`${e.toString()}\`\`\``], context);
+    } catch { /* Discord being down shouldn't prevent us from concluding the week */ }
   } finally {
     fs.unlinkSync(finalReportPath);
     fs.unlinkSync(demoTarPath);
@@ -128,11 +130,16 @@ async function releaseMap (context) {
   const votingmaps = [];
   for (let i = 0; i < allmaps.length; i ++) {
 
-    const details = await workshopper(["get", allmaps[i].id]);
-    if (votingmaps.find(curr => curr.author === details.author)) continue;
+    try {
+      const details = await workshopper(["get", allmaps[i].id]);
+      if (votingmaps.find(curr => curr.author === details.author)) continue;
 
-    votingmaps.push(details);
-    if (votingmaps.length === VOTING_MAPS_COUNT) break;
+      votingmaps.push(details);
+      if (votingmaps.length === VOTING_MAPS_COUNT) break;
+    } catch (e) {
+      UtilPrint(`epochtal(releaseMap): Error on voting map ${allmaps[i].id}, skipping...`);
+      continue;
+    }
 
   }
 
@@ -223,7 +230,7 @@ async function releaseMap (context) {
 
     await spplice(["remove", "epochtal-voting"]);
 
-    e.message = "ERR_VOTEFILES: " + e.message;
+    e.message = "ERR_NEXTFILES: " + e.message;
     throw e;
 
   }
@@ -352,7 +359,8 @@ async function releaseMap (context) {
   await Bun.write(context.file.log, "");
 
   // Announce the new week on Discord
-  await discord(["announce", "@everyone " + announceText.replaceAll(/[*@_~`#[\]()\-.>\\:]/g, "\\$&")], context);
+  // HACK: Hardcoded role ID for now, must fix ASAP!!
+  await discord(["announce", "<@&1363136773592580158> " + announceText.replaceAll(/[*@_~`#[\]()\-.>\\:]/g, "\\$&")], context);
 
   return "SUCCESS";
 

@@ -189,11 +189,24 @@ module.exports = async function (args, context = epochtal) {
           continue;
         }
 
-        if (portalOverride) {
+        if (portalOverride === "action command") {
+          // When tracking "action commands", count every meaningful + input
+          if (event.type === "cmd") {
+            const cmd = event.value.split(" ")[0].toLowerCase();
+            if (cmd === "+jump") output.portals ++;
+            else if (cmd === "+duck") output.portals ++;
+            else if (cmd === "+use") output.portals ++;
+            else if (cmd === "+attack") output.portals ++;
+            else if (cmd === "+attack2") output.portals ++;
+          }
+        } else if (portalOverride) {
+          // For non-standard portal counter overrides, treat the override
+          // string as a console command.
           if (event.type === "cmd" && event.value.split(" ")[0].toLowerCase() === portalOverride) {
             output.portals ++;
           }
         } else {
+          // In all other cases, match just portal creation events
           if (event.type === "portal") {
             output.portals ++;
           }

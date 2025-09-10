@@ -76,6 +76,14 @@
   margin-bottom: 10px;
 }
 
+#lobby-players-list {
+  margin-bottom: 25vh;
+}
+
+#lobby-spectator-players-list {
+  display: none;
+}
+
 .lobby-player {
   position: relative;
   width: 80%;
@@ -114,6 +122,11 @@
   display: inline-block;
   margin: 0 0 0 20px;
   font-size: 1.6rem;
+  line-height: 1.4rem;
+}
+.lobby-player-wins {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 1.1rem;
 }
 
 .lobby-player-ready {
@@ -136,11 +149,101 @@
   background-color: rgba(255, 255, 255, 0.25);
 }
 
+#lobby-map-history-button {
+  position: absolute;
+  right: 5px;
+  bottom: -10px;
+  margin: 0;
+  transform: translateY(100%);
+  font-size: 0.8rem;
+}
+#lobby-map-history-button a {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+#lobby-map-history-container {
+  position: fixed;
+  left: 30%;
+  width: 40%;
+  top: 50%;
+  box-sizing: border-box;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
+  border: 2px solid white;
+  border-radius: 10px;
+  font-weight: 300;
+  pointer-events: none;
+  transform: translateY(calc(-50% + 10vh));
+  opacity: 0;
+}
+#lobby-map-history-container {
+  transition: transform 0.5s, opacity 0.5s;
+}
+#lobby-map-history-list {
+  max-height: 50vh;
+  overflow-y: scroll;
+  padding: 15px 30px;
+}
+#lobby-map-history-close {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  font-size: 1.2rem;
+  user-select: none;
+  cursor: pointer;
+}
+
 #lobby-ready-button {
   transition: opacity 0.2s;
 }
+#lobby-autoready-button {
+  width: 0;
+  margin-left: 10px;
+  cursor: pointer;
+}
 
-#lobby-forcestart-button {
+#lobby-force-button {
   display: none;
   color: rgb(255, 80, 80);
+}
+
+#lobby-chat-container {
+  position: fixed;
+  display: flex;
+  flex-direction: column-reverse;
+  left: 2vw;
+  bottom: 2vw;
+  width: 30vw;
+  height: 18%;
+  border-radius: 10px;
+  background-color: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(5px);
+  overflow: hidden;
+}
+
+#lobby-chat-output {
+  padding: 1vw;
+  overflow-y: scroll;
+}
+
+#lobby-chat-input {
+  border: 0;
+  padding: 5px 15px;
+  width: 100%;
+  text-align: left;
+  border-radius: 0;
+  box-shadow: none;
+  background-color: rgba(255, 255, 255, 0.05);
+}
+#lobby-chat-input:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+#lobby-spectate-button {
+  position: fixed;
+  left: 34vw;
+  bottom: 2vw;
+  min-width: 160px;
+  box-shadow: none;
+  backdrop-filter: blur(5px);
 }

@@ -1,5 +1,11 @@
-// Polyfills for Spplice 2
-if (!("game" in this)) eval(fs.read("polyfill.js"));
+// Require latest spplice-cpp version
+if (!("game" in this)) {
+  SendToConsole('disconnect "Epochtal Live requires the latest version of SppliceCPP. Update here: github.com/p2r3/spplice-cpp/releases"');
+  sleep(3000).then(function () {
+    SendToConsole('disconnect "Epochtal Live requires the latest version of SppliceCPP. Update here: github.com/p2r3/spplice-cpp/releases"');
+  });
+  throw new Error("Terminating script due to version mismatch.");
+}
 
 // Read the server's HTTP address from file
 const HTTP_ADDRESS = fs.read("address.txt");
@@ -26,15 +32,103 @@ do { // Attempt connection with the game's console
 
 console.log("Connected to Portal 2 console.");
 
+/**
+ * Utility function, cleans up any open sockets and throws an error.
+ * This is useful for when the game has closed or when an otherwise
+ * critical issue requires us to stop the script.
+ */
+function doCleanup () {
+  // Disconnect from the WebSocket, if any
+  if (webSocket) {
+    ws.disconnect(webSocket);
+    webSocket = null;
+  }
+  // Disconnect from the game's console
+  if (gameSocket !== -1) game.disconnect(gameSocket);
+  // Throw an error to terminate the script
+  throw new Error("Cleanup finished, terminating script.");
+}
+
+/**
+ * Utility funtion, attempts to read a command from the console. On failure,
+ * attempts to reconnect to the socket.
+ * @param {number} socket Game socket file descriptor (index)
+ * @param {number} bytes How many bytes to request from the socket
+ */
+function readFromConsole (socket, bytes) {
+  try {
+    return game.read(socket, bytes);
+  } catch (e) {
+    console.error(e);
+    // Attempt to reconnect to the game's console
+    do {
+      if (!game.status()) doCleanup();
+      var gameSocket = game.connect();
+      sleep(200);
+    } while (gameSocket === -1);
+    return readFromConsole(gameSocket, bytes);
+  }
+}
+
+/**
+ * Utility funtion, attempts to write a command to the console. On failure,
+ * attempts to reconnect to the socket.
+ * @param {number} socket Game socket file descriptor (index)
+ * @param {number} command Command to send to the console
+ */
+function sendToConsole (socket, command) {
+  try {
+    return game.send(socket, command);
+  } catch (e) {
+    console.error(e);
+    // Attempt to reconnect to the game's console
+    do {
+      if (!game.status()) doCleanup();
+      var gameSocket = game.connect();
+      sleep(200);
+    } while (gameSocket === -1);
+    return sendToConsole(gameSocket, command);
+  }
+}
+
 // Time of the currently ongoing run
 var totalTicks = 0;
-// Session time from last received report
-var lastTimeReport = 0;
-// Expected session time report:
-// 0 - none, 1 - load start, 2 - load end, 3 - run end
-var expectReport = 0;
+// Last tick count reported by the VScript
+var lastTicksReport = 0;
+// Whether to expect an elStart event
+var expectRoundStart = false;
 // Name of the map we're running
 var runMap = null;
+// Name of the map we were just running
+var lastRunMap = null;
+// Counts the amount of times `processConsoleOutput` has been called
+var consoleTick = 0;
+// Whether we're a spectator - resets each round
+var amSpectator = false;
+// Spectator position and angles for interpolation
+var spectatorData = {
+  // List of available SteamIDs and index of currently spectated player
+  targets: [],
+  target: 0,
+  // Whether godmode has been enabled
+  god: false,
+  // Contents of last portal/cube position update from VScript
+  // These are the only parameters used by players, NOT spectators
+  portals: "",
+  cube: ""
+};
+
+/**
+ * Checks whether the player has the right spplice-cpp version and throws
+ * a warning if not.
+ */
+function processVersionCheck () {
+  // Use existence of game.status as a heuristic for spplice-cpp version
+  if (!("status" in game)) {
+    sendToConsole(gameSocket, 'disconnect "Epochtal Live requires the latest version of SppliceCPP. Update here: github.com/p2r3/spplice-cpp/releases"');
+    doCleanup();
+  }
+}
 
 // Store the last partially received line until it can be processed
 var lastLine = "";
@@ -44,16 +138,38 @@ var lastLine = "";
  */
 function processConsoleOutput () {
 
+  // Increment this function's call counter
+  consoleTick ++;
+
+  // Run some less common actions on every 5th console tick
+  if (consoleTick % 5 === 0) {
+    // Log player position and angles for sending to spectators
+    if (!amSpectator && webSocket && runMap) {
+      sendToConsole(gameSocket, "spec_pos");
+    }
+    /**
+     * Check if the game is still running, and if not, terminate the script.
+     * In most cases, this would've already been caught earlier, but we run
+     * it here too just to be safe.
+     */
+    if (!game.status()) doCleanup();
+  }
+
   // Receive 1024 bytes from the game console socket
-  const buffer = game.read(gameSocket, 1024);
+  const buffer = readFromConsole(gameSocket, 1024);
   // If we received nothing, don't proceed
   if (buffer.length === 0) return;
 
-  // Add the latest buffer to any partial data we had before
-  lastLine += buffer;
+  try {
+    // Add the latest buffer to any partial data we had before
+    lastLine += buffer;
+  } catch (_) {
+    // Sometimes, the buffer can't be string-coerced for some reason
+    return;
+  }
 
   // Parse output line-by-line
-  const lines = lastLine.replace(/\r/, "").split("\n");
+  const lines = lastLine.split("\n");
   lines.forEach(function (line) {
 
     // Process WebSocket token
@@ -65,87 +181,92 @@ function processConsoleOutput () {
     // The events below this only apply to connected clients
     if (!webSocket) return;
 
-    // Process start of map load event
-    if (line.indexOf("---- Host_") === 0) {
-      // Request total session time for load start
-      game.send(gameSocket, "display_elapsedtime\n");
-      expectReport = 1;
-
+    // Process map start event
+    if (expectRoundStart && line.indexOf("elStart") !== -1) {
+      expectRoundStart = false;
+      // Reset run timer
+      totalTicks = 0;
+      lastTicksReport = 0;
+      // Make saves to prevent accidentally loading into a different map
+      sendToConsole(gameSocket, "save quick");
+      sendToConsole(gameSocket, "save autosave");
       return;
-    }
+    };
 
-    // Process end of map load event
-    if (line.indexOf("Redownloading all lightmaps") === 0) {
-      // Request total session time for load end
-      game.send(gameSocket, "display_elapsedtime\n");
-      expectReport = 2;
-
-      // Process the start of a workshop map
-      if (runMap.indexOf("workshop/") === 0) {
-        // Attach an output to report time and run end on PTI level end
-        // In workshop maps, we can afford running cheat commands
-        game.send(gameSocket, 'script ::__elFinish<-function(){ printl("elFinish") }\n');
-        game.send(gameSocket, 'ent_fire @relay_pti_level_end AddOutput "OnTrigger !self:RunScriptCode:__elFinish():0:1"\n');
+    // Process map finish event
+    if (line.indexOf("elFinish ") === 0) {
+      // Don't process time updates from spectators
+      if (amSpectator) return;
+      // Add run finish tick report to running tick total
+      totalTicks += parseInt(line.slice(9));
+      // Close the map after the run has finished
+      sendToConsole(gameSocket, "disconnect");
+      sendToConsole(gameSocket, "echo;echo Round finished.");
+      sendToConsole(gameSocket, "echo \"Final time: " + (totalTicks / 30).toFixed(3) + " seconds.\";echo");
+      // Clear current map to indicate that we're not in a run anymore
+      lastRunMap = runMap;
+      runMap = null;
+      // Send the finishRun event
+      const success = ws.send(webSocket, '{"type":"finishRun","value":{"time":'+ (totalTicks * 2) +',"portals":0}}');
+      // Disconnect from socket on failure
+      if (!success) {
+        sendToConsole(gameSocket, "echo Failed to send finishRun event.");
+        sendToConsole(gameSocket, "echo Please reconnect to the lobby with a new token.");
+        ws.disconnect(webSocket);
+        webSocket = null;
       }
+    }
 
+    // Process timer updates from VScript
+    if (line.indexOf("spec_goto_tick ") === 0) {
+      // Don't process time updates from spectators
+      if (amSpectator) return;
+      // Parse the fragment of the string containing the tick count
+      const ticks = parseInt(line.slice(15));
+      // Tick count decrease marks a load - add previous report to total
+      if (ticks < lastTicksReport) totalTicks += lastTicksReport;
+      // Update previous report
+      lastTicksReport = ticks;
+    }
+
+    // Send spectator position output to server for spectators
+    if (line.indexOf("spec_goto ") === 0) {
+      ws.send(webSocket, '{"type":"spectate","player":"'+ line.slice(10).trim() +'","portals":"'+ spectatorData.portals +'","cube":"'+ spectatorData.cube +'"}');
+      return;
+    }
+    // Update last known position of portals
+    if (line.indexOf("spec_goto_portals ") === 0) {
+      spectatorData.portals = line.slice(18).trim();
+      return;
+    }
+    // Update last known position of the nearest cube
+    if (line.indexOf("spec_goto_cube ") === 0) {
+      spectatorData.cube = line.slice(15).trim();
       return;
     }
 
-    // Process workshop map finish event
-    if (line.indexOf("elFinish") === 0) {
-      // Request total session time for map finish
-      game.send(gameSocket, "display_elapsedtime\n");
-      expectReport = 3;
+    // The events below this only apply to spectators
+    if (!amSpectator) return;
 
-      return;
-    }
-
-    // Process map transition event
-    if (line.indexOf("DEFAULT_WRITE_PATH") !== -1 && line.indexOf(runMap.split("/").pop()) === -1) {
-      // Notice that we don't actually request a new time report
-      // Instead, we tell it to treat the last one (start of map load) as a map finish event
-      expectReport = 3;
-
-      return;
-    }
-
-    // Process total session time report
-    if (line.indexOf("Elapsed time: ") === 0) {
-
-      // If not expecting a time report, do nothing
-      if (!expectReport) return;
-
-      // Parse time from command output
-      const seconds = parseFloat(line.slice(14));
-      const ticks = Math.round(seconds * 60);
-
-      // If this is the end of a segment, add time since last report to total run time
-      if (expectReport !== 2 && lastTimeReport !== 0) {
-        totalTicks += ticks - lastTimeReport;
+    // Handle switching spectated player
+    if (line.indexOf("Switching spectated player...") === 0) {
+      spectatorData.target ++;
+      if (spectatorData.target >= spectatorData.targets.length) {
+        spectatorData.target = 0;
       }
+      // Close previous player's portals
+      sendToConsole("ent_fire prop_portal SetActivatedState 0");
 
-      // If this is the end of a run, send the finishRun event
-      if (expectReport === 3) {
-        const success = ws.send(webSocket, '{"type":"finishRun","value":{"time":'+ totalTicks +',"portals":0}}');
-        // Disconnect from socket on failure
-        if (!success){
-          game.send(gameSocket, "echo Failed to send finishRun event.\n");
-          game.send(gameSocket, "echo Please reconnect to the lobby with a new token.\n");
-          ws.disconnect(webSocket);
-          webSocket = null;
-        }
-      }
+      return;
+    }
 
-      /**
-       * Finally, store the time of this report for future reference.
-       *
-       * Since these reports start counting from engine startup, we need a
-       * way to convert that to relative time. Even though the start of a
-       * map load doesn't have any special handling above, it's still
-       * important to store it so that we're not adding loading times into
-       * the final submission.
-       */
-      lastTimeReport = ticks;
+    // Ensure that godmode remains on while spectating
+    if (line.indexOf("godmode ON") === 0) {
+      spectatorData.god = true;
+      return;
+    }
+    if (line.indexOf("godmode OFF") === 0) {
+      sendToConsole(gameSocket, "god");
       return;
     }
 
@@ -170,11 +291,11 @@ function processServerEvent (data) {
     case "authenticated": {
 
       // Acknowledge success to the user
-      game.send(gameSocket, "echo Authentication complete.\n");
+      sendToConsole(gameSocket, "echo Authentication complete.");
 
       // Send isGame event to inform the server of our role
       if (!ws.send(webSocket, '{"type":"isGame","value":"true"}')) {
-        game.send(gameSocket, "echo Failed to send isGame event. Disconnecting.\n");
+        sendToConsole(gameSocket, "echo Failed to send isGame event. Disconnecting.");
         ws.disconnect(webSocket);
         webSocket = null;
       }
@@ -221,7 +342,9 @@ function processServerEvent (data) {
         // If the procedure was unsuccessful, respond with code -1
         ws.send(webSocket, '{"type":"getMap","value":-1}');
         // Log the error to the Portal 2 console
-        game.send(gameSocket, 'echo "' + e.toString().replace(/\"/g, "'") + '"\n');
+        sendToConsole(gameSocket, 'echo "' + e.toString().replace(/\"/g, "'") + '"');
+        // Remove the partially downloaded file
+        if (pathExists(fullPath)) fs.unlink(fullPath);
 
       }
 
@@ -231,15 +354,73 @@ function processServerEvent (data) {
     // Handle round start
     case "lobby_start": {
 
-      // Reset run timer
-      totalTicks = 0;
       // Update the currently active map
       runMap = data.map;
-      // Clear last known session time
-      lastTimeReport = 0;
+      // Reset run timer
+      totalTicks = 0;
+      lastTicksReport = 0;
+      // Start the requested map
+      expectRoundStart = true;
+      sendToConsole(gameSocket, "disconnect;map " + runMap);
 
-      // Send the map command to start the map
-      game.send(gameSocket, "map " + data.map + "\n");
+      // Clear spectator state
+      amSpectator = false;
+      spectatorData.target = 0;
+      spectatorData.targets = [];
+      spectatorData.god = false;
+      // Reset specator commands
+      sendToConsole(gameSocket, "in_forceuser 0");
+      sendToConsole(gameSocket, "sv_cheats 0");
+      sendToConsole(gameSocket, "alias +remote_view \"\"");
+
+      return;
+    }
+
+    // Handle incoming coordinates for spectating
+    case "spectate": {
+
+      // Set up spectator environment
+      if (!amSpectator) {
+        sendToConsole(gameSocket, "sv_cheats 1");
+        sendToConsole(gameSocket, "in_forceuser 1");
+        sendToConsole(gameSocket, "alias +remote_view \"echo Switching spectated player...\"");
+        sendToConsole(gameSocket, "disconnect;map " + (runMap || lastRunMap));
+        amSpectator = true;
+      }
+
+      // Add player to targets list if they're not there already
+      if (spectatorData.targets.indexOf(data.steamid) === -1) {
+        spectatorData.targets.push(data.steamid);
+      }
+
+      // Use Bendies for players who we're not actively spectating
+      if (data.steamid !== spectatorData.targets[spectatorData.target]) {
+        sendToConsole(gameSocket, "script ::__elSpectatorBendy(Vector("+ data.pos.join(", ") +"), "+ data.ang[1] +", \""+ data.steamid +"\")");
+        return;
+      } else {
+        // Hide the Bendy of the player we're actively spectating
+        sendToConsole(gameSocket, "script ::__elSpectatorBendy(null, null, \""+ data.steamid +"\")");
+        // Instead, interpolate POV with __elSpectatorPlayer
+        sendToConsole(gameSocket, "script ::__elSpectatorPlayer(Vector("+ data.pos.join(", ") +"), Vector("+ data.ang.join(", ") +"))");
+      }
+
+      // Force the player into noclip on each position update
+      sendToConsole(gameSocket, "noclip 1");
+      // Force spectators to be faded in on each position update
+      sendToConsole(gameSocket, "fadein 0");
+      // Show currently spectated player's name on-screen
+      sendToConsole(gameSocket, "script ScriptShowHudMessageAll(\"\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n"+ data.name +"\", 1.0)");
+      // Try to enable god mode until we've confirmed that it's on
+      if (!spectatorData.god) {
+        sendToConsole(gameSocket, "god");
+      }
+
+      // Portals are managed using the portal_place command
+      if (data.portals[0].slice(0, 17) !== "0.000 0.000 0.000") sendToConsole(gameSocket, "portal_place 0 0 " + data.portals[0]);
+      if (data.portals[1].slice(0, 17) !== "0.000 0.000 0.000") sendToConsole(gameSocket, "portal_place 0 1 " + data.portals[1]);
+
+      // Cubes are managed using a non-solid prop created with VScript
+      sendToConsole(gameSocket, "script ::__elSpectatorCube(Vector("+ data.cube.pos.join(", ") +"), Vector("+ data.cube.ang.join(", ") +"), "+ data.cube.type +")");
 
       return;
     }
@@ -263,39 +444,42 @@ function processWebSocket () {
     // Disconnect existing socket, if any
     if (webSocket) ws.disconnect(webSocket);
     // Start a new WebSocket connection
-    game.send(gameSocket, "echo Connecting to WebSocket...\n");
+    sendToConsole(gameSocket, "echo Connecting to WebSocket...");
     webSocket = ws.connect(WS_ADDRESS + "/api/events/connect");
 
     // Clear the token and exit if the connection failed
     if (!webSocket) {
-      game.send(gameSocket, "echo WebSocket connection failed.\n");
+      sendToConsole(gameSocket, "echo WebSocket connection failed.");
       webSocketToken = null;
       return;
     }
 
     // Send the token to authenticate
-    game.send(gameSocket, "echo Connection established, authenticating...\n");
+    sendToConsole(gameSocket, "echo Connection established, authenticating...");
     const success = ws.send(webSocket, webSocketToken);
     webSocketToken = null;
 
     // On transmission failure, assume the socket is dead
     if (!success) {
-      game.send(gameSocket, "echo Failed to send authentication token.\n");
+      sendToConsole(gameSocket, "echo Failed to send authentication token.");
       ws.disconnect(webSocket);
       webSocket = null;
       return;
     }
 
-    // Shortly after, send a ping to check that we're still connected
+    // Shortly after, try to read to check that we're still connected
     sleep(1000);
-    const pingSuccess = ws.send(webSocket, '{"type":"ping"}');
-
-    // If this failed, the server probably closed the connection, indicating auth failure
-    if (!pingSuccess) {
-      game.send(gameSocket, "echo Authentication failed.\n");
-      game.send(gameSocket, 'echo ""\n');
-      game.send(gameSocket, "echo The token you provided most likely expired. Tokens are only valid for 30 seconds after being issued.\n");
-      game.send(gameSocket, "echo Please try again with a new token obtained through the New Token button at the top of the lobby window.\n");
+    try {
+      const message = ws.read(webSocket);
+      // If this succeeded, we do actually have to parse it
+      try { processServerEvent(JSON.parse(message)) }
+      catch (_) { return }
+    } catch (_) {
+      // If this failed, the server probably closed the connection, indicating auth failure
+      sendToConsole(gameSocket, "echo Authentication failed.");
+      sendToConsole(gameSocket, 'echo ""');
+      sendToConsole(gameSocket, "echo The token you provided most likely expired. Tokens are only valid for 30 seconds after being issued.");
+      sendToConsole(gameSocket, "echo Please try again with a new token obtained through the New Token button at the top of the lobby window.");
 
       ws.disconnect(webSocket);
       webSocket = null;
@@ -307,20 +491,28 @@ function processWebSocket () {
   // If a socket has not been instantiated, don't proceed
   if (!webSocket) return;
 
-  // Process incoming data until the stack is empty
-  var message;
-  while ((message = ws.read(webSocket)) !== "") {
+  try {
+    // Process incoming data until the stack is empty
+    var message;
+    while ((message = ws.read(webSocket)) !== "") {
 
-    // Attempt to deserialize and process the message
-    try { processServerEvent(JSON.parse(message)) }
-    catch (_) { continue }
+      // Attempt to deserialize and process the message
+      try { processServerEvent(JSON.parse(message)) }
+      catch (_) { continue }
 
+    }
+  } catch (_) {
+    // If we've dropped down here, the socket has thrown an error
+    sendToConsole(gameSocket, 'disconnect "Connection error! WebSocket disconnected. Please reconnect to the lobby with a new token."');
+    ws.disconnect(webSocket);
+    webSocket = null;
   }
 
 }
 
 // Run each processing function on an interval
 while (true) {
+  processVersionCheck();
   processConsoleOutput();
   processWebSocket();
 

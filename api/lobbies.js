@@ -43,10 +43,14 @@ async function checkUserPerms (request, lobbyid, checkHost = false) {
  * - `password`: Set a lobby's password.
  * - `maxplayers`: Set the maximum player count of the lobby
  * - `map`: Set the active lobby map
+ * - `mode`: Set the lobby mode
  * - `ready`: Set the player's ready state
  * - `host`: Transfer the host role to the specified player
  * - `kick`: Remove the specified player from the lobby
  * - `start`: Force start the game
+ * - `abort`: Force stop the game (everyone is set to "not ready")
+ * - `spectate`: Add or remove the calling player from the spectators list
+ * - `chat`: Send a chat message to be broadcasted within the lobby
  *
  * @param {string[]} args The arguments for the api request
  * @param {HttpRequest} request The http request object
@@ -68,6 +72,8 @@ module.exports = async function (args, request) {
     case "create": {
 
       const name = args[1];
+      // Disallow imitations of the "Chamber Of The Day"
+      if (name.trim().toLowerCase() === "chamber of the day") return "ERR_NAME";
 
       // Get the active user and throw ERR_LOGIN if not logged in
       const user = await api_users(["whoami"], request);
@@ -123,25 +129,28 @@ module.exports = async function (args, request) {
       // Filter returned data to omit unwanted properties
       const clientData = {
         players: Object.fromEntries(
-          Object.entries(data.players).map(([key, player]) => [key, { ready: player.ready }])
+          Object.entries(data.players).map(([key, player]) => [key, { ready: player.ready, wins: player.wins }])
         ),
         maxplayers: data.maxplayers,
         host: data.host,
+        spectators: data.spectators,
         state: data.state,
         context: data.context.data
       };
       /** The above results in an object with the following pseudo-structure:
        * {
        *   players: {
-       *     steamid: { ready },
-       *     steamid: { ready },
+       *     steamid: { ready, wins },
+       *     steamid: { ready, wins },
        *     ...
        *   },
        *   maxplayers,
        *   host,
+       *   spectators,
        *   state,
        *   context: {
        *     map,
+       *     maps,
        *     leaderboard,
        *     week
        *   }
@@ -155,6 +164,8 @@ module.exports = async function (args, request) {
     case "rename": {
 
       const newName = args[2];
+      // Disallow imitations of the "Chamber Of The Day"
+      if (newName.trim().toLowerCase() === "chamber of the day") return "ERR_NAME";
 
       // Check if the player is the host of this lobby
       const permsCheck = await checkUserPerms(request, lobbyid, true);
@@ -199,6 +210,21 @@ module.exports = async function (args, request) {
 
       // Set the specified lobby's map
       return lobbies(["map", lobbyid, mapid]);
+
+    }
+
+    case "mode": {
+
+      const newMode = args[2];
+      // Disallow imitations of the "Chamber Of The Day"
+      if (newMode === "cotd") return "ERR_MODE";
+
+      // Check if the player is the host of this lobby
+      const permsCheck = await checkUserPerms(request, lobbyid, true);
+      if (typeof permsCheck === "string") return permsCheck;
+
+      // Change the mode of the specified lobby
+      return lobbies(["mode", lobbyid, newMode]);
 
     }
 
@@ -250,6 +276,50 @@ module.exports = async function (args, request) {
 
       // Force start the game
       return lobbies(["start", lobbyid]);
+
+    }
+
+    case "abort": {
+
+      // Check if the player is the host of this lobby
+      const permsCheck = await checkUserPerms(request, lobbyid, true);
+      if (typeof permsCheck === "string") return permsCheck;
+
+      // Abort the game
+      return lobbies(["abort", lobbyid]);
+
+    }
+
+    case "spectate": {
+
+      const spectatorState = args[2];
+
+      // Check if the player is a member of this lobby
+      const permsCheck = await checkUserPerms(request, lobbyid);
+      if (typeof permsCheck === "string") return permsCheck;
+      const { user } = permsCheck;
+
+      // Toggle the player's spectator state
+      return lobbies(["spectate", lobbyid, spectatorState, user.steamid]);
+
+    }
+
+    case "chat": {
+
+      const message = args[2];
+
+      // Ensure the message is within 200 characters
+      if (message.length > 200) return "ERR_LENGTH";
+      // Ensure the message isn't empty
+      if (message.trim().length === 0) return "ERR_EMPTY";
+
+      // Check if the player is a member of this lobby
+      const permsCheck = await checkUserPerms(request, lobbyid);
+      if (typeof permsCheck === "string") return permsCheck;
+      const { user } = permsCheck;
+
+      // Send the message
+      return lobbies(["chat", lobbyid, message, user.steamid]);
 
     }
 

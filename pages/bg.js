@@ -4,6 +4,10 @@
 if (localStorage.getItem("powerSaving") === "on") {
   throw " - power saving enabled, animation disabled";
 }
+// Don't proceed with the animation on the Steam game overlay
+if (navigator.userAgent.includes("Valve Steam GameOverlay")) {
+  throw " - Steam game overlay detected, animation disabled";
+}
 
 const canvas = document.getElementById("bg-anim");
 const ctx = canvas.getContext("2d");
@@ -19,9 +23,18 @@ window.onresize = function () {
   canvas.height = window.innerHeight * gscale;
 };
 
+var mouseX = -canvas.width, mouseY = -canvas.height;
+
+document.addEventListener("mousemove", function (event) {
+  mouseX = event.clientX * gscale;
+  mouseY = event.clientY * gscale;
+});
+
 const dots = [];
 const minDistance = 200 * gscale;
-const minDistanceSqrt = Math.pow(minDistance, 2);
+const minDistanceSquared = Math.pow(minDistance, 2);
+const minMouseDistance = 100 * gscale;
+const minMouseDistanceSquared = Math.pow(minMouseDistance, 2);
 const maxSpeed = 1.5 * gscale;
 
 var dotCount = 50;
@@ -68,13 +81,18 @@ class Dot {
 
   connect (dots) {
     dots.forEach((dot) => {
-      const distanceRoot = Math.pow(this.x - dot.x, 2) + Math.pow(this.y - dot.y, 2);
+      const distanceSquared = Math.pow(this.x - dot.x, 2) + Math.pow(this.y - dot.y, 2);
 
-      if (distanceRoot < minDistanceSqrt) {
+      if (distanceSquared < minDistanceSquared) {
+        const mouseDistanceSquared = Math.pow(mouseX - dot.x, 2) + Math.pow(mouseY - dot.y, 2);
+        let multip = 1.0;
+        if (mouseDistanceSquared < minMouseDistanceSquared) {
+          multip += Math.min(Math.sqrt(1 - Math.sqrt(mouseDistanceSquared) / minMouseDistance) * 1.2, 1.2);
+        }
         ctx.beginPath();
         ctx.moveTo(this.x, this.y);
         ctx.lineTo(dot.x, dot.y);
-        ctx.strokeStyle = `rgba(255, 255, 255, ${1 - Math.sqrt(distanceRoot) / minDistance})`;
+        ctx.strokeStyle = `rgba(255, 255, 255, ${(1 - Math.sqrt(distanceSquared) / minDistance) * multip})`;
         ctx.lineWidth = 1;
         ctx.stroke();
       }

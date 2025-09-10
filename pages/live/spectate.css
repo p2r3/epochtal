@@ -1,0 +1,102 @@
+body {
+  overflow: hidden;
+}
+
+#lobby-players-container {
+  position: fixed;
+  left: 0;
+  bottom: 2.5%;
+  width: 100%;
+  line-height: 0;
+}
+#lobby-players-list {
+  margin-bottom: 0;
+  padding-left: 10px;
+}
+
+.lobby-player {
+  position: relative;
+  display: inline-block;
+  width: 58px;
+  margin: 8px 7px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background-color: rgba(0, 0, 0, 0);
+  backdrop-filter: none;
+}
+.lobby-player p, .lobby-player i {
+  display: none;
+}
+.lobby-spectator {
+  display: none;
+}
+.lobby-player-avatar {
+  border-width: 2px;
+}
+
+#lobby-spectator-players-list {
+  display: block;
+  position: fixed;
+  left: 2vw;
+  top: 50vh;
+  transform: translateY(-50%);
+}
+
+#lobby-settings-container * {
+  display: none;
+  position: unset;
+}
+
+#lobby-settings-container .center {
+  display: block !important;
+}
+#lobby-settings-map {
+  display: block !important;
+  position: fixed;
+  margin: 0 !important;
+  width: 30%;
+  left: 50%;
+  bottom: 3.5%;
+  transform: translateX(-50%);
+}
+#lobby-settings-map * {
+  display: inline-block !important;
+  position: relative !important;
+}
+#lobby-settings-map .votes-text {
+  display: inline !important;
+  position: absolute !important;
+}
+#lobby-settings-map .votes-image {
+  width: 30%;
+}
+#lobby-map-button {
+  display: none !important;
+}
+#lobby-force-button {
+  display: none !important;
+}
+#lobby-map-history-button {
+  display: none !important;
+}
+
+#lobby-chat-container {
+  left: unset;
+  right: 2vw;
+  height: 11%;
+}
+#lobby-chat-input {
+  display: none;
+}
+#lobby-spectate-button {
+  display: none;
+}
+
+header {
+  display: none;
+}
+
+#global-popup {
+  display: none;
+}

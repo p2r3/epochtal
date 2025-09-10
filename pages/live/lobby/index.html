@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="/live/style.css">
     <script src="https://kit.fontawesome.com/fc2642e2d1.js" crossorigin="anonymous"></script>
   </head>
-  <body>
+  <body onkeypress="redirectEventToChat(event)">
 
     <div id="bg-anim-container">
       <div id="bg-anim-bg"></div>
@@ -27,6 +27,7 @@
         </div>
 
         <div id="header-right">
+          <div class="header-block" onclick="window.open('https://docs.google.com/document/d/1gcWvwEjzJaKfgOEGpGPFGvtNV_LQCbSC3OE84dARMYE', '_blank')">Help</div>
           <div class="header-block" onclick="copyEventToken()">New Token</div>
           <div class="header-block" onclick="leaveLobby()">Leave Lobby</div>
           <div class="header-block" onclick="window.location.href = '/api/auth/login'" id="login-button">Log in</div>
@@ -43,6 +44,8 @@
         <div id="lobby-players-list"></div>
       </div>
 
+      <div id="lobby-spectator-players-list"></div>
+
       <div id="lobby-settings-container">
 
         <h2 class="font-spaced">&nbsp;&nbsp;•&nbsp;•&nbsp;•&nbsp;&nbsp;settings</h2><br>
@@ -54,6 +57,8 @@
           <button onclick="changeLobbyPassword()" id="lobby-password-button">Change lobby password</button>
           <br><br>
           <button onclick="changeLobbyMaxplayers()" id="lobby-maxplayers-button">Change lobby size</button>
+            &nbsp;&nbsp;
+          <button onclick="changeLobbyMode()" id="lobby-mode-button">Change lobby mode</button>
 
           <br><br>
 
@@ -65,12 +70,34 @@
           <br><br>
 
           <h3 class="marginb_small">Are you ready?</h3>
-          <button id="lobby-ready-button" onclick="toggleReadyState()">I'm ready!</button>
+          <button id="lobby-ready-button" onclick="toggleReadyState()">I'm ready!</button><i class="fa-solid fa-repeat" id="lobby-autoready-button" onclick="toggleAutoReady()"></i>
           <br><br>
-          <a href="javascript:forceStart()" id="lobby-forcestart-button">Force start</a>
+          <a href="javascript:forceStart()" id="lobby-force-button">Force start</a>
 
         </div>
 
+      </div>
+
+      <div id="lobby-chat-container">
+        <input type="text"
+          name="el_lobby_chat_input"
+          id="lobby-chat-input"
+          autocomplete="off"
+          autocorrect="off"
+          autocapitalize="off"
+          spellcheck="false"
+          maxlength="200"
+          onkeypress="sendChatMessageFromInput(event)"></input>
+        <div id="lobby-chat-output">
+
+        </div>
+      </div>
+
+      <button id="lobby-spectate-button" onclick="spectate()">Spectate</button>
+
+      <div id="lobby-map-history-container">
+        <div id="lobby-map-history-list"></div>
+        <i class="fa-solid fa-xmark" id="lobby-map-history-close" onclick="toggleMapHistoryWindow()"></i>
       </div>
 
       <footer></footer>

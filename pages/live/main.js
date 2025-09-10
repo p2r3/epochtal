@@ -84,6 +84,10 @@ var lobbyListInit = async function () {
       let modeString;
       switch (lobby.mode) {
         case "ffa": modeString = "Free For All"; break;
+        case "random": modeString = "Random Workshop Maps"; break;
+        case "random_ranked": modeString = "Random Maps Ranked"; break;
+        case "battle_royale": modeString = "Battle Royale"; break;
+        case "cotd": modeString = "Chamber Of The Day"; break;
         default: modeString = "Unknown"; break;
       }
 
@@ -279,7 +283,7 @@ async function joinLobby (lobbyid) {
       switch (data) {
 
         case "SUCCESS":
-          return window.open(`/live/lobby/#${lobbyid}`);
+          return window.location.href = `/live/lobby/#${lobbyid}`;
 
         case "ERR_LOGIN": return showPopup("Not logged in", "Please log in via Steam before joining a lobby.", POPUP_ERROR);
         case "ERR_STEAMID": return showPopup("Unrecognized user", "Your SteamID is not present in the users database. WTF?", POPUP_ERROR);

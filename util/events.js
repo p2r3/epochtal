@@ -201,8 +201,8 @@ module.exports = async function (args, context = epochtal) {
           // Send message to the event
           try {
             await event.message(message, ws);
-          } catch {
-            new UtilError("ERR_HANDLER", args, context);
+          } catch (e) {
+            new UtilError("ERR_HANDLER: " + e.stack, args, context);
           }
 
         };
@@ -217,8 +217,8 @@ module.exports = async function (args, context = epochtal) {
           try {
             ws.unsubscribe(ws.data.event);
             await event.disconnect(ws);
-          } catch {
-            new UtilError("ERR_HANDLER", args, context);
+          } catch (e) {
+            new UtilError("ERR_HANDLER: " + e.stack, args, context);
           }
 
         };

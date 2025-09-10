@@ -196,7 +196,11 @@ async function buildFiles (context) {
 
   // Prepare map(s) BSP for simulated co-op
   for (let i = 0; i < mapPaths.length; i ++) {
-    await coopifier(["inject", `${portal2}/maps/${mapPaths[i]}.bsp`], context);
+    try {
+      await coopifier(["inject", `${portal2}/maps/${mapPaths[i]}.bsp`], context);
+    } catch (e) {
+      throw e.message + ` (${mapPaths[i]})`;
+    }
   }
 
   return {

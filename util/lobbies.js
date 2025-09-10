@@ -24,15 +24,17 @@ function createLobbyContext (name) {
     },
     data: {
       map: null,
+      nextMap: null,
+      maps: [],
       leaderboard: {
-        ffa: []
+        lobby: []
       },
       week: {
-        date: Date.now(),
+        date: Date.now() / 1000,
         categories: [
           {
-            name: "ffa",
-            title: "Free For All",
+            name: "lobby",
+            title: "Lobby Leaderboard",
             portals: false
           }
         ]
@@ -40,6 +42,158 @@ function createLobbyContext (name) {
     },
     name: "lobby_" + name
   };
+}
+
+/**
+ * Creates a "map" entry for an Epochtal context object.
+ *
+ * This is used instead of the workshopper to extract only the information
+ * that is relevant to lobbies.
+ *
+ * @param {object} details The JSON output of a Steam workshop API request
+ * @param {boolean} [hidden] Whether the map thumbnail should be hidden
+ * @returns {object} An object describing the map in an Epochtal context
+ */
+async function createMapEntry (details, hidden = false) {
+
+  const map = {
+    id: details.publishedfileid,
+    title: details.title,
+    thumbnail: details.preview_url,
+    link: details.file_url
+  };
+
+  // If marked as hidden, don't store the map thumbnail
+  if (hidden) {
+    map.thumbnail = "https://epochtal.p2r3.com/icons/unknown-wide.jpg";
+  }
+
+  // Fetch the map author's username
+  try {
+    const authorRequest = await fetch(`https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=${CONFIG.API_KEY.STEAM}&steamids=${details.creator}`);
+    const authorData = await authorRequest.json();
+    map.author = authorData.response.players[0].personaname;
+  } catch {
+    map.author = "unknown";
+  }
+
+  // Get the path to which the map is saved when subscribed to
+  const pathWorkshop = details.file_url.split("/ugc/").pop().split("/")[0];
+  const pathBSP = details.filename.split("/").pop().slice(0, -4);
+  map.file = `workshop/${pathWorkshop}/${pathBSP}`;
+
+  return map;
+
+}
+
+/**
+ * Handles the lobby state changing by firing events based on the lobby
+ * mode, effectively implementing different gamemodes.
+ *
+ * @param {string} id The lobby's unique ID string
+ * @param {object} context The Epochtal context in which the lobby resides
+ * @param {boolean} init Whether we're just initializing a new lobby mode
+ */
+async function handleStateChange (id, context, init = false) {
+
+  const listEntry = context.data.lobbies.list[id];
+  const dataEntry = context.data.lobbies.data[id];
+  const eventName = "lobby_" + id;
+
+  // Exit silently if the lobby no longer exists
+  // This is done to not assume anything about surrounding error handling
+  if (!listEntry || !dataEntry) return;
+
+  const { mode } = listEntry;
+  const { state } = dataEntry;
+
+  // Delete any round timeouts on state or mode change
+  if ("roundTimeout" in dataEntry) {
+    clearTimeout(dataEntry.roundTimeout);
+    delete dataEntry.roundTimeout;
+  }
+
+  // Increment win count of players in first place
+  if (state === LOBBY_INGAME) {
+    for (const run of dataEntry.context.data.leaderboard.lobby) {
+      if (run.placement !== 1) continue;
+      if (!(run.steamid in dataEntry.players)) continue;
+      dataEntry.players[run.steamid].wins ++;
+    }
+  }
+
+  switch (mode) {
+    case "ffa": break;
+    case "random_ranked":
+    case "random": {
+      if (state === LOBBY_INGAME) break;
+      // Pick a random map whenever the lobby becomes idle
+      const hidden = mode === "random_ranked";
+      try {
+        await module.exports(["map", id, "random", hidden], context);
+      } catch {
+        // If that failed, keep trying on an interval
+        // Even we keep throwing, it'll stop on mode change or lobby deletion
+        setTimeout(function () {
+          handleStateChange(id, context, init).catch(e => { });
+        }, 3000);
+      }
+      break;
+    }
+    case "cotd": {
+      if (state === LOBBY_INGAME) {
+        // After starting a round, schedule force-abort in 8 minutes
+        dataEntry.roundTimeout = setTimeout(async function () {
+          try {
+            if (dataEntry.state === LOBBY_IDLE) return;
+            await module.exports(["abort", id], context);
+            delete dataEntry.roundTimeout;
+          } catch { }
+        }, 8*60*1000);
+      } else if (!init) {
+        // After finishing a round, give runners 5 minutes to get ready
+        dataEntry.roundTimeout = setTimeout(async function () {
+          try {
+            if (dataEntry.state === LOBBY_INGAME) return;
+            await module.exports(["start", id], context);
+            delete dataEntry.roundTimeout;
+          } catch { }
+        }, 5*60*1000);
+      }
+      // Fall through to "Battle Royale" case, inheriting its behavior
+    }
+    case "battle_royale": {
+      if (state === LOBBY_INGAME) {
+        // Kick players who aren't connected by the time that the game starts
+        for (const player in dataEntry.players) {
+          if (dataEntry.host === player) continue;
+          if (dataEntry.players[player].gameSocket) continue;
+          await module.exports(["leave", id, player], context);
+        }
+        break;
+      }
+      // Kick players with no time, and the player with the slowest time
+      // Don't do this when initializing, because no one has a time then
+      if (!init) {
+        // Get leaderboard of runs
+        const lb = await leaderboard(["get", "lobby"], dataEntry.context);
+        // Kick non-hosts without times
+        for (const player of listEntry.players) {
+          if (lb.find(c => c.steamid === player)) continue;
+          if (dataEntry.host === player) continue;
+          await module.exports(["leave", id, player], context);
+        }
+        // Kick slowest player with a time
+        const slowest = lb[lb.length - 1].steamid;
+        await module.exports(["leave", id, slowest], context);
+      }
+      // Shrink lobby to smallest size accommodating remaining players
+      const playerCount = listEntry.players.length;
+      await module.exports(["maxplayers", id, playerCount], context);
+      break;
+    }
+  }
+
 }
 
 /**
@@ -55,10 +209,14 @@ function createLobbyContext (name) {
  * - `password`: Set a lobby password
  * - `maxplayers`: Set the maximum player count of the lobby
  * - `map`: Set the active lobby map
+ * - `mode`: Set the lobby mode
  * - `ready`: Set the ready state of the specified player
  * - `host`: Transfer the host role to the specified player
  * - `leave`: Remove the specified player from the lobby
  * - `start`: Force start the game
+ * - `abort`: Force stop the game (everyone is set to "not ready")
+ * - `spectate`: Add or remove the given player from the spectators list
+ * - `chat`: Send a chat message to be broadcasted within the lobby
  *
  * @param {string[]} args The arguments for the call
  * @param {unknown} context The context on which to execute the call (defaults to epochtal)
@@ -123,6 +281,8 @@ module.exports = async function (args, context = epochtal) {
         players: {},
         maxplayers: null,
         host: undefined,
+        spectators: [],
+        crashed: [],
         state: LOBBY_IDLE,
         context: createLobbyContext(cleanName)
       };
@@ -147,17 +307,36 @@ module.exports = async function (args, context = epochtal) {
           // Distinguishes browser clients from game clients
           // Game clients are expected to send this right after authenticating
           case "isGame": {
+
             // Link the socket to the player data
             dataEntry.players[steamid].gameSocket = ws;
+
             // Broadcast game client join to all lobby clients
             await events(["send", eventName, { type: "lobby_join_game", steamid }], context);
+
+            // If the player had previously crashed, try to recover
+            if (dataEntry.crashed.includes(steamid) && dataEntry.state === LOBBY_INGAME) {
+              const { file, link } = dataEntry.context.data.map;
+              ws.send(JSON.stringify({ type: "getMap", value: { file, link } }));
+              // Client WS is synchronous, this will only take effect after the download
+              ws.send(JSON.stringify({ type: "lobby_start", map: file }));
+            }
+
+            // Ask joining clients to predownload cached map (if any)
+            if (dataEntry.context.data.nextMap) {
+              const { file, link } = dataEntry.context.data.nextMap;
+              ws.send(JSON.stringify({ type: "getMap", value: { file, link } }));
+            }
+
             return;
           }
 
           // Returned by game clients as a response to the server's query
           case "getMap": {
-            dataEntry.players[steamid].getMapCallback(data.value);
-            delete dataEntry.players[steamid].getMapCallback;
+            if ("getMapCallback" in dataEntry.players[steamid]) {
+              dataEntry.players[steamid].getMapCallback(data.value);
+              delete dataEntry.players[steamid].getMapCallback;
+            }
             return;
           }
 
@@ -166,16 +345,61 @@ module.exports = async function (args, context = epochtal) {
 
             // Reject the response if we're not in-game
             if (dataEntry.state !== LOBBY_INGAME) return;
+            // Reject the response if we're a spectator
+            if (dataEntry.spectators.includes(steamid)) return;
+            // Reject the response if we're not ready
+            if (!dataEntry.players[steamid].ready) return;
 
-            const { time, portals } = data.value;
+            let { time, portals } = data.value;
+
+            if (dataEntry.crashed.includes(steamid)) {
+              // If the player had crashed, use real-time for timing instead
+              const seconds = Date.now() / 1000 - dataEntry.context.data.week.date;
+              time = Math.round(seconds * 60);
+              // Remove the player from the crashed players list
+              dataEntry.crashed = dataEntry.crashed.filter(p => p !== steamid);
+            }
 
             // Submit this run to the lobby leaderboard
-            await leaderboard(["add", listEntry.mode, steamid, time, "", portals], dataEntry.context);
+            await leaderboard(["add", "lobby", steamid, time, "", portals], dataEntry.context);
             // Broadcast submission to all lobby clients
             await events(["send", eventName, { type: "lobby_submit", value: { time, portals, steamid } }], context);
             // Change the client's ready state to false
             await module.exports(["ready", newID, false, steamid, true], context);
 
+            return;
+          }
+
+          // Contains the client's position, portals, and nearby cubes
+          case "spectate": {
+            // Ignore position packets sent by spectators
+            if (dataEntry.spectators.includes(steamid)) return;
+            // Convert the strings of coordinates/angles to arrays of numbers
+            const arrPlayer = data.player.split(" ").map(Number);
+            const arrPortals = data.portals.split(" ").map(Number).map(c => c.toFixed(3));
+            const arrCube = data.cube.split(" ").map(Number).map(Math.round);
+            // Construct the outgoing message
+            const output = {
+              type: "spectate",
+              pos: arrPlayer.slice(0, 3),
+              ang: arrPlayer.slice(3, 5),
+              portals: [
+                arrPortals.slice(0, 6).join(" "),
+                arrPortals.slice(6, 12).join(" ")
+              ],
+              cube: {
+                pos: arrCube.slice(0, 3),
+                ang: arrCube.slice(3, 6),
+                type: arrCube[6]
+              },
+              steamid: steamid,
+              name: (await users(["get", steamid])).name
+            };
+            // Send this message to all spectators
+            for (const spectator of dataEntry.spectators) {
+              if (!dataEntry.players[spectator].gameSocket) continue;
+              dataEntry.players[spectator].gameSocket.send(JSON.stringify(output));
+            }
             return;
           }
 
@@ -192,20 +416,44 @@ module.exports = async function (args, context = epochtal) {
         if (!listEntry.players.includes(steamid)) return;
         if (!(steamid in dataEntry.players)) return;
 
-        // If this is a game client, just change their ready state to false and exit
+        // Handle disconnecting game clients
         if (dataEntry.players[steamid].gameSocket === ws) {
+          // Delete the WebSocket handle
           delete dataEntry.players[steamid].gameSocket;
-          await module.exports(["ready", newID, false, steamid, true], context);
+          if (listEntry.state === LOBBY_IDLE) {
+            // If the lobby was idle, just force-unready the player
+            try {
+              await module.exports(["ready", newID, false, steamid, true], context);
+            } catch { }
+          } else {
+            // If the lobby was in-game, flag the player as having crashed
+            dataEntry.crashed.push(steamid);
+          }
           return;
+        } else {
+          /**
+           * If it's the browser client that disconnected, remove the player from
+           * the crash list. Waiting here is admittedly a hacky approach, and
+           * ideally we'd have the browser cleanly report a page close, but really
+           * any approach I can currently think of is prone to race conditions.
+           */
+          setTimeout(function () {
+            dataEntry.crashed = dataEntry.crashed.filter(p => p !== steamid);
+          }, 1000);
         }
 
         // Disconnect the connected game client (if any) for this player
         if (dataEntry.players[steamid].gameSocket) {
           dataEntry.players[steamid].gameSocket.close(1001, "LOBBY_LEAVE");
+          delete dataEntry.players[steamid].gameSocket;
         }
 
-        // Remove the player from the lobby
-        await module.exports(["leave", newID, steamid], context);
+        try {
+          // Force ready state to false
+          await module.exports(["ready", newID, false, steamid, true], context);
+          // Remove the player from the lobby
+          await module.exports(["leave", newID, steamid], context);
+        } catch { }
 
       };
 
@@ -241,9 +489,22 @@ module.exports = async function (args, context = epochtal) {
       // If the player is already in the lobby, pretend the join was successful
       if (listEntry.players.includes(steamid)) return "SUCCESS";
 
+      // Count the amount of wins this player had before leaving
+      let wins = 0;
+      for (const cat in dataEntry.context.data.leaderboard) {
+        // Skip current leaderboard if players are in-game
+        if (dataEntry.state === LOBBY_INGAME && cat === "lobby") continue;
+        // For every 1st place placement, add one win
+        const lb = dataEntry.context.data.leaderboard[cat];
+        if (lb.find(c => c.steamid === steamid && c.placement === 1)) wins ++;
+      }
+
+      // If recovering from a crash, count this player as ready
+      const ready = dataEntry.crashed.includes(steamid);
+
       // Add the player to the lobby
       listEntry.players.push(steamid);
-      dataEntry.players[steamid] = {};
+      dataEntry.players[steamid] = { wins, ready };
 
       // The first player to join is given the role of host
       if (!dataEntry.host) dataEntry.host = steamid;
@@ -336,7 +597,7 @@ module.exports = async function (args, context = epochtal) {
 
     case "map": {
 
-      const mapid = args[2];
+      const [ mapid, hidden ] = args.slice(2);
 
       const listEntry = lobbies.list[lobbyid];
       const dataEntry = lobbies.data[lobbyid];
@@ -352,11 +613,40 @@ module.exports = async function (args, context = epochtal) {
       // The loose equality check here is intentional, as either ID might in rare cases be a number
       if (mapid == epochtal.data.week.map.id) throw new UtilError("ERR_WEEKMAP", args, context);
 
+      // Check if the string provided is a known campaign map name
+      const campaignMap = campaignMaps.find(c => c.id === mapid);
+
+      // The new lobby map is set in the branch below
       let newMap;
 
-      // Check if the string provided is a known campaign map name or a workshop map ID
-      const campaignMap = campaignMaps.find(c => c.id === mapid);
-      if (campaignMap) {
+      if (mapid === "random") {
+
+        if (dataEntry.context.data.nextMap) {
+          // If a precached map exists, use that one
+          newMap = dataEntry.context.data.nextMap;
+          dataEntry.context.data.nextMap = null;
+        } else {
+          // Otherwise, request a new random map from the workshopper
+          const details = await workshopper(["random"]);
+          newMap = await createMapEntry(details, hidden);
+        }
+
+        // Precache the next random map to make transitions seamless
+        workshopper(["random"]).then(async function (details) {
+          try {
+            dataEntry.context.data.nextMap = await createMapEntry(details, hidden);
+            // Ask all clients to predownload the cached map
+            const { file, link } = dataEntry.context.data.nextMap;
+            await events(["send", eventName, { type: "getMap", value: { file, link } }], context);
+          } catch { }
+        }).catch(e => {});
+
+      } else if (mapid === "") {
+
+        // If no map was provided, clear the lobby map
+        newMap = null;
+
+      } else if (campaignMap) {
 
         newMap = {
           id: campaignMap.id,
@@ -368,39 +658,46 @@ module.exports = async function (args, context = epochtal) {
 
       } else {
 
-        // We forge the map entry from a raw workshop request to extract only what we need
+        // Request raw map details for passing into createMapEntry
         const details = await workshopper(["get", mapid, true]);
-
-        newMap = {
-          id: mapid,
-          title: details.title,
-          thumbnail: details.preview_url,
-          link: details.file_url
-        };
-
-        // Fetch the map author's username
-        try {
-          const authorRequest = await fetch(`https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=${CONFIG.API_KEY.STEAM}&steamids=${details.creator}`);
-          const authorData = await authorRequest.json();
-          newMap.author = authorData.response.players[0].personaname;
-        } catch {
-          throw new UtilError("ERR_STEAMID", args, context);
-        }
-
-        // Get the path to which the map is saved when subscribed to
-        const pathWorkshop = details.file_url.split("/ugc/").pop().split("/")[0];
-        const pathBSP = details.filename.split("/").pop().slice(0, -4);
-        newMap.file = `workshop/${pathWorkshop}/${pathBSP}`;
+        newMap = await createMapEntry(details);
 
       }
 
       // Set the lobby map
       dataEntry.context.data.map = newMap;
+      // Append map to lobby map history
+      if (newMap) dataEntry.context.data.maps.push(newMap);
 
       // Force all player ready states to false
-      for (const player in dataEntry.players) player.ready = false;
+      for (const player in dataEntry.players) dataEntry.players[player].ready = false;
       // Brodcast map change to clients
       await events(["send", eventName, { type: "lobby_map", newMap }], context);
+
+      // Write the lobbies to file if it exists
+      if (file) Bun.write(file, JSON.stringify(lobbies));
+
+      return "SUCCESS";
+
+    }
+
+    case "mode": {
+
+      const newMode = args[2].trim().toLowerCase();
+
+      const listEntry = lobbies.list[lobbyid];
+      const dataEntry = lobbies.data[lobbyid];
+      const eventName = "lobby_" + lobbyid;
+
+      // Ensure the lobby exists
+      if (!listEntry || !dataEntry) throw new UtilError("ERR_LOBBYID", args, context);
+
+      // Switch the lobby mode
+      listEntry.mode = newMode;
+      await handleStateChange(lobbyid, context, true);
+
+      // Brodcast mode change to clients
+      await events(["send", eventName, { type: "lobby_mode", newMode }], context);
 
       // Write the lobbies to file if it exists
       if (file) Bun.write(file, JSON.stringify(lobbies));
@@ -507,14 +804,18 @@ module.exports = async function (args, context = epochtal) {
         // If everyone's ready, start the game
         let everyoneReady = true;
         for (const curr in dataEntry.players) {
+          // Ignore spectators without connected game clients
+          if (dataEntry.spectators.includes(steamid) && !dataEntry.players[steamid].gameSocket) continue;
           if (!dataEntry.players[curr].ready) {
             everyoneReady = false;
             break;
           }
         }
         if (everyoneReady) {
-          dataEntry.state = LOBBY_INGAME;
-          await events(["send", eventName, { type: "lobby_start", map: mapFile }], context);
+          // Don't auto-start the very first round of a COTD lobby
+          if (!(listEntry.mode === "cotd" && !("roundTimeout" in dataEntry))) {
+            await module.exports(["start", lobbyid], context);
+          }
         }
 
       } else {
@@ -525,17 +826,19 @@ module.exports = async function (args, context = epochtal) {
         // If no one is ready, reset the lobby state
         let nobodyReady = true;
         for (const curr in dataEntry.players) {
-          if (dataEntry.players[curr].ready) {
+          if (dataEntry.players[curr].ready && !dataEntry.spectators.includes(curr)) {
             nobodyReady = false;
             break;
           }
         }
         if (nobodyReady) {
           // Broadcast the lobby state change to clients
-          if (dataEntry.state === LOBBY_INGAME) {
-            await events(["send", eventName, { type: "lobby_finish" }], context);
-          }
+          const previousState = dataEntry.state;
           dataEntry.state = LOBBY_IDLE;
+          if (previousState === LOBBY_INGAME) {
+            await events(["send", eventName, { type: "lobby_finish" }], context);
+            await handleStateChange(lobbyid, context);
+          }
         }
 
       }
@@ -555,8 +858,10 @@ module.exports = async function (args, context = epochtal) {
       const newHost = args[2];
 
       // Ensure a valid user SteamID was provided
-      const user = await users(["get", newHost], context);
-      if (!user) throw new UtilError("ERR_STEAMID", args, context);
+      if (newHost) {
+        const user = await users(["get", newHost], context);
+        if (!user) throw new UtilError("ERR_STEAMID", args, context);
+      }
 
       const listEntry = lobbies.list[lobbyid];
       const dataEntry = lobbies.data[lobbyid];
@@ -565,10 +870,14 @@ module.exports = async function (args, context = epochtal) {
       // Ensure the lobby exists
       if (!listEntry || !dataEntry) throw new UtilError("ERR_LOBBYID", args, context);
       // Ensure the new host is in the lobby
-      if (!listEntry.players.includes(newHost)) throw new UtilError("ERR_STEAMID", args, context);
+      if (newHost && !listEntry.players.includes(newHost)) throw new UtilError("ERR_STEAMID", args, context);
 
-      // Assign the new host
-      dataEntry.host = newHost;
+      /**
+       * Assign the new host. If a falsy value was provided, use a string
+       * that cannot be translated into a SteamID to instead permanently
+       * remove any host from the lobby.
+       */
+      dataEntry.host = newHost || "nobody";
 
       // Brodcast host change to clients
       await events(["send", eventName, { type: "lobby_host", steamid: newHost }], context);
@@ -598,7 +907,12 @@ module.exports = async function (args, context = epochtal) {
       // Remove the player from the lobby
       const index = listEntry.players.indexOf(steamid);
       if (index !== -1) listEntry.players.splice(index, 1);
-      delete dataEntry.players[steamid];
+      if (steamid in dataEntry.players) {
+        if (dataEntry.players[steamid].gameSocket) {
+          dataEntry.players[steamid].gameSocket.close(1001, "LOBBY_LEAVE");
+        }
+        delete dataEntry.players[steamid];
+      }
 
       // If the host just left, assign a new host
       if (dataEntry.host === steamid) {
@@ -607,11 +921,19 @@ module.exports = async function (args, context = epochtal) {
         await events(["send", eventName, { type: "lobby_host", steamid: listEntry.players[0] }], context);
       }
 
+      // If a spectator just left, remove them from the spectators list
+      const spectatorIndex = dataEntry.spectators.indexOf(steamid);
+      if (spectatorIndex !== -1) {
+        dataEntry.spectators.splice(spectatorIndex, 1);
+      }
+
       // Brodcast the leave to clients
       await events(["send", eventName, { type: "lobby_leave", steamid }], context);
 
-      // Delete the lobby if it is still empty 10 seconds after all players have left
-      if (listEntry.players.length === 0) {
+      // Delete the lobby if it is still empty 2 minutes after all players have left
+      // These checks are bypassed on the very first round of a COTD lobby
+      const isCOTDFirstRound = listEntry.mode === "cotd" && !("roundTimeout" in dataEntry);
+      if (listEntry.players.length === 0 && !isCOTDFirstRound) {
 
         setTimeout(async function () {
           if (listEntry.players.length !== 0) return;
@@ -625,22 +947,22 @@ module.exports = async function (args, context = epochtal) {
           } catch {
             // Prevent a full server crash in case of a race condition
           }
-        }, 10000);
+        }, 2 * 60 * 1000);
 
-      } else {
+      } else if (!isCOTDFirstRound) {
 
         // If everyone remaining is ready, start the game
         let everyoneReady = true;
         for (const curr in dataEntry.players) {
+          // Ignore spectators without connected game clients
+          if (dataEntry.spectators.includes(steamid) && !dataEntry.players[steamid].gameSocket) continue;
           if (!dataEntry.players[curr].ready) {
             everyoneReady = false;
             break;
           }
         }
         if (everyoneReady && dataEntry.state !== LOBBY_INGAME) {
-          dataEntry.state = LOBBY_INGAME;
-          const mapFile = dataEntry.context.data.map.file;
-          await events(["send", eventName, { type: "lobby_start", map: mapFile }], context);
+          await module.exports(["start", lobbyid], context);
         }
 
       }
@@ -668,10 +990,93 @@ module.exports = async function (args, context = epochtal) {
       if (dataEntry.context.data.map === null) throw new UtilError("ERR_NOMAP", args, context);
       const mapFile = dataEntry.context.data.map.file;
 
+      // Clear and archive current lobby leaderboard
+      const lobbyLeaderboard = dataEntry.context.data.leaderboard;
+      const leaderboardCount = Object.keys(lobbyLeaderboard).length;
+      lobbyLeaderboard["lobby" + leaderboardCount] = lobbyLeaderboard["lobby"];
+      lobbyLeaderboard["lobby"] = [];
+
+      // Clear crashed players list
+      dataEntry.crashed = [];
+
       // Change the lobby state
       dataEntry.state = LOBBY_INGAME;
+      await handleStateChange(lobbyid, context);
       // Broadcast game start to clients
       await events(["send", eventName, { type: "lobby_start", map: mapFile }], context);
+      // Store the current time in the lobby context
+      dataEntry.context.data.week.date = Date.now() / 1000;
+
+      return "SUCCESS";
+
+    }
+
+    case "abort": {
+
+      const listEntry = lobbies.list[lobbyid];
+      const dataEntry = lobbies.data[lobbyid];
+
+      // Ensure the lobby exists
+      if (!listEntry || !dataEntry) throw new UtilError("ERR_LOBBYID", args, context);
+
+      // Force the ready state of all players to false
+      for (const curr in dataEntry.players) {
+        await module.exports(["ready", lobbyid, false, curr, true], context);
+      }
+
+      return "SUCCESS";
+
+    }
+
+    case "spectate": {
+
+      const spectatorState = args[2];
+
+      const listEntry = lobbies.list[lobbyid];
+      const dataEntry = lobbies.data[lobbyid];
+      const eventName = "lobby_" + lobbyid;
+
+      // Ensure the lobby exists
+      if (!listEntry || !dataEntry) throw new UtilError("ERR_LOBBYID", args, context);
+
+      // Add or remove this player from the spectators list
+      if (spectatorState) {
+        if (dataEntry.spectators.includes(steamid)) return;
+        dataEntry.spectators.push(steamid);
+      } else {
+        const index = dataEntry.spectators.indexOf(steamid);
+        if (index === -1) return;
+        dataEntry.spectators.splice(index, 1);
+      }
+
+      // Broadcast new spectators list to players
+      await events(["send", eventName, { type: "lobby_spectators", steamids: dataEntry.spectators }], context);
+
+      // Write the lobbies to file if it exists
+      if (file) Bun.write(file, JSON.stringify(lobbies));
+
+      return "SUCCESS";
+
+    }
+
+    case "chat": {
+
+      const message = args[2];
+
+      const listEntry = lobbies.list[lobbyid];
+      const dataEntry = lobbies.data[lobbyid];
+      const eventName = "lobby_" + lobbyid;
+
+      // Ensure the lobby exists
+      if (!listEntry || !dataEntry) throw new UtilError("ERR_LOBBYID", args, context);
+
+      // Ensure the message is within 200 characters
+      if (message.length > 200) throw new UtilError("ERR_LENGTH", args, context);
+      // Ensure the message isn't empty
+      if (message.trim().length === 0) throw new UtilError("ERR_EMPTY", args, context);
+
+      // Broadcast chat message to players
+      await events(["send", eventName, { type: "lobby_chat", steamid: steamid, value: message }], context);
 
       return "SUCCESS";
 

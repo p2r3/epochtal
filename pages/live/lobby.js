@@ -1,9 +1,19 @@
 var lobby, users, whoami;
 var avatarCache = {};
-var lobbySocket = null;
-var readyState = false;
-var amHost = false;
+var lobbySocket = null, lobbySocketDisconnected = false;
+var readyState = false, autoReady = false;
+var amHost = false, amSpectator = false;
 var localMapQueue = [];
+
+const lobbyModeStrings = {
+  "ffa": "Free For All",
+  "random": "Random Workshop Maps",
+  "random_ranked": "Random Maps Ranked",
+  "battle_royale": "Battle Royale",
+  "cotd": "Chamber Of The Day",
+};
+
+const [LOBBY_IDLE, LOBBY_INGAME] = [0, 1];
 
 const lobbyPlayersList = document.querySelector("#lobby-players-list");
 
@@ -15,9 +25,13 @@ async function updatePlayerList () {
   let output = "";
 
   // Get the leaderboard for this lobby mode
-  const leaderboard = lobby.data.context.leaderboard[lobby.listEntry.mode];
+  const leaderboard = lobby.data.context.leaderboard["lobby"];
   // Check if we are the host
   amHost = lobby.data.host === whoami.steamid;
+  // Check if we are a spectator
+  amSpectator = lobby.data.spectators.includes(whoami.steamid);
+  // Check if the lobby is in "in-game" mode
+  const ingame = lobby.data.state === LOBBY_INGAME;
 
   // Sort players by their latest time
   lobby.listEntry.players.sort(function (a, b) {
@@ -41,6 +55,9 @@ async function updatePlayerList () {
     return runA.time - runB.time;
 
   });
+
+  const spectatorPlayersList = document.querySelector("#lobby-spectator-players-list");
+  spectatorPlayersList.innerHTML = "";
 
   // List all players in the lobby
   for (let i = 0; i < lobby.listEntry.players.length; i ++) {
@@ -74,14 +91,18 @@ async function updatePlayerList () {
 
     // Get the player's last run in this mode, if they have one
     const run = leaderboard.find(c => c.steamid === steamid);
+    // Get the player's win count
+    const wins = lobby.data.players[steamid].wins || 0;
 
     // Get the player's ready state
     const ready = lobby.data.players[steamid].ready;
     // Check if this player is the host
     const isHost = lobby.data.host === steamid;
+    // Check if this player is a spectator
+    const isSpectator = lobby.data.spectators.includes(steamid);
 
     output += `
-<div class="lobby-player">
+<div class="lobby-player ${isSpectator ? "lobby-spectator" : ""}" ${isSpectator ? `style="opacity: 0.5"` : ""}>
   ${(amHost && !isHost) ? `<i
     class="fa-solid fa-xmark lobby-player-kick"
     onmouseover="showTooltip('Kick player')"
@@ -100,18 +121,35 @@ async function updatePlayerList () {
       onclick="transferHost('${steamid}')"
       ` : "")}
   >
-  <p class="lobby-player-name">${username}${run ? ` - ${ticksToString(run.time)}` : ""}</p>
+  <p class="lobby-player-name">${username}${run ? ` - ${ticksToString(run.time)}` : ""}<br><span class="lobby-player-wins">${wins} win${wins === 1 ? "" : "s"}</span></p>
   <i
-    class="${ready ? "fa-solid fa-circle-check" : "fa-regular fa-circle"} lobby-player-ready"
-    onmouseover="showTooltip('${ready ? "Ready" : "Not ready"}')"
+    class="${isSpectator ? "fa-regular fa-eye" : (ready ? (ingame ? "fa-solid fa-circle-play" : "fa-solid fa-circle-check") : "fa-regular fa-circle")} lobby-player-ready"
+    onmouseover="showTooltip('${isSpectator ? "Spectating" : (ready ? (ingame ? "Playing" : "Ready") : "Not ready")}')"
     onmouseleave="hideTooltip()"
   ></i>
 </div>
     `;
 
+    if (amSpectator && run) {
+      spectatorPlayersList.innerHTML += `
+        <div style="position:relative">
+          <img src="${avatar}" class="lobby-player-avatar"><p class="lobby-player-name" style="transform:translateY(calc(-50% - 5px)"><span style="font-size:1.2rem">${username}</span><br>${ticksToString(run.time)}</p><br>
+        </div>
+        <br>
+      `;
+    }
+
   }
 
   lobbyPlayersList.innerHTML = output;
+
+  // Update player count text
+  const lobbyPlayerCountText = document.querySelector("#lobby-playercount");
+  if (lobby.data.maxplayers !== null) {
+    lobbyPlayerCountText.textContent = `(${lobby.listEntry.players.length - lobby.data.spectators.length} / ${lobby.data.maxplayers})`;
+  } else {
+    lobbyPlayerCountText.textContent = `(${lobby.listEntry.players.length - lobby.data.spectators.length})`;
+  }
 
 }
 
@@ -124,11 +162,13 @@ async function updateLobbyMap () {
 
   const lobbyMap = lobby.data.context.map;
 
+  const hidden = lobby.listEntry.mode === "random_ranked" && lobby.data.state === LOBBY_IDLE;
+
   // If no map is selected, display a placeholder
   if (!lobbyMap) {
     lobbyMapContainer.innerHTML = `
       <p class="votes-text">No map selected</p>
-      <button id="lobby-map-button" onclick="selectLobbyMap()">Select</button>
+      <button id="lobby-map-button" onclick="selectLobbyMap()" ${amHost ? "" : `style="display: none"`}>Select</button>
     `;
     return;
   }
@@ -138,11 +178,12 @@ async function updateLobbyMap () {
     <a href="https://steamcommunity.com/sharedfiles/filedetails/?id=${lobbyMap.id}" target="_blank">
       <img class="votes-image" alt="thumbnail" src="${lobbyMap.thumbnail}?impolicy=Letterbox&imw=640&imh=360">
       <p class="votes-text">
-        ${lobbyMap.title}<br>
-        <i class="font-light">by ${lobbyMap.author}</i>
+        ${hidden ? "Title hidden" : lobbyMap.title}<br>
+        <i class="font-light">${hidden ? "author hidden" : `by ${lobbyMap.author}`}</i>
       </p>
     </a>
-    <button id="lobby-map-button" onclick="selectLobbyMap()">Select</button>
+    <button id="lobby-map-button" onclick="selectLobbyMap()" ${amHost ? "" : `style="display: none"`}>Select</button>
+    <p id="lobby-map-history-button"><a href="javascript:toggleMapHistoryWindow()">See map history</a></p>
   `;
 
 }
@@ -153,42 +194,68 @@ async function updateLobbyMap () {
 function updateLobbyHost () {
 
   // Enable or disable settings buttons based on if we're the host
-  const buttons = [
+  const grayedButtons = [
     document.querySelector("#lobby-name-button"),
-    document.querySelector("#lobby-password-button")
+    document.querySelector("#lobby-password-button"),
+    document.querySelector("#lobby-maxplayers-button"),
+    document.querySelector("#lobby-mode-button")
+  ];
+  const hiddenButtons = [
+    document.querySelector("#lobby-map-button"),
+    document.querySelector("#lobby-force-button")
   ];
 
   if (amHost) {
-    for (const button of buttons) {
+    for (const button of grayedButtons) {
       button.style.opacity = 1.0;
       button.style.cursor = "pointer";
       button.removeAttribute("onmouseover");
       button.removeAttribute("onmouseleave");
     }
+    for (const button of hiddenButtons) {
+      button.style.display = "inline";
+    }
   } else {
-    for (const button of buttons) {
+    for (const button of grayedButtons) {
       button.style.opacity = 0.5;
       button.style.cursor = "default";
       button.setAttribute("onmouseover", "showTooltip('Only the host can do this.')");
       button.setAttribute("onmouseleave", "hideTooltip()");
     }
+    for (const button of hiddenButtons) {
+      button.style.display = "none";
+    }
   }
 
-  // Hide the map select button entirely for non-hosts
-  const mapButton = document.querySelector("#lobby-map-button");
-  if (amHost) mapButton.style.display = "";
-  else mapButton.style.display = "none";
+}
 
-  // Hide the force start button for non-hosts
-  const forceStartButton = document.querySelector("#lobby-forcestart-button");
-  if (amHost) forceStartButton.style.display = "inline";
-  else forceStartButton.style.display = "none";
+/**
+ * Displays a message in the lobby chat window.
+ */
+function displayChatMessage (message, from = null) {
 
-};
+  if (from) message = message.toString().replaceAll("&quot;", '"')
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+
+  if (from) {
+    message = `<a>${users[from].name}</a>: ${message}`;
+  } else {
+    message = `<a>${message}</a>`;
+  }
+
+  const chatOutput = document.querySelector("#lobby-chat-output");
+  chatOutput.innerHTML += message + "<br>";
+
+  chatOutput.scrollTop = chatOutput.scrollHeight;
+
+}
 
 var eventHandlerConnected = false;
 
 const lobbyReadyButton = document.querySelector("#lobby-ready-button");
+const lobbyAutoReadyButton = document.querySelector("#lobby-autoready-button");
 
 /**
  * Handle incoming WebSocket events
@@ -203,10 +270,23 @@ async function lobbyEventHandler (event) {
   // Handle the event
   switch (data.type) {
 
+    case "authenticated": {
+
+      // If we previously lost connection, notify user of reconnect
+      if (lobbySocketDisconnected) {
+        showPopup("Connected", "Connection to server re-established.");
+        lobbySocketDisconnected = false;
+      }
+
+      return;
+    }
+
     case "lobby_name": {
 
       // Rename the lobby
       document.querySelector("#lobby-name").textContent = data.newName;
+
+      displayChatMessage(`Lobby name changed to "${data.newName}".`);
 
       return;
     }
@@ -228,6 +308,12 @@ async function lobbyEventHandler (event) {
       lobby.listEntry.players.splice(index, 1);
       updatePlayerList();
 
+      displayChatMessage(`${users[steamid].name} left the lobby.`);
+
+      const spectatorIndex = lobby.data.spectators.indexOf(steamid);
+      if (spectatorIndex == -1) return;
+      lobby.data.spectators.splice(spectatorIndex, 1);
+
       return;
     }
 
@@ -242,6 +328,8 @@ async function lobbyEventHandler (event) {
       lobby.data.players[steamid] = {};
       updatePlayerList();
 
+      displayChatMessage(`${users[steamid].name} joined the lobby.`);
+
       return;
     }
 
@@ -254,6 +342,19 @@ async function lobbyEventHandler (event) {
       updatePlayerList();
       updateLobbyHost();
 
+      displayChatMessage(`${users[steamid].name} is now the host.`);
+
+      return;
+    }
+
+    case "lobby_spectators": {
+
+      // Handle spectator list update
+      const { steamids } = data;
+
+      lobby.data.spectators = steamids;
+      updatePlayerList();
+
       return;
     }
 
@@ -265,9 +366,9 @@ async function lobbyEventHandler (event) {
       const lobbyPlayerCountText = document.querySelector("#lobby-playercount");
 
       if (lobby.data.maxplayers !== null) {
-        lobbyPlayerCountText.textContent = `(${lobby.listEntry.players.length} / ${lobby.data.maxplayers})`;
+        lobbyPlayerCountText.textContent = `(${lobby.listEntry.players.length - lobby.data.spectators.length} / ${lobby.data.maxplayers})`;
       } else {
-        lobbyPlayerCountText.textContent = `(${lobby.listEntry.players.length})`;
+        lobbyPlayerCountText.textContent = `(${lobby.listEntry.players.length - lobby.data.spectators.length})`;
       }
 
       return;
@@ -278,14 +379,41 @@ async function lobbyEventHandler (event) {
       // Update the lobby map
       lobby.data.context.map = data.newMap;
       updateLobbyMap();
+      // Update lobby map history
+      lobby.data.context.maps.push(data.newMap);
 
       // Set all player ready states to false
-      for (const player in lobby.data.players) player.ready = false;
-      updatePlayerList();
+      for (const steamid in lobby.data.players) lobby.data.players[steamid].ready = false;
 
       // Update our own ready state
       readyState = false;
       lobbyReadyButton.innerHTML = "I'm ready!";
+
+      // If we're a spectator, or if autoReady is enabled, automatically ready up
+      if (amSpectator || autoReady) {
+        const lobbyid = window.location.href.split("#")[1];
+        fetch(`/api/lobbies/ready/${lobbyid}/true`);
+      }
+
+      return;
+    }
+
+    case "lobby_mode": {
+
+      // Update lobby mode
+      lobby.listEntry.mode = data.newMode;
+
+      // In Random Maps Ranked mode, make sure map details are hidden
+      if (lobby.listEntry.mode === "random_ranked") {
+        updateLobbyMap();
+      }
+
+      // Change the lobby mode text
+      const modeString = lobbyModeStrings[lobby.listEntry.mode];
+      const lobbyModeText = document.querySelector("#lobby-mode");
+      lobbyModeText.innerHTML = "&nbsp;- " + modeString;
+
+      displayChatMessage(`Lobby mode changed to "${modeString}".`);
 
       return;
     }
@@ -310,12 +438,22 @@ async function lobbyEventHandler (event) {
 
       // Handle new run submission
       const run = data.value;
-      const leaderboard = lobby.data.context.leaderboard[lobby.listEntry.mode];
+      const leaderboard = lobby.data.context.leaderboard["lobby"];
 
       const index = leaderboard.findIndex(c => c.steamid === run.steamid);
       if (index !== -1) leaderboard.splice(index, 1);
 
       leaderboard.push(run);
+
+      // Sort leaderboard to get placement
+      leaderboard.sort(function (a, b) {
+        return a.time - b.time;
+      });
+      let placement = 1;
+      for (let i = 0; i < leaderboard.length; i ++) {
+        if (leaderboard[i - 1] && leaderboard[i].time > leaderboard[i - 1].time) placement ++;
+        leaderboard[i].placement = placement;
+      }
 
       return;
     }
@@ -342,9 +480,24 @@ async function lobbyEventHandler (event) {
 
       }, 1000);
 
+      // Update local lobby state
+      lobby.data.state = LOBBY_INGAME;
+
+      // In Random Maps Ranked mode, reveal name and author on game start
+      if (lobby.listEntry.mode === "random_ranked") {
+        updateLobbyMap();
+      }
+
       // Clear previous run times from player list
-      lobby.data.context.leaderboard[lobby.listEntry.mode] = [];
+      lobby.data.context.leaderboard["lobby"] = [];
       updatePlayerList();
+
+      displayChatMessage(`The round is starting. Good luck!`);
+
+      // Update the force action button
+      const forceButton = document.querySelector("#lobby-force-button");
+      forceButton.textContent = "Abort round";
+      forceButton.href = "javascript:forceAbort()";
 
       return;
     }
@@ -352,11 +505,33 @@ async function lobbyEventHandler (event) {
     case "lobby_finish": {
 
       // Handle game finishing
+      // Increment win count of players in first place
+      for (const run of lobby.data.context.leaderboard["lobby"]) {
+        if (run.placement !== 1) continue;
+        if (!(run.steamid in lobby.data.players)) continue;
+        lobby.data.players[run.steamid].wins ++;
+      }
+      updatePlayerList();
+
       // Switch to the next map in the local queue
       if (amHost && localMapQueue.length > 0) {
         requestLobbyMapChange(localMapQueue.shift());
         updateLobbyMap();
       }
+
+      // Update local lobby state
+      lobby.data.state = LOBBY_IDLE;
+
+      // Update the force action button
+      const forceButton = document.querySelector("#lobby-force-button");
+      forceButton.textContent = "Force start";
+      forceButton.href = "javascript:forceStart()";
+
+      // If we're a spectator, or if autoReady is enabled, automatically ready up
+      if (amSpectator || autoReady) setTimeout(function () {
+        const lobbyid = window.location.href.split("#")[1];
+        fetch(`/api/lobbies/ready/${lobbyid}/true`);
+      }, 3000);
 
       return;
     }
@@ -393,6 +568,14 @@ async function lobbyEventHandler (event) {
       if (data.steamid !== whoami.steamid) return;
 
       showPopup("Game connected", "Your game client has been connected successfully. You may now ready up.");
+      return;
+    }
+
+    case "lobby_chat": {
+
+      // Handle receiving chat messages
+      displayChatMessage(data.value, data.steamid);
+
       return;
     }
 
@@ -436,18 +619,19 @@ async function lobbyInit () {
   const lobbyPlayerCountText = document.querySelector("#lobby-playercount");
 
   // Display the lobby name and mode
-  let modeString;
-  switch (lobby.listEntry.mode) {
-    case "ffa": modeString = "Free For All"; break;
-    default: modeString = "Unknown"; break;
+  lobbyNameText.textContent = lobby.listEntry.name;
+  lobbyModeText.innerHTML = "&nbsp;- " + lobbyModeStrings[lobby.listEntry.mode];
+  if (lobby.data.maxplayers !== null) {
+    lobbyPlayerCountText.textContent = `(${lobby.listEntry.players.length - lobby.data.spectators.length} / ${lobby.data.maxplayers})`;
+  } else {
+    lobbyPlayerCountText.textContent = `(${lobby.listEntry.players.length - lobby.data.spectators.length})`;
   }
 
-  lobbyNameText.textContent = lobby.listEntry.name;
-  lobbyModeText.innerHTML = "&nbsp;- " + modeString;
-  if (lobby.data.maxplayers !== null) {
-    lobbyPlayerCountText.textContent = `(${lobby.listEntry.players.length} / ${lobby.data.maxplayers})`;
-  } else {
-    lobbyPlayerCountText.textContent = `(${lobby.listEntry.players.length})`;
+  // If in-game, change the "Force start" button to "Abort round"
+  if (lobby.data.state === LOBBY_INGAME) {
+    const forceButton = document.querySelector("#lobby-force-button");
+    forceButton.textContent = "Abort round";
+    forceButton.href = "javascript:forceAbort()";
   }
 
   // Update the player list and map display
@@ -455,23 +639,48 @@ async function lobbyInit () {
   updateLobbyMap();
   updateLobbyHost();
 
-  // Connect to the WebSocket
-  if (lobbySocket) lobbySocket.close();
+  // Display a notification for this player joining the lobby
+  displayChatMessage(`${whoami.username} joined the lobby.`);
+
+  if (lobby.listEntry.name === "Chamber Of The Day") {
+    displayChatMessage(`<br>
+      Welcome to Chamber Of The Day!<br><br>
+      You're given up to 20 minutes from the creation of this lobby to
+      practice and route a completely random workshop chamber.<br>
+      <a href="https://docs.google.com/document/d/1gcWvwEjzJaKfgOEGpGPFGvtNV_LQCbSC3OE84dARMYE" target="_blank">Click here for a quick setup guide.</a>
+    `);
+  }
 
   const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
 
-  lobbySocket = new WebSocket(`${protocol}://${window.location.host}/api/events/connect`);
-  lobbySocket.onopen = async function () {
-    const token = await (await fetch(`/api/events/auth/lobby_${lobbyid}`)).json();
-    lobbySocket.send(token);
+  // Sets up the lobby WebSocket and its associated event handlers
+  window.setUpWebSocket = function () {
+    // Close existing connection, if any
+    if (lobbySocket) lobbySocket.close();
+    // Connect to the WebSocket API endpoint
+    lobbySocket = new WebSocket(`${protocol}://${window.location.host}/api/events/connect`);
+    // Set authentication token on connection
+    lobbySocket.onopen = async function () {
+      const token = await (await fetch(`/api/events/auth/lobby_${lobbyid}`)).json();
+      lobbySocket.send(token);
+    };
+    // Add event handler for incoming messages
+    lobbySocket.addEventListener("message", lobbyEventHandler);
+    // Attempt to reconnect to socket if connection closes
+    lobbySocket.onclose = function () {
+      showPopup("Disconnected", "Lost connection to server. Reconnecting...", POPUP_WARN);
+      lobbySocketDisconnected = true;
+      setTimeout(window.setUpWebSocket, 1000);
+    };
   };
-  lobbySocket.addEventListener("message", lobbyEventHandler);
+  // Connect to the WebSocket
+  window.setUpWebSocket();
 
   // Prompt game client authentication
   if (!("promptedGameAuth" in window)) {
     showPopup(
       "Connect with Portal 2",
-      `To connect your game client, start the "Epochtal Live" Spplice package, <a href="javascript:copyEventToken()">click here</a> to copy your lobby token, then paste that into your console.`
+      `To connect your game client, start the "Epochtal Live" Spplice package, click "New Token" at the top of this page to copy your lobby token, then paste that into your console.`
     );
     window.promptedGameAuth = true;
   }
@@ -617,6 +826,59 @@ async function lobbyInit () {
 
   }
 
+    // Handle the lobby change mode button
+  window.changeLobbyMode = function () {
+
+    // Exit early if we don't have host permissions
+    if (!amHost) return;
+
+    // Build list of dropdown options, omitting special COTD mode
+    let lobbyModes = "";
+    for (const mode in lobbyModeStrings) {
+      if (mode === "cotd") continue;
+      lobbyModes += `<option value="${mode}" ${mode === lobby.listEntry.mode ? 'selected=""' : ""}>${lobbyModeStrings[mode]}</option>`;
+    }
+
+    // Display a popup to change the lobby mode
+    showPopup("Change Mode", `
+      Select the new lobby mode<br>
+      <select id="new-lobby-mode" style="margin-top:5px">
+        ${lobbyModes}
+      </select>
+    `, POPUP_INFO, true);
+
+    popupOnOkay = async function () {
+
+      hidePopup();
+
+      const newMode = encodeURIComponent(document.querySelector("#new-lobby-mode").value);
+
+      // Fetch the api to change the lobby mode
+      const request = await fetch(`/api/lobbies/mode/${lobbyid}/${newMode}`);
+      let requestData;
+      try {
+        requestData = await request.json();
+      } catch (e) {
+        return showPopup("Unknown error", "The server returned an unexpected response. Error code: " + request.status, POPUP_ERROR);
+      }
+
+      switch (requestData) {
+        case "SUCCESS":
+          showPopup("Success", "The lobby mode has been successfully updated.");
+          return;
+
+        case "ERR_LOGIN": return showPopup("Not logged in", "Please log in via Steam before editing lobby details.", POPUP_ERROR);
+        case "ERR_STEAMID": return showPopup("Unrecognized user", "Your SteamID is not present in the users database. WTF?", POPUP_ERROR);
+        case "ERR_LOBBYID": return showPopup("Lobby not found", "An open lobby with this ID does not exist.", POPUP_ERROR);
+        case "ERR_PERMS": return showPopup("Permission denied", "You do not have permission to perform this action.", POPUP_ERROR);
+
+        default: return showPopup("Unknown error", "The server returned an unexpected response: " + requestData, POPUP_ERROR);
+      }
+
+    };
+
+  };
+
   // Requests a map change from API with the given workshop link
   window.requestLobbyMapChange = async function (link) {
 
@@ -644,6 +906,7 @@ async function lobbyInit () {
       case "ERR_MAPID": return showPopup("Invalid map", "The string you provided does not name a valid workshop or campaign map.", POPUP_ERROR);
       case "ERR_STEAMAPI": return showPopup("Missing map info", "Failed to retrieve map details. Is this the right link?", POPUP_ERROR);
       case "ERR_WEEKMAP": return showPopup("Active Epochtal map", "You may not play the currently active weekly tournament map in lobbies.", POPUP_ERROR);
+      case "ERR_CACHE": return showPopup("Incomplete cache", "The random map cache is incomplete, try again later.", POPUP_ERROR);
 
       default: return showPopup("Unknown error", "The server returned an unexpected response: " + requestData, POPUP_ERROR);
     }
@@ -654,7 +917,7 @@ async function lobbyInit () {
   window.selectLobbyMap = function () {
 
     // Prompt for a workshop map link
-    showPopup("Select a map", `<p>Enter a workshop link, or a map name from the single-player campaign.</p>
+    showPopup("Select a map", `<p>Enter a workshop link, or a map name from the single-player campaign, or enter "random" for a truly random workshop map.</p>
       <div id="lobby-settings-map-list">
         <input type="text" placeholder="Workshop Link" class="lobby-settings-map-input"></input>
         <i class="fa-solid fa-plus" onmouseover="showTooltip('Add another map to queue')" onmouseleave="hideTooltip()" onclick="addMapInput()" style="cursor:pointer"></i></a>
@@ -713,14 +976,19 @@ async function lobbyInit () {
   };
 
   /**
-   * Fetches the lobby event token and copies it to clipboard.
+   * Fetches the lobby event token and copies it to clipboard. If access
+   * to the clipboard is denied, displays it on-screen instead.
    */
   window.copyEventToken = async function () {
 
     const token = await (await fetch(`/api/events/auth/lobby_${lobbyid}`)).json();
-    navigator.clipboard.writeText(`echo ws:${token}`);
 
-    return showPopup("Token copied", "A new token has been copied to your clipboard. It is valid for 30 seconds, starting now. Paste it in your Portal 2 console to complete the setup.");
+    try {
+      navigator.clipboard.writeText(`echo ws:${token}`);
+      return showPopup("Token copied", "A new token has been copied to your clipboard. It is valid for 30 seconds, starting now. Paste it in your Portal 2 console to complete the setup.");
+    } catch (e) {
+      return showPopup("Token generated", `Your token is:<br><a>echo ws:${token}</a><br><br>It is valid for 30 seconds, starting now. Paste it in your Portal 2 console to complete the setup.`);
+    }
 
   }
 
@@ -765,6 +1033,25 @@ async function lobbyInit () {
       default: return showPopup("Unknown error", "The server returned an unexpected response: " + requestData, POPUP_ERROR);
     }
 
+  };
+
+  lobbyAutoReadyButton.onmouseover = () => showTooltip("Auto-ready: Disabled");
+  lobbyAutoReadyButton.onmouseleave = () => hideTooltip();
+  lobbyAutoReadyButton.style.opacity = 0.5;
+
+  // Toggles the auto-ready feature
+  window.toggleAutoReady = function () {
+    autoReady = !autoReady;
+    if (autoReady) {
+      showTooltip("Auto-ready: Enabled");
+      lobbyAutoReadyButton.onmouseover = () => showTooltip("Auto-ready: Enabled");
+      lobbyAutoReadyButton.style.opacity = 1;
+      if (!readyState && lobby.data.context.map) window.toggleReadyState();
+    } else {
+      showTooltip("Auto-ready: Disabled");
+      lobbyAutoReadyButton.onmouseover = () => showTooltip("Auto-ready: Disabled");
+      lobbyAutoReadyButton.style.opacity = 0.5;
+    }
   };
 
   window.transferHost = async function (steamid) {
@@ -825,15 +1112,16 @@ async function lobbyInit () {
     }
 
     // This might take a while, prevent the user from spamming the button
-    lobbyReadyButton.style.opacity = 0.5;
-    lobbyReadyButton.style.pointerEvents = "none";
+    const forceStartButton = document.querySelector("#lobby-force-button");
+    forceStartButton.style.opacity = 0.5;
+    forceStartButton.style.pointerEvents = "none";
 
     // Request force start from API
     const request = await fetch(`/api/lobbies/start/${lobbyid}`);
 
     // Restore the button once the request finishes
-    lobbyReadyButton.style.opacity = 1.0;
-    lobbyReadyButton.style.pointerEvents = "auto";
+    forceStartButton.style.opacity = 1.0;
+    forceStartButton.style.pointerEvents = "auto";
 
     let requestData;
     try {
@@ -857,6 +1145,144 @@ async function lobbyInit () {
 
   };
 
+  // Aborts an ongoing match (if any) by un-readying all players
+  window.forceAbort = async function () {
+
+    // Request force abort from API
+    const request = await fetch(`/api/lobbies/abort/${lobbyid}`);
+
+    let requestData;
+    try {
+      requestData = await request.json();
+    } catch (e) {
+      return showPopup("Unknown error", "The server returned an unexpected response. Error code: " + request.status, POPUP_ERROR);
+    }
+
+    switch (requestData) {
+      case "SUCCESS": return showPopup("Success", "The round has been aborted.");
+
+      case "ERR_LOGIN": return showPopup("Not logged in", "Please log in via Steam before editing lobby details.", POPUP_ERROR);
+      case "ERR_STEAMID": return showPopup("Unrecognized user", "Your SteamID is not present in the users database. WTF?", POPUP_ERROR);
+      case "ERR_LOBBYID": return showPopup("Lobby not found", "An open lobby with this ID does not exist.", POPUP_ERROR);
+      case "ERR_PERMS": return showPopup("Permission denied", "You do not have permission to perform this action.", POPUP_ERROR);
+
+      default: return showPopup("Unknown error", "The server returned an unexpected response: " + requestData, POPUP_ERROR);
+    }
+
+  };
+
+  // Toggle spectator state
+  window.spectate = async function (applyStylesheet = false) {
+
+    const spectateButton = document.querySelector("#lobby-spectate-button");
+
+    if (amSpectator) {
+      document.head.innerHTML = document.head.innerHTML.replace(`<link rel="stylesheet" href="/live/spectate.css">`, "");
+      spectateButton.innerHTML = "Spectate";
+      if (readyState) fetch(`/api/lobbies/ready/${lobbyid}/false`);
+      return await fetch(`/api/lobbies/spectate/${lobbyid}/false`);
+    } else {
+      if (!readyState) fetch(`/api/lobbies/ready/${lobbyid}/true`);
+      if (applyStylesheet) document.head.innerHTML += `<link rel="stylesheet" href="/live/spectate.css">`;
+      spectateButton.innerHTML = "Stop Spectating";
+      return await fetch(`/api/lobbies/spectate/${lobbyid}/true`);
+    }
+
+  }
+
+  // Sends a chat message to be broadcasted to all players
+  window.sendChatMessage = async function (message) {
+
+    // Request chat message broadcast from API
+    const request = await fetch(`/api/lobbies/chat/${lobbyid}/"${encodeURIComponent(message.replaceAll('"', "&quot;"))}"`);
+
+    let requestData;
+    try {
+      requestData = await request.json();
+    } catch (e) {
+      return showPopup("Unknown error", "The server returned an unexpected response. Error code: " + request.status, POPUP_ERROR);
+    }
+
+    switch (requestData) {
+      case "SUCCESS": return true;
+
+      case "ERR_LOGIN": return showPopup("Not logged in", "Please log in via Steam before editing lobby details.", POPUP_ERROR);
+      case "ERR_STEAMID": return showPopup("Unrecognized user", "Your SteamID is not present in the users database. WTF?", POPUP_ERROR);
+      case "ERR_LOBBYID": return showPopup("Lobby not found", "An open lobby with this ID does not exist.", POPUP_ERROR);
+      case "ERR_LENGTH": return showPopup("Message too long", "Your message wasn't sent because it is too long. Please keep chat messages to under 200 characters.", POPUP_ERROR);
+      case "ERR_EMPTY": return;
+
+      default: return showPopup("Unknown error", "The server returned an unexpected response: " + requestData, POPUP_ERROR);
+    }
+
+  };
+
+  const chatInputField = document.querySelector("#lobby-chat-input");
+
+  // Sends a chat message containing the chatbox input field data
+  window.sendChatMessageFromInput = function (event) {
+
+    // Proceed only if the Enter key has been pressed
+    if (event.keyCode !== 13) return;
+
+    const message = chatInputField.value.trim();
+
+    // If there's nothing to send, don't even attempt it
+    if (message.length === 0) return;
+
+    // Clear the value of the input box immediately after it's been stored
+    chatInputField.value = "";
+
+    // Attempt to send the message
+    window.sendChatMessage(message).then(function (success) {
+      // If sending the message did not succeed, restore the input box
+      if (success !== true) chatInputField.value = message;
+    });
+
+  };
+
+  // Focuses the chat window and redirects the given event to it
+  window.redirectEventToChat = function (event) {
+    // Don't redirect events sent to text input boxes
+    if (event.target.tagName.toLowerCase() === "input") return;
+    // Don't redirect special keys
+    if (!event.key || event.key.length !== 1) return;
+    // Add the typed key to the chatbox and focus it
+    chatInputField.value += event.key;
+    chatInputField.focus();
+  };
+
+  // Toggles displaying the "map history" window
+  window.toggleMapHistoryWindow = function () {
+
+    // Query the container, check if it's visible based on its opacity
+    const container = document.querySelector("#lobby-map-history-container");
+    const isVisible = Number(container.style.opacity) === 1;
+
+    // If the container is visible, hide it and exit early
+    if (isVisible) {
+      container.style.opacity = 0;
+      container.style.pointerEvents = "none";
+      container.style.transform = "translateY(calc(-50% + 10vh))";
+      return;
+    }
+
+    // Generate HTML for stuffing into the list
+    let output = "";
+    for (const map of lobby.data.context.maps) {
+      const link = `https://steamcommunity.com/sharedfiles/filedetails/?id=${map.id}`;
+      output += `<p>•&nbsp;&nbsp;<b><a href="${link}" target="_blank">${map.title}</a></b> by <b>${map.author}</b></p>`;
+    }
+    const list = document.querySelector("#lobby-map-history-list");
+    list.innerHTML = output;
+
+    // Bring up the container and enable interaction with it
+    container.style.opacity = 1;
+    container.style.pointerEvents = "auto";
+    container.style.transform = "translateY(-50%)";
+
+  };
+
 }
 lobbyInit();
 
@@ -864,6 +1290,11 @@ lobbyInit();
  * Leave the current lobby by closing the window
  */
 function leaveLobby () {
+  // On Steam game overlay, return to list page instead of closing the window
+  if (navigator.userAgent.includes("Valve Steam GameOverlay")) {
+    window.location.href = "/live/";
+    return;
+  }
   // Attempt to close the window
   window.close();
   // If that failed, redirect to the lobby list page
