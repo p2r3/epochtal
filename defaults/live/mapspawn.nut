@@ -44,9 +44,6 @@ if (!("Entities" in this)) return;
 ::__elSetup <- function () {
   // Print run start signature
   printl("elStart");
-  // Make some saves to prevent accidentally loading into a different map
-  SendToConsole("save quick");
-  SendToConsole("save autosave");
   // Connect outputs to run finish events
   EntFire("@relay_pti_level_end", "AddOutput", "OnTrigger !self:RunScriptCode:__elFinish():0:1");
   EntFire("@changelevel", "AddOutput", "OnChangeLevel !self:RunScriptCode:__elFinish():0:1");

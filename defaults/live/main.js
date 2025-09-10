@@ -181,11 +181,15 @@ function processConsoleOutput () {
     // The events below this only apply to connected clients
     if (!webSocket) return;
 
-    // Process map start event - reset timer
+    // Process map start event
     if (expectRoundStart && line.indexOf("elStart") !== -1) {
       expectRoundStart = false;
+      // Reset run timer
       totalTicks = 0;
       lastTicksReport = 0;
+      // Make saves to prevent accidentally loading into a different map
+      sendToConsole(gameSocket, "save quick");
+      sendToConsole(gameSocket, "save autosave");
       return;
     };
 
