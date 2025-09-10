@@ -28,7 +28,7 @@ function createLobbyContext (name) {
         lobby: []
       },
       week: {
-        date: Date.now(),
+        date: Date.now() / 1000,
         categories: [
           {
             name: "lobby",
@@ -225,6 +225,7 @@ module.exports = async function (args, context = epochtal) {
         maxplayers: null,
         host: undefined,
         spectators: [],
+        crashed: [],
         state: LOBBY_IDLE,
         context: createLobbyContext(cleanName)
       };
@@ -256,6 +257,14 @@ module.exports = async function (args, context = epochtal) {
             // Broadcast game client join to all lobby clients
             await events(["send", eventName, { type: "lobby_join_game", steamid }], context);
 
+            // If the player had previously crashed, try to recover
+            if (dataEntry.crashed.includes(steamid) && dataEntry.state === LOBBY_INGAME) {
+              const { file, link } = dataEntry.context.data.map;
+              ws.send(JSON.stringify({ type: "getMap", value: { file, link } }));
+              // Client WS is synchronous, this will only take effect after the download
+              ws.send(JSON.stringify({ type: "lobby_start", map: file }));
+            }
+
             return;
           }
 
@@ -276,7 +285,15 @@ module.exports = async function (args, context = epochtal) {
             // Reject the response if we're not ready
             if (!dataEntry.players[steamid].ready) return;
 
-            const { time, portals } = data.value;
+            let { time, portals } = data.value;
+
+            if (dataEntry.crashed.includes(steamid)) {
+              // If the player had crashed, use real-time for timing instead
+              const seconds = Date.now() / 1000 - dataEntry.context.data.week.date;
+              time = Math.round(seconds * 60);
+              // Remove the player from the crashed players list
+              dataEntry.crashed = dataEntry.crashed.filter(p => p !== steamid);
+            }
 
             // Submit this run to the lobby leaderboard
             await leaderboard(["add", "lobby", steamid, time, "", portals], dataEntry.context);
@@ -334,11 +351,30 @@ module.exports = async function (args, context = epochtal) {
         if (!listEntry.players.includes(steamid)) return;
         if (!(steamid in dataEntry.players)) return;
 
-        // If this is a game client, just change their ready state to false and exit
+        // Handle disconnecting game clients
         if (dataEntry.players[steamid].gameSocket === ws) {
+          // Delete the WebSocket handle
           delete dataEntry.players[steamid].gameSocket;
-          await module.exports(["ready", newID, false, steamid, true], context);
+          if (listEntry.state === LOBBY_IDLE) {
+            // If the lobby was idle, just force-unready the player
+            try {
+              await module.exports(["ready", newID, false, steamid, true], context);
+            } catch { }
+          } else {
+            // If the lobby was in-game, flag the player as having crashed
+            dataEntry.crashed.push(steamid);
+          }
           return;
+        } else {
+          /**
+           * If it's the browser client that disconnected, remove the player from
+           * the crash list. Waiting here is admittedly a hacky approach, and
+           * ideally we'd have the browser cleanly report a page close, but really
+           * any approach I can currently think of is prone to race conditions.
+           */
+          setTimeout(function () {
+            dataEntry.crashed = dataEntry.crashed.filter(p => p !== steamid);
+          }, 1000);
         }
 
         // Disconnect the connected game client (if any) for this player
@@ -347,8 +383,12 @@ module.exports = async function (args, context = epochtal) {
           delete dataEntry.players[steamid].gameSocket;
         }
 
-        // Remove the player from the lobby
-        await module.exports(["leave", newID, steamid], context);
+        try {
+          // Force ready state to false
+          await module.exports(["ready", newID, false, steamid, true], context);
+          // Remove the player from the lobby
+          await module.exports(["leave", newID, steamid], context);
+        } catch { }
 
       };
 
@@ -395,9 +435,12 @@ module.exports = async function (args, context = epochtal) {
         if (lb.find(c => c.steamid === steamid && c.placement === 1)) wins ++;
       }
 
+      // If recovering from a crash, count this player as ready
+      const ready = dataEntry.crashed.includes(steamid);
+
       // Add the player to the lobby
       listEntry.players.push(steamid);
-      dataEntry.players[steamid] = { wins };
+      dataEntry.players[steamid] = { wins, ready };
 
       // The first player to join is given the role of host
       if (!dataEntry.host) dataEntry.host = steamid;
@@ -798,7 +841,12 @@ module.exports = async function (args, context = epochtal) {
       // Remove the player from the lobby
       const index = listEntry.players.indexOf(steamid);
       if (index !== -1) listEntry.players.splice(index, 1);
-      delete dataEntry.players[steamid];
+      if (steamid in dataEntry.players) {
+        if (dataEntry.players[steamid].gameSocket) {
+          dataEntry.players[steamid].gameSocket.close(1001, "LOBBY_LEAVE");
+        }
+        delete dataEntry.players[steamid];
+      }
 
       // If the host just left, assign a new host
       if (dataEntry.host === steamid) {
@@ -882,11 +930,16 @@ module.exports = async function (args, context = epochtal) {
       lobbyLeaderboard["lobby" + leaderboardCount] = lobbyLeaderboard["lobby"];
       lobbyLeaderboard["lobby"] = [];
 
+      // Clear crashed players list
+      dataEntry.crashed = [];
+
       // Change the lobby state
       dataEntry.state = LOBBY_INGAME;
       await handleStateChange(lobbyid, context);
       // Broadcast game start to clients
       await events(["send", eventName, { type: "lobby_start", map: mapFile }], context);
+      // Store the current time in the lobby context
+      dataEntry.context.data.week.date = Date.now() / 1000;
 
       return "SUCCESS";
 
