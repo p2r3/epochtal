@@ -127,11 +127,16 @@ async function releaseMap (context) {
   const votingmaps = [];
   for (let i = 0; i < allmaps.length; i ++) {
 
-    const details = await workshopper(["get", allmaps[i].id]);
-    if (votingmaps.find(curr => curr.author === details.author)) continue;
+    try {
+      const details = await workshopper(["get", allmaps[i].id]);
+      if (votingmaps.find(curr => curr.author === details.author)) continue;
 
-    votingmaps.push(details);
-    if (votingmaps.length === VOTING_MAPS_COUNT) break;
+      votingmaps.push(details);
+      if (votingmaps.length === VOTING_MAPS_COUNT) break;
+    } catch (e) {
+      UtilPrint(`epochtal(releaseMap): Error on voting map ${allmaps[i].id}, skipping...`);
+      continue;
+    }
 
   }
 
@@ -222,7 +227,7 @@ async function releaseMap (context) {
 
     await spplice(["remove", "epochtal-voting"]);
 
-    e.message = "ERR_VOTEFILES: " + e.message;
+    e.message = "ERR_NEXTFILES: " + e.message;
     throw e;
 
   }
