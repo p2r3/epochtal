@@ -80,7 +80,15 @@ async function handleStateChange (id, context, init = false) {
       if (state === LOBBY_INGAME) break;
       // Pick a random map whenever the lobby becomes idle
       const hidden = mode === "random_ranked";
-      await module.exports(["map", id, "random", hidden], context);
+      try {
+        await module.exports(["map", id, "random", hidden], context);
+      } catch {
+        // If that failed, keep trying on an interval
+        // Even we keep throwing, it'll stop on mode change or lobby deletion
+        setTimeout(function () {
+          handleStateChange(id, context, init).catch(e => { });
+        }, 3000);
+      }
       break;
     }
     case "cotd": {
