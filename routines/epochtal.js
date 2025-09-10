@@ -356,7 +356,8 @@ async function releaseMap (context) {
   await Bun.write(context.file.log, "");
 
   // Announce the new week on Discord
-  await discord(["announce", "@everyone " + announceText.replaceAll("\\", "\\\\").replaceAll("@", "\\@")], context);
+  // HACK: Hardcoded role ID for now, must fix ASAP!!
+  await discord(["announce", "<@&1363136773592580158> " + announceText.replaceAll("\\", "\\\\").replaceAll("@", "\\@")], context);
 
   return "SUCCESS";
 
