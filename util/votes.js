@@ -46,8 +46,11 @@ module.exports = async function (args, context = epochtal) {
         week.votes[steamid] = Array(week.votingmaps.length).fill(0);
       }
 
+      // Double the weight of SQC member votes
+      const weight = users[steamid].sqc ? 2 : 1;
+
       // Upvote, downvote, or reset the vote and write the changes to the week json file
-      week.votes[steamid][map] = command === "upvote" ? 1 : (command === "downvote" ? -1 : 0);
+      week.votes[steamid][map] = command === "upvote" ? weight : (command === "downvote" ? -weight : 0);
       if (file) Bun.write(file, JSON.stringify(week));
 
       return "SUCCESS";
