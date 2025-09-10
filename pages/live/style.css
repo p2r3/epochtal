@@ -80,6 +80,10 @@
   margin-bottom: 25vh;
 }
 
+#lobby-spectator-players-list {
+  display: none;
+}
+
 .lobby-player {
   position: relative;
   width: 80%;

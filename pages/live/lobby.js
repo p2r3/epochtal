@@ -56,6 +56,9 @@ async function updatePlayerList () {
 
   });
 
+  const spectatorPlayersList = document.querySelector("#lobby-spectator-players-list");
+  spectatorPlayersList.innerHTML = "";
+
   // List all players in the lobby
   for (let i = 0; i < lobby.listEntry.players.length; i ++) {
 
@@ -126,6 +129,15 @@ async function updatePlayerList () {
   ></i>
 </div>
     `;
+
+    if (amSpectator && run) {
+      spectatorPlayersList.innerHTML += `
+        <div style="position:relative">
+          <img src="${avatar}" class="lobby-player-avatar"><p class="lobby-player-name" style="transform:translateY(calc(-50% - 5px)"><span style="font-size:1.2rem">${username}</span><br>${ticksToString(run.time)}</p><br>
+        </div>
+        <br>
+      `;
+    }
 
   }
 
