@@ -318,6 +318,18 @@ input:checked+.slider:before {
 .lb-rank2 { color: #95cbe1 }
 .lb-rank3 { color: #c88971 }
 
+.lb-badge {
+  font-size: 0.7rem;
+  padding: 0.2rem 0.3rem;
+  color: black;
+  background-color: #ae7fc2;
+  font-weight: bold;
+  border-radius: 5px;
+  margin: 0 0 0 10px;
+  vertical-align: 0.2rem;
+  cursor: default;
+}
+
 #leaderboard-container {
   position: relative;
 }

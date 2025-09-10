@@ -282,9 +282,15 @@ var homepageInit = async function () {
 
       const suffix = ["st","nd","rd"][((placement + 90) % 100 - 10) % 10 - 1] || "th"; // what the fuck
 
+      let badges = "";
+      if (user.admin) badges += `<span class="lb-badge" style="background-color:#2ecc71" onmouseover="showTooltip('Tournament Organizer')" onmouseleave="hideTooltip()">MOD</span>`
+      if (user.kofi) badges += `<span class="lb-badge" style="background-color:#f3d635" onmouseover="showTooltip('Monthly Ko-fi supporter')" onmouseleave="hideTooltip()">SUPPORTER</span>`;
+      if (user.sqc) badges += `<span class="lb-badge" onmouseover="showTooltip('Speedmap Quality Committee')" onmouseleave="hideTooltip()">SQC</span>`;
+      if (user.showmatch) badges += `<span class="lb-badge" style="background-color:#f78f07" onmouseover="showTooltip('Showmatch Winner (April 12, 2025)')" onmouseleave="hideTooltip()">LIVE #1</span>`;
+
       output += `
 <div class="lb-entry lb-rank${placement}">
-  <p class="lb-text">${username}</p>
+  <p class="lb-text">${username}${badges}</p>
   <p class="lb-text font-light">${placement}${suffix} place in ${ticksToString(run.time)}${portalCount}</p>
   <div class="lb-icons">
     ${!isArchive && whoami && run.steamid === whoami.steamid ? `<i class="fa-solid fa-pen-to-square pointer" onmouseover="showTooltip('Edit comment')" onmouseleave="hideTooltip()" onclick="editComment('${category}')"></i>` : ""}
