@@ -51,12 +51,12 @@ async function discordUpdate (steamid, category) {
   const time = ticksToString(run.time);
 
   let emoji = "🎲";
-  let output = `**${user.name.replaceAll("\\", "\\\\").replaceAll("@", "\\@")}**`;
+  let output = `**${user.name.replaceAll(/[*@_~`#[\]()\-.>\\:]/g, "\\$&")}**`;
 
   if (currCategory.coop) {
     const partners = await config(["get", "partners"]);
     const partner = await users(["get", partners[steamid]]);
-    output += ` and **${partner.name.replaceAll("\\", "\\\\").replaceAll("@", "\\@")}**`;
+    output += ` and **${partner.name.replaceAll(/[*@_~`#[\]()\-.>\\:]/g, "\\$&")}**`;
   }
 
   output += ` submitted a new${run.segmented ? " segmented" : ""} run to "${currCategory.title}" with a time of \`${time}\``;
@@ -157,7 +157,7 @@ module.exports = async function (args, request) {
           fs.rmSync(path);
 
           // Report the run on the discord
-          const reportText = `${user.username}'s run was rejected. ${verdict}\nSteam ID: \`${user.steamid}\``;
+          const reportText = `${user.username.replaceAll(/[*@_~`#[\]()\-.>\\:]/g, "\\$&")}'s run was rejected. ${verdict}\nSteam ID: \`${user.steamid}\``;
           await discord(["report", reportText]);
 
           // Return the verdict to the user
