@@ -420,7 +420,7 @@ function processServerEvent (data) {
       if (data.portals[1].slice(0, 17) !== "0.000 0.000 0.000") sendToConsole(gameSocket, "portal_place 0 1 " + data.portals[1]);
 
       // Cubes are managed using a non-solid prop created with VScript
-      sendToConsole(gameSocket, "script ::__elSpectatorCube(Vector("+ data.cube.pos.join(", ") +"), Vector("+ data.cube.ang.join(", ") +"))");
+      sendToConsole(gameSocket, "script ::__elSpectatorCube(Vector("+ data.cube.pos.join(", ") +"), Vector("+ data.cube.ang.join(", ") +"), "+ data.cube.type +")");
 
       return;
     }

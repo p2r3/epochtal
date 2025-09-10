@@ -174,11 +174,20 @@ if (!("Entities" in this)) return;
   else if (monster && (cube.GetOrigin() - eyepos).LengthSqr() > (monster.GetOrigin() - eyepos).LengthSqr()) {
     cube = monster;
   }
+  if (!cube) return;
+
+  // Determine cube type from its model
+  local model = cube.GetModelName(), type = 0;
+  if (model == "models/props/metal_box.mdl") type = 0;
+  else if (model == "models/props/reflection_cube.mdl") type = 1;
+  else if (model == "models/props_gameplay/mp_ball.mdl") type = 2;
+  else if (monster) type = 3;
+
   // Print the position and angles of the cube
   if (cube && cube.IsValid()) {
     local co = cube.GetOrigin();
     local ca = cube.GetAngles();
-    printl("spec_goto_cube "+co.x+" "+co.y+" "+co.z+" "+ca.x+" "+ca.y+" "+ca.z);
+    printl("spec_goto_cube "+co.x+" "+co.y+" "+co.z+" "+ca.x+" "+ca.y+" "+ca.z+" "+type);
   }
 
 };
@@ -238,7 +247,7 @@ if (!("Entities" in this)) return;
  * an unsimulated prop, which is then teleported to the given position and
  * angle vectors for simulating the spectated player's nearest cube.
  */
-::__elSpectatorCube <- function (pos, ang) {
+::__elSpectatorCube <- function (pos, ang, type) {
 
   // Find the named prop acting as the spectator's cube
   local cube = Entities.FindByName(null, "__elSpectatorCube");
@@ -262,17 +271,18 @@ if (!("Entities" in this)) return;
   cube.SetAbsOrigin(pos);
   cube.__KeyValueFromString("angles", ang.x + " " + ang.y + " " + ang.z);
 
-  // Find the closest cube to this one and use its model
-  local nearest = Entities.FindByClassnameNearest("prop_weighted_cube", pos, 1024.0);
-  local monster = Entities.FindByClassnameNearest("prop_monster_box", pos, 1024.0);
-  // Determine what's closer - a cube or a Frankenturret
-  if (!nearest) nearest = monster;
-  else if (monster && (nearest.GetOrigin() - pos).LengthSqr() > (monster.GetOrigin() - pos).LengthSqr()) {
-    nearest = monster;
-  }
-  // Set the respective model
-  if (nearest && nearest.IsValid()) {
-    cube.SetModel(nearest.GetModelName());
+  // Determine cube model from its type
+  local model = "models/props/metal_box.mdl";
+  if (type == 0) model = "models/props/metal_box.mdl";
+  else if (type == 1) model = "models/props/reflection_cube.mdl";
+  else if (type == 2) model = "models/props_gameplay/mp_ball.mdl";
+  else if (type == 3) model = "models/npcs/monsters/monster_a.mdl";
+
+  // Set the respective model if it has been precached
+  if (Entities.FindByModel(null, model)) {
+    cube.SetModel(model);
+  } else if (Entities.FindByModel(null, "models/props/metal_box.mdl")) {
+    cube.SetModel("models/props/metal_box.mdl");
   }
 
 };

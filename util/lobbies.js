@@ -307,7 +307,8 @@ module.exports = async function (args, context = epochtal) {
               ],
               cube: {
                 pos: arrCube.slice(0, 3),
-                ang: arrCube.slice(3, 6)
+                ang: arrCube.slice(3, 6),
+                type: arrCube[6]
               },
               steamid: steamid,
               name: (await users(["get", steamid])).name
