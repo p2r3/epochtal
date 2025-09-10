@@ -42,7 +42,15 @@ const initializeUI = async function () {
   const leaderboardElement = document.querySelector("#leaderboard");
   const titleElement = document.querySelector("#title");
   const backgroundAnimation = document.querySelector("#bg-anim-container");
-  const youtubeEmbed = document.querySelector("#youtube");
+  const youtubeEmbed = new YT.Player("youtube", {
+    events: {
+      "onStateChange": ({data})=>{
+        if (data === YT.PlayerState.ENDED) {
+          youtubeEmbed.stopVideo();
+        }
+      }
+    }
+  });
 
   const runElementContainer = document.querySelector("#runinfo");
   const runNameElement = document.querySelector("#runinfo-name");
@@ -288,8 +296,11 @@ const initializeUI = async function () {
     else videoID = link.split("youtu.be/")[1].split("?")[0];
 
     // Activate the YouTube embed
-    youtubeEmbed.style.display = "block";
-    youtubeEmbed.src = `https://www.youtube-nocookie.com/embed/${videoID}?autoplay=1&vq=high`;
+    youtubeEmbed.getIframe().style.display = "block";
+    youtubeEmbed.cueVideoById(videoID);
+    setTimeout(function () {
+      youtubeEmbed.playVideo();
+    }, 1500);
 
   };
 
@@ -301,8 +312,8 @@ const initializeUI = async function () {
     backgroundAnimation.style.opacity = 1;
 
     setTimeout(function () {
-      youtubeEmbed.src = "";
-      youtubeEmbed.style.display = "none";
+      youtubeEmbed.stopVideo();
+      youtubeEmbed.getIframe().style.display = "none";
       contentContainer.style.pointerEvents = "auto";
     }, 500);
 
