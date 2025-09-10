@@ -627,6 +627,13 @@ async function lobbyInit () {
     lobbyPlayerCountText.textContent = `(${lobby.listEntry.players.length - lobby.data.spectators.length})`;
   }
 
+  // If in-game, change the "Force start" button to "Abort round"
+  if (lobby.data.state === LOBBY_INGAME) {
+    const forceButton = document.querySelector("#lobby-force-button");
+    forceButton.textContent = "Abort round";
+    forceButton.href = "javascript:forceAbort()";
+  }
+
   // Update the player list and map display
   updatePlayerList();
   updateLobbyMap();
