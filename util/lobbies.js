@@ -930,7 +930,7 @@ module.exports = async function (args, context = epochtal) {
       // Brodcast the leave to clients
       await events(["send", eventName, { type: "lobby_leave", steamid }], context);
 
-      // Delete the lobby if it is still empty 10 seconds after all players have left
+      // Delete the lobby if it is still empty 2 minutes after all players have left
       // These checks are bypassed on the very first round of a COTD lobby
       const isCOTDFirstRound = listEntry.mode === "cotd" && !("roundTimeout" in dataEntry);
       if (listEntry.players.length === 0 && !isCOTDFirstRound) {
@@ -947,7 +947,7 @@ module.exports = async function (args, context = epochtal) {
           } catch {
             // Prevent a full server crash in case of a race condition
           }
-        }, 10000);
+        }, 2 * 60 * 1000);
 
       } else if (!isCOTDFirstRound) {
 
