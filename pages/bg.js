@@ -4,6 +4,10 @@
 if (localStorage.getItem("powerSaving") === "on") {
   throw " - power saving enabled, animation disabled";
 }
+// Don't proceed with the animation on the Steam game overlay
+if (navigator.userAgent.includes("Valve Steam GameOverlay")) {
+  throw " - Steam game overlay detected, animation disabled";
+}
 
 const canvas = document.getElementById("bg-anim");
 const ctx = canvas.getContext("2d");

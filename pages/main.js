@@ -1,5 +1,21 @@
 // Everything is loaded once, at once. Hopefully makes the frontend way snappier to use.
 
+/**
+ * If this is the Steam game overlay browser, and we've been redirected
+ * here from the Steam auth page, it's very likely that our intent is to
+ * authenticate an Epochtal Live client. Redirect again to the lobby
+ * list page.
+ *
+ * This would be neater as a server-side redirect, but that doesn't work.
+ * I think the auth return has to be one hardcoded URL (in this case, "/")
+ */
+if (
+  navigator.userAgent.includes("Valve Steam GameOverlay") &&
+  document.referrer === "https://steamcommunity.com/"
+) {
+  window.location.href = "/live";
+}
+
 const pageContent = document.querySelector("#page-content");
 const header = document.querySelector("header");
 

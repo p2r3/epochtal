@@ -1277,6 +1277,11 @@ lobbyInit();
  * Leave the current lobby by closing the window
  */
 function leaveLobby () {
+  // On Steam game overlay, return to list page instead of closing the window
+  if (navigator.userAgent.includes("Valve Steam GameOverlay")) {
+    window.location.href = "/live/";
+    return;
+  }
   // Attempt to close the window
   window.close();
   // If that failed, redirect to the lobby list page
