@@ -38,6 +38,11 @@ module.exports = async function (args, context = epochtal) {
       await discordClient.channels.cache.get(context.data.discord.update).send({ content, files });
       return "SUCCESS";
 
+    case "live":
+
+      await discordClient.channels.cache.get(context.data.discord.live).send({ content, files });
+      return "SUCCESS";
+
   }
 
   throw new UtilError("ERR_COMMAND", args, context);

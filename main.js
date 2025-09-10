@@ -76,7 +76,8 @@ epochtal.data = {
   discord: {
     announce: process.env.DISCORD_CHANNEL_ANNOUNCE,
     report: process.env.DISCORD_CHANNEL_REPORT,
-    update: process.env.DISCORD_CHANNEL_UPDATE
+    update: process.env.DISCORD_CHANNEL_UPDATE,
+    live: process.env.DISCORD_CHANNEL_LIVE
   },
   spplice: {
     address: `${gconfig.https ? "https" : "http"}://${gconfig.domain}`,
@@ -315,7 +316,7 @@ console.log(`Listening on ${gconfig.tls ? "https" : "http"}://localhost:${server
 // Schedule routines
 utils.routine(["schedule", "epochtal", "concludeWeek", "0 0 15 * * 7"]);
 utils.routine(["schedule", "epochtal", "releaseMap", "0 0 12 * * 1"]);
-utils.routine(["schedule", "live", "createCOTD", "0 0 19 * * *"]);
+utils.routine(["schedule", "live", "createCOTD", "0 0 19 * * 6"]);
 
 // Register events
 utils.events(["create", "utilError", steamid => epochtal.data.users[steamid].admin]);

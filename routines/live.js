@@ -3,6 +3,7 @@ const fs = require("node:fs");
 const spplice = require("../util/spplice.js");
 const tmppath = require("../util/tmppath.js");
 const lobbies = require("../util/lobbies.js");
+const discord = require("../util/discord.js");
 
 /**
  * Builds the Epochtal Live Spplice package
@@ -87,16 +88,27 @@ async function createCOTD (context) {
   // Permanently remove the lobby host
   await lobbies(["host", lobbyid, null], context);
 
-  // Set the lobby map to a random workshop map
-  let mapInterval;
-  mapInterval = setInterval(async function () {
+  const trySetMap = async function () {
     try {
+
       await lobbies(["map", lobbyid, "random"], context);
-      clearInterval(mapInterval);
+
+      // Get the map information from the lobby data
+      const lobbyMap = context.data.lobbies.data[lobbyid].context.data.map;
+      const mapName = lobbyMap.title.replaceAll("_", "").replaceAll("*", "").replaceAll("#", "").replaceAll("@", "");
+      const mapAuthor = lobbyMap.author.replaceAll("_", "").replaceAll("*", "").replaceAll("#", "").replaceAll("@", "");
+      const mapLink = `https://steamcommunity.com/sharedfiles/filedetails/?id=${lobbyMap.id}`;
+      const mapString = `[**${mapName}** by **${mapAuthor}**](${mapLink})`;
+
+      // Announce the beginning of COTD on Discord
+      // HACK: Hardcoded role ID for now, must fix ASAP!!!
+      await discord(["live", `<@&1363135650572009523> The [Chamber Of The Day](<https://epochtal.p2r3.com/live>) is starting!\n${mapString}`], context);
+
     } catch {
-      // Keep trying until we succeed
+      setTimeout(trySetMap, 3000);
     }
-  }, 3000);
+  };
+  await trySetMap();
 
   // Warn players of game start in lobby chat
   setTimeout(async function () {
