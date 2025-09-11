@@ -47,10 +47,28 @@ const initializeUI = async function () {
       "onStateChange": ({data})=>{
         if (data === YT.PlayerState.ENDED) {
           youtubeEmbed.stopVideo();
+          youtubeEmbed.getIframe().classList.remove("hide-related-hack");
+        } else if (data === YT.PlayerState.PLAYING) {
+          youtubeEmbed.getIframe().classList.add("hide-related-hack");
         }
+        window.sendToController({ update: "ytPlaypause", isPlaying: data === YT.PlayerState.PLAYING });
       }
     }
   });
+  let lastVolume, lastPlayTime;
+  setInterval(() => {
+    let newVolume = youtubeEmbed.getVolume();
+    if(lastVolume !== newVolume) {
+      lastVolume = newVolume;
+      window.sendToController({ update: "ytVolume", volume: newVolume });
+    }
+    let newPlayTime = youtubeEmbed.getCurrentTime();
+    if(lastPlayTime !== newPlayTime) {
+      lastPlayTime = newPlayTime;
+      let duration = youtubeEmbed.getDuration();
+      window.sendToController({ update: "ytTime", fraction: newPlayTime/duration, string: `${ticksToString(newPlayTime*60)}/${ticksToString(duration*60)}` });
+    }
+  }, 1000);
 
   const runElementContainer = document.querySelector("#runinfo");
   const runNameElement = document.querySelector("#runinfo-name");
@@ -357,6 +375,17 @@ const initializeUI = async function () {
       case "musicPause": return musicTogglePause();
       case "category": return updateLeaderboard(data.name);
       case "scroll": return scrollToRunner(data.category, data.steamid);
+      case "ytRewind": return youtubeEmbed.seekTo(youtubeEmbed.getCurrentTime()-10, true);
+      case "ytPlaypause":
+        if(youtubeEmbed.getPlayerState() === YT.PlayerState.PAUSED) {
+          youtubeEmbed.playVideo();
+        } else {
+          youtubeEmbed.pauseVideo();
+        }
+        return;
+      case "ytFastForward": return youtubeEmbed.seekTo(youtubeEmbed.getCurrentTime()+10, true);
+      case "ytVolume": return youtubeEmbed.setVolume(data.volume);
+      case "ytSeek": return youtubeEmbed.seekTo(youtubeEmbed.getDuration()*data.seek, true);
 
     }
 
