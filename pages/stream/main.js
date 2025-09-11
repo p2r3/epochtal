@@ -47,6 +47,9 @@ const initializeUI = async function () {
       "onStateChange": ({data})=>{
         if (data === YT.PlayerState.ENDED) {
           youtubeEmbed.stopVideo();
+          youtubeEmbed.getIframe().classList.remove("hide-related-hack");
+        } else if (data === YT.PlayerState.PLAYING) {
+          youtubeEmbed.getIframe().classList.add("hide-related-hack");
         }
         window.sendToController({ update: "ytPlaypause", isPlaying: data === YT.PlayerState.PLAYING });
       }
