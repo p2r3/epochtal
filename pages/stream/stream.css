@@ -66,8 +66,14 @@ h2 {
   left: 0;
   top: 0;
   width: 100vw;
-  height: calc(100vw / (16 / 9));
+  height: 56.25vw;
+  border: 0;
   z-index: 1;
+}
+
+#youtube.hide-related-hack {
+  top: -28.125vw;
+  height: 112.5vw;
 }
 
 #soundcloud {
