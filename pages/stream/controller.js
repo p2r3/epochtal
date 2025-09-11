@@ -61,6 +61,7 @@ const controllerInit = async function () {
         window.sendToController({ action: "play" });
       } else {
         const link = await (await fetch(`/api/proof/download/"${steamid}"/${category}`)).text();
+        videoControlsContainer.style.display = "";
         window.sendToController({ action: "play", link });
       }
 
@@ -92,6 +93,8 @@ const controllerInit = async function () {
     // Disable the "Play Selected Run" button
     playRunButton.style.pointerEvents = "none";
     playRunButton.style.opacity = 0.5;
+
+    videoControlsContainer.style.display = "none";
 
   };
 
@@ -209,6 +212,43 @@ const controllerInit = async function () {
 
   };
 
+  // Set up video controls
+  const videoControlsContainer = document.querySelector("#yt-controls");
+  const videoRewind = document.querySelector("#yt-rewind");
+  const videoPlaypause = document.querySelector("#yt-playpause");
+  const videoFastForward = document.querySelector("#yt-fastforward");
+  const videoVolumeIcon = document.querySelector("#yt-volume-icon");
+  const videoVolumeSlider = document.querySelector("#yt-volume-slider");
+  const videoTimeString = document.querySelector("#yt-time-string");
+  const videoSeekBar = document.querySelector("#yt-seek");
+
+  videoControlsContainer.style.display = "none";
+  videoRewind.onclick = function () {
+
+    window.sendToController({ action: "ytRewind" });
+
+  };
+  videoPlaypause.onclick = function () {
+
+    window.sendToController({ action: "ytPlaypause" });
+
+  };
+  videoFastForward.onclick = function () {
+
+    window.sendToController({ action: "ytFastForward" });
+
+  };
+  videoVolumeSlider.oninput = function () {
+
+    window.sendToController({ action: "ytVolume", volume: parseInt(this.value) });
+
+  };
+  videoSeekBar.oninput = function () {
+
+    window.sendToController({ action: "ytSeek", seek: parseFloat(this.value) });
+
+  };
+
   /**
    * Handles messages sent from the stream UI
    * @param {unknown} event The WebSocket message event
@@ -223,6 +263,32 @@ const controllerInit = async function () {
 
       case "musicName": {
         musicNowPlaying.innerHTML = `Now playing: <b>${data.trackname}</b>`;
+        return;
+      }
+      case "ytVolume": {
+        videoVolumeSlider.value = data.volume;
+        if (data.volume === 0) {
+          videoVolumeIcon.className = "fa-solid fa-volume-xmark";
+        } else if (data.volume < 33) {
+          videoVolumeIcon.className = "fa-solid fa-volume-off";
+        } else if (data.volume < 66) {
+          videoVolumeIcon.className = "fa-solid fa-volume-low";
+        } else {
+          videoVolumeIcon.className = "fa-solid fa-volume-high";
+        }
+        return;
+      }
+      case "ytTime": {
+        videoSeekBar.value = data.fraction;
+        videoTimeString.innerHTML = data.string;
+        return;
+      }
+      case "ytPlaypause": {
+        if(data.isPlaying) {
+          videoPlaypause.className = "fa-solid fa-pause";
+        } else {
+          videoPlaypause.className = "fa-solid fa-play";
+        }
         return;
       }
 

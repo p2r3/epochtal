@@ -13,6 +13,22 @@
         opacity: 0.5;
         transition: opacity 0.2s;
       }
+
+      input[type="range"] {
+        padding: 0;
+        vertical-align: sub;
+        appearance: auto;
+      }
+
+      #yt-volume-slider {
+        width: 7em;
+        min-width: revert;
+      }
+
+      #yt-seek {
+        min-width: revert;
+        width: min(95vw, 25em);
+      }
     </style>
     <script src="https://kit.fontawesome.com/fc2642e2d1.js" crossorigin="anonymous"></script>
   </head>
@@ -29,6 +45,21 @@
       <p class="marginb_small">Switch state</p>
       <button onclick="returnToLeaderboard()">Return to Leaderboard</button>
       <button onclick="playSelectedRun()" id="button-play">Play Selected Run</button>
+
+      <div id="yt-controls">
+        <p class="marginb_small">YT player controls</p>
+        <h2 class="margin0">
+          <i class="fa-solid fa-backward" style="cursor: pointer" id="yt-rewind"></i>&nbsp;&nbsp;
+          <i class="fa-solid fa-play" style="cursor: pointer" id="yt-playpause"></i>&nbsp;&nbsp;
+          <i class="fa-solid fa-forward" style="cursor: pointer" id="yt-fastforward"></i>&nbsp;&nbsp;
+          <i class="fa-solid fa-volume-off" style="cursor: pointer" id="yt-volume-icon"></i>
+          <input type="range" min="0" max="100" value="0" step="1" id="yt-volume-slider">&nbsp;&nbsp;
+          <span id="yt-time-string">0:00/0:00</span>
+        </h2>
+        <h2 class="margin0">
+          <input type="range" min="0" max="1" value="0" step="any" id="yt-seek">
+        </h2>
+      </div>
 
       <p>Selected leaderboard</p>
       <p id="controller-leaderboard" class="marginy"></p>
