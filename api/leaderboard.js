@@ -8,32 +8,10 @@ const leaderboard = require("../util/leaderboard.js");
 const categories = require("../util/categories.js");
 const config = require("../util/config.js");
 const users = require("../util/users.js");
+const shared = require("../pages/shared.js");
 
 const api_users = require("./users.js");
 
-/**
- * Converts ticks to a string format.
- *
- * @param {int} t Ticks
- * @returns {string} The formatted time string
- */
-function ticksToString (t) {
-
-  // Convert ticks to hours, minutes, and seconds
-  let output = "";
-  const hrs = Math.floor(t / 216000),
-    min = Math.floor(t / 3600),
-    sec = t % 3600 / 60;
-
-  // Format the time string
-  if (hrs !== 0) output += `${hrs}:${min % 60 < 10 ? "0" : ""}${min % 60}:`;
-  else if (min !== 0) output += `${min}:`;
-  if (sec < 10) output += "0";
-  output += sec.toFixed(3);
-
-  return output;
-
-}
 
 /**
  * Pushes a run update to the discord.
@@ -48,7 +26,7 @@ async function discordUpdate (steamid, category) {
 
   const run = currBoard.find(c => c.steamid === steamid);
   const user = await users(["get", steamid]);
-  const time = ticksToString(run.time);
+  const time = shared.ticksToString(run.time);
 
   let emoji = "🎲";
   let output = `**${user.name.replaceAll(/[*@_~`#[\]()\-.>\\:]/g, "\\$&")}**`;

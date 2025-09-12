@@ -1,45 +1,3 @@
-/**
- * Decode the player profile log from a buffer
- *
- * @param {Array} buffer The buffer to decode
- * @param {string[]} categoryList The list of categories
- * @returns {Object[]} The decoded log
- */
-function decodeLog (buffer, categoryList) {
-
-  const log = [];
-
-  // each entry is 11 bytes long
-  for (let i = 0; i < buffer.length; i += 10) {
-
-    const entry = {};
-
-    // 1 byte - category index
-    entry.category = categoryList[buffer[i]];
-
-    // 4 bytes - run time in ticks
-    entry.time = 0;
-    for (let j = 0; j < 4; j ++) {
-      entry.time += buffer[i + 1 + j] * Math.pow(256, 3 - j);
-    }
-
-    // 1 byte - portal count
-    entry.portals = buffer[i + 5];
-
-    // 4 bytes - seconds since start of week 0
-    entry.timestamp = 0;
-    for (let j = 0; j < 4; j ++) {
-      entry.timestamp += buffer[i + 6 + j] * Math.pow(256, 3 - j);
-    }
-
-    log.push(entry);
-
-  }
-
-  return log;
-
-}
-
 var profileSteamID = window.location.href.split("#")[1].split("/")[0].split("?")[0].split("&")[0];
 
 /**
@@ -55,17 +13,7 @@ function openSteamProfile () {
 var profilePageInit = async function () {
 
   // Change the login button to a logout button if the user is logged in
-  const whoami = await (await fetch("/api/users/whoami")).json();
-  if (whoami !== null) {
-
-    const loginButton = document.querySelector("#login-button");
-
-    loginButton.innerHTML = "Log out";
-    loginButton.onclick = function () {
-      window.location.href = '/api/auth/logout';
-    };
-
-  }
+  const whoami = await handleWhoami()
 
   const users = await (await fetch("/api/users/get")).json();
 
@@ -428,33 +376,7 @@ var profilePageInit = async function () {
   }
 
 
-  let cliKeysControl = false;
-  let cliKeysTilde = false;
-
-  // Handle CLI popup
-  const keyDownFunc = function (e) {
-    if (e.key === "Control") cliKeysControl = true;
-    if (e.key === "`") cliKeysTilde = true;
-    if (cliKeysControl && cliKeysTilde) {
-
-      const features = "popup=yes,width=640,height=400,left=20,top=20";
-
-      const popupWindow = window.open("/admin/cli/index.html", "_blank", features);
-      if (popupWindow) popupWindow.focus();
-
-      cliKeysControl = false;
-      cliKeysTilde = false;
-
-    }
-  };
-
-  const keyUpFunc = function (e) {
-    if (e.key === "Control") cliKeysControl = false;
-    if (e.key === "`") cliKeysTilde = false;
-  };
-
-  window.addEventListener("keydown", keyDownFunc);
-  window.addEventListener("keyup", keyUpFunc);
+  handleCliPopup();
 
 };
 profilePageInit();

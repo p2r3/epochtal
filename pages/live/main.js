@@ -7,17 +7,7 @@ var lobbies;
 var lobbyListInit = async function () {
 
   // Change the login button to a logout button if the user is logged in
-  const whoami = await (await fetch("/api/users/whoami")).json();
-  if (whoami !== null) {
-
-    const loginButton = document.querySelector("#login-button");
-
-    loginButton.innerHTML = "Log out";
-    loginButton.onclick = function () {
-      window.location.href = '/api/auth/logout';
-    };
-
-  }
+  const whoami = await handleWhoami()
 
   const users = await (await fetch("/api/users/get")).json();
   const avatarCache = {};
@@ -145,33 +135,7 @@ var lobbyListInit = async function () {
     history.replaceState(null, document.title, "/live/");
   }
 
-  let cliKeysControl = false;
-  let cliKeysTilde = false;
-
-  // Handle CLI popup
-  const keyDownFunc = function (e) {
-    if (e.key === "Control") cliKeysControl = true;
-    if (e.key === "`") cliKeysTilde = true;
-    if (cliKeysControl && cliKeysTilde) {
-
-      const features = "popup=yes,width=640,height=400,left=20,top=20";
-
-      const popupWindow = window.open("/admin/cli/index.html", "_blank", features);
-      if (popupWindow) popupWindow.focus();
-
-      cliKeysControl = false;
-      cliKeysTilde = false;
-
-    }
-  };
-
-  const keyUpFunc = function (e) {
-    if (e.key === "Control") cliKeysControl = false;
-    if (e.key === "`") cliKeysTilde = false;
-  };
-
-  window.addEventListener("keydown", keyDownFunc);
-  window.addEventListener("keyup", keyUpFunc);
+  handleCliPopup()
 
 };
 lobbyListInit();
