@@ -1,13 +1,13 @@
 #bg-anim-container {
-    display: block;
-    position: fixed;
-    left: 0;
-    top: 0;
-    width: 100vw;
-    height: 100vh;
-    z-index: 1;
-    opacity: 1;
-    pointer-events: none;
-    will-change: opacity;
-    transition: opacity 0.5s;
+  display: block;
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1;
+  opacity: 1;
+  pointer-events: none;
+  will-change: opacity;
+  transition: opacity 0.5s;
 }
