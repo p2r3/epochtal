@@ -102,8 +102,7 @@ async function createCOTD (context) {
       const mapString = `[**${mapName}** by **${mapAuthor}**](${mapLink})`;
 
       // Announce the beginning of COTD on Discord
-      // HACK: Hardcoded role ID for now, must fix ASAP!!!
-      await discord(["live", `<@&1363135650572009523> The [Chamber Of The Day](<https://epochtal.p2r3.com/live>) is starting!\n${mapString}`], context);
+      await discord(["live", `${CONFIG.DISCORD.ROLE.COTD}The [Chamber Of The Day](<https://epochtal.p2r3.com/live>) is starting!\n${mapString}`], context);
 
     } catch {
       setTimeout(trySetMap, 3000);

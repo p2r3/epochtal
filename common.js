@@ -27,4 +27,4 @@ async function getWorkshopData (mapid) {
 
 }
 
-module.exports = { getWorkshopData };
+module.exports = { getWorkshopData, STEAM_API };

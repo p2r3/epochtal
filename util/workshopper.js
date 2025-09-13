@@ -2,9 +2,7 @@ const UtilError = require("./error.js");
 
 const curator = require("./curator.js");
 const {CONFIG} = require("../config.ts");
-const {getWorkshopData} = require("../common.js");
-
-const STEAM_API = "https://api.steampowered.com";
+const {getWorkshopData, STEAM_API} = require("../common.js");
 
 /**
  * Fetches map data from the Steam Workshop API.
