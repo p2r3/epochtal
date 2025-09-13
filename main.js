@@ -2,9 +2,6 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { CONFIG } = require("./config.ts");
 
-// Read environment variables from the .env file
-require("dotenv").config();
-
 // Validate the global config
 global.isFirstLaunch = !fs.existsSync(`${CONFIG.DIR.DATA}/.first-run`);
 const validate = require(`${__dirname}/validate.js`);
