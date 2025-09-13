@@ -17,6 +17,7 @@ const profilelog = require("../util/profilelog.js");
 const points = require("../util/points.js");
 const curator = require("../util/curator.js");
 const {CONFIG} = require("../config.ts");
+const {sanitizeForDiscord} = require("../common.js");
 
 // Scheduled routines are designed to revert all changes upon failing or to fail invisibly
 // This causes messy try/catches, but is better than leaving the system in a half-broken state
@@ -122,9 +123,8 @@ async function releaseMap (context) {
     await profilelog(["build", steamid], context);
   }
 
-  // Load the curated workshop map set, pick 5 for voting
+  // Load the curated workshop map set, pick some for voting
   const allmaps = await Bun.file(`${CONFIG.DIR.DATA}/maps.json`).json();
-  const VOTING_MAPS_COUNT = 5;
 
   UtilPrint("epochtal(releaseMap): Building voting map list...");
   const votingmaps = [];
@@ -135,7 +135,7 @@ async function releaseMap (context) {
       if (votingmaps.find(curr => curr.author === details.author)) continue;
 
       votingmaps.push(details);
-      if (votingmaps.length === VOTING_MAPS_COUNT) break;
+      if (votingmaps.length === CONFIG.VOTING_MAPS_COUNT) break;
     } catch (e) {
       UtilPrint(`epochtal(releaseMap): Error on voting map ${allmaps[i].id}, skipping...`);
       continue;
@@ -199,15 +199,15 @@ async function releaseMap (context) {
   let newmap;
   try {
 
-    const totalVotes = Array(VOTING_MAPS_COUNT).fill(0);
-    const totalUpvotes = Array(VOTING_MAPS_COUNT).fill(0);
-    const totalDownvotes = Array(VOTING_MAPS_COUNT).fill(0);
+    const totalVotes = Array(CONFIG.VOTING_MAPS_COUNT).fill(0);
+    const totalUpvotes = Array(CONFIG.VOTING_MAPS_COUNT).fill(0);
+    const totalDownvotes = Array(CONFIG.VOTING_MAPS_COUNT).fill(0);
 
     for (const steamid in context.data.week.votes) {
 
       const curr = context.data.week.votes[steamid];
 
-      for (let i = 0; i < VOTING_MAPS_COUNT; i ++) {
+      for (let i = 0; i < CONFIG.VOTING_MAPS_COUNT; i ++) {
         if (curr[i] > 0) totalUpvotes[i] += curr[i];
         else if (curr[i] < 0) totalDownvotes[i] -= curr[i];
         totalVotes[i] += curr[i];
@@ -216,7 +216,7 @@ async function releaseMap (context) {
     }
 
     let highestVoted = 0;
-    for (let i = 1; i < VOTING_MAPS_COUNT; i ++) {
+    for (let i = 1; i < CONFIG.VOTING_MAPS_COUNT; i ++) {
       if (totalVotes[i] > totalVotes[highestVoted]) {
         highestVoted = i;
       }
@@ -359,8 +359,7 @@ async function releaseMap (context) {
   await Bun.write(context.file.log, "");
 
   // Announce the new week on Discord
-  // HACK: Hardcoded role ID for now, must fix ASAP!!
-  await discord(["announce", "<@&1363136773592580158> " + announceText.replaceAll(/[*@_~`#[\]()\-.>\\:]/g, "\\$&")], context);
+  await discord(["announce", CONFIG.DISCORD.ROLE.ANNOUNCE + " " + sanitizeForDiscord(announceText)], context);
 
   return "SUCCESS";
 

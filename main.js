@@ -2,9 +2,6 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { CONFIG } = require("./config.ts");
 
-// Read environment variables from the .env file
-require("dotenv").config();
-
 // Validate the global config
 global.isFirstLaunch = !fs.existsSync(`${CONFIG.DIR.DATA}/.first-run`);
 const validate = require(`${__dirname}/validate.js`);
@@ -56,10 +53,10 @@ epochtal.data = {
   profiles: {},
   week: await epochtal.file.week.json(),
   discord: {
-    announce: CONFIG.DISCORD_CHANNEL.ANNOUNCEMENTS,
-    report: CONFIG.DISCORD_CHANNEL.REPORTS,
-    update: CONFIG.DISCORD_CHANNEL.UPDATES,
-    live: process.env.DISCORD_CHANNEL_LIVE
+    announce: CONFIG.DISCORD.CHANNEL.ANNOUNCEMENTS,
+    report: CONFIG.DISCORD.CHANNEL.REPORTS,
+    update: CONFIG.DISCORD.CHANNEL.UPDATES,
+    live: CONFIG.DISCORD.CHANNEL.LIVE
   },
   spplice: {
     address: `${CONFIG.USE_HTTPS ? "https" : "http"}://${CONFIG.WEB_URL}`,
@@ -296,9 +293,9 @@ epochtal.data.events.server = server;
 console.log(`Listening on ${CONFIG.USE_TLS ? "https" : "http"}://localhost:${server.port}...`);
 
 // Schedule routines
-utils.routine(["schedule", "epochtal", "concludeWeek", "0 0 15 * * 7"]);
-utils.routine(["schedule", "epochtal", "releaseMap", "0 0 12 * * 1"]);
-utils.routine(["schedule", "live", "createCOTD", "0 0 19 * * 6"]);
+utils.routine(["schedule", "epochtal", "concludeWeek", CONFIG.CONCLUDE_WEEK_CRON]);
+utils.routine(["schedule", "epochtal", "releaseMap", CONFIG.RELEASE_MAP_CRON]);
+utils.routine(["schedule", "live", "createCOTD", CONFIG.COTD_CRON]);
 
 // Register events
 utils.events(["create", "utilError", steamid => epochtal.data.users[steamid].admin]);

@@ -95,25 +95,67 @@ export const CONFIG: object = {
      */
     USE_HTTPS: process.env.USE_HTTPS === "true",
     /**
-     * The Discord channels used for this deployment
+     * Discord configuration
      */
-    DISCORD_CHANNEL: {
+    DISCORD: {
         /**
-         * The channel ID of the Discord announcement channel
+         * The Discord channels used for this deployment
          */
-        ANNOUNCEMENTS: requireEnv("DISCORD_CHANNEL_ANNOUNCE"),
+        CHANNEL: {
+            /**
+             * The channel ID of the Discord announcement channel
+             */
+            ANNOUNCEMENTS: requireEnv("DISCORD_CHANNEL_ANNOUNCE"),
+            /**
+             * The channel ID of the Discord report channel
+             */
+            REPORTS: requireEnv("DISCORD_CHANNEL_REPORT"),
+            /**
+             * The channel ID of the Discord update channel
+             */
+            UPDATES: requireEnv("DISCORD_CHANNEL_UPDATE"),
+            /**
+             * The channel ID of the Discord update channel for Epochtal Live
+             */
+            LIVE: requireEnv("DISCORD_CHANNEL_LIVE")
+        },
         /**
-         * The channel ID of the Discord report channel
+         * The Discord roles used for this deployment
          */
-        REPORTS: requireEnv("DISCORD_CHANNEL_REPORT"),
-        /**
-         * The channel ID of the Discord update channel
-         */
-        UPDATES: requireEnv("DISCORD_CHANNEL_UPDATE")
+        ROLE: {
+            /**
+             * The ID of the Discord role to ping for announcements
+             */
+            ANNOUNCE: process.env.DISCORD_ROLE_ANNOUNCE ? "<@&" + process.env.DISCORD_ROLE_ANNOUNCE + ">" : "@everyone",
+            /**
+             * The ID of the Discord role to ping for Chamber Of The Day
+             */
+            COTD: process.env.DISCORD_ROLE_COTD ? "<@&" + process.env.DISCORD_ROLE_COTD + ">" : "@everyone"
+        },
     },
     /**
      * The time span for the curation algorithm to curate for, in seconds.
      * This defines how far back in time the curation algorithm fetches maps from.
      */
-    CURATE_SECONDS: process.env.CURATE_SECONDS ?? 604800 // Defaults to one week
+    CURATE_SECONDS: process.env.CURATE_SECONDS ?? 604800, // Defaults to one week
+    /**
+     * The amount of maps in the voting pool
+     */
+    VOTING_MAPS_COUNT: process.env.VOTING_MAPS_COUNT ?? 5,
+    /**
+     * The amount of time (in milliseconds) the demos are considered valid for submission after they are being recorded
+     */
+    DEMO_EXPIRY_TIME: process.env.DEMO_EXPIRY_TIME ?? 3600000, // Defaults to one hour
+    /**
+     * When the week should be concluded
+     */
+    CONCLUDE_WEEK_CRON: process.env.CONCLUDE_WEEK_CRON ?? "0 0 15 * * 7",
+    /**
+     * When the new week map should be released
+     */
+    RELEASE_MAP_CRON: process.env.RELEASE_MAP_CRON ?? "0 0 12 * * 1",
+    /**
+     * When the Chamber Of The Day should be released
+     */
+    COTD_CRON: process.env.COTD_CRON ?? "0 0 19 * * 6",
 };

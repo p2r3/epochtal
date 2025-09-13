@@ -5,6 +5,7 @@ const tmppath = require("../util/tmppath.js");
 const lobbies = require("../util/lobbies.js");
 const discord = require("../util/discord.js");
 const {CONFIG} = require("../config.ts");
+const {sanitizeForDiscord} = require("../common.js");
 
 /**
  * Builds the Epochtal Live Spplice package
@@ -99,11 +100,10 @@ async function createCOTD (context) {
       const mapName = lobbyMap.title.replaceAll("_", "").replaceAll("*", "").replaceAll("#", "").replaceAll("@", "");
       const mapAuthor = lobbyMap.author.replaceAll("_", "").replaceAll("*", "").replaceAll("#", "").replaceAll("@", "");
       const mapLink = `https://steamcommunity.com/sharedfiles/filedetails/?id=${lobbyMap.id}`;
-      const mapString = `[**${mapName}** by **${mapAuthor}**](${mapLink})`;
+      const mapString = `[**${sanitizeForDiscord(mapName)}** by **${sanitizeForDiscord(mapAuthor)}**](${mapLink})`;
 
       // Announce the beginning of COTD on Discord
-      // HACK: Hardcoded role ID for now, must fix ASAP!!!
-      await discord(["live", `<@&1363135650572009523> The [Chamber Of The Day](<https://epochtal.p2r3.com/live>) is starting!\n${mapString}`], context);
+      await discord(["live", `${CONFIG.DISCORD.ROLE.COTD}The [Chamber Of The Day](<https://epochtal.p2r3.com/live>) is starting!\n${mapString}`], context);
 
     } catch {
       setTimeout(trySetMap, 3000);

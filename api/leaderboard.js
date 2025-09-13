@@ -8,32 +8,11 @@ const leaderboard = require("../util/leaderboard.js");
 const categories = require("../util/categories.js");
 const config = require("../util/config.js");
 const users = require("../util/users.js");
+const shared = require("../pages/shared.js");
+const {sanitizeForDiscord} = require("../common.js")
 
 const api_users = require("./users.js");
 
-/**
- * Converts ticks to a string format.
- *
- * @param {int} t Ticks
- * @returns {string} The formatted time string
- */
-function ticksToString (t) {
-
-  // Convert ticks to hours, minutes, and seconds
-  let output = "";
-  const hrs = Math.floor(t / 216000),
-    min = Math.floor(t / 3600),
-    sec = t % 3600 / 60;
-
-  // Format the time string
-  if (hrs !== 0) output += `${hrs}:${min % 60 < 10 ? "0" : ""}${min % 60}:`;
-  else if (min !== 0) output += `${min}:`;
-  if (sec < 10) output += "0";
-  output += sec.toFixed(3);
-
-  return output;
-
-}
 
 /**
  * Pushes a run update to the discord.
@@ -48,15 +27,15 @@ async function discordUpdate (steamid, category) {
 
   const run = currBoard.find(c => c.steamid === steamid);
   const user = await users(["get", steamid]);
-  const time = ticksToString(run.time);
+  const time = shared.ticksToString(run.time);
 
   let emoji = "🎲";
-  let output = `**${user.name.replaceAll(/[*@_~`#[\]()\-.>\\:]/g, "\\$&")}**`;
+  let output = `**${sanitizeForDiscord(user.name)}**`;
 
   if (currCategory.coop) {
     const partners = await config(["get", "partners"]);
     const partner = await users(["get", partners[steamid]]);
-    output += ` and **${partner.name.replaceAll(/[*@_~`#[\]()\-.>\\:]/g, "\\$&")}**`;
+    output += ` and **${sanitizeForDiscord(partner.name)}**`;
   }
 
   output += ` submitted a new${run.segmented ? " segmented" : ""} run to "${currCategory.title}" with a time of \`${time}\``;
@@ -157,7 +136,7 @@ module.exports = async function (args, request) {
           fs.rmSync(path);
 
           // Report the run on the discord
-          const reportText = `${user.username.replaceAll(/[*@_~`#[\]()\-.>\\:]/g, "\\$&")}'s run was rejected. ${verdict}\nSteam ID: \`${user.steamid}\``;
+          const reportText = `${sanitizeForDiscord(user.username)}'s run was rejected. ${verdict}\nSteam ID: \`${user.steamid}\``;
           await discord(["report", reportText]);
 
           // Return the verdict to the user
