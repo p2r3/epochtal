@@ -56,7 +56,7 @@ epochtal.data = {
     announce: CONFIG.DISCORD.CHANNEL.ANNOUNCEMENTS,
     report: CONFIG.DISCORD.CHANNEL.REPORTS,
     update: CONFIG.DISCORD.CHANNEL.UPDATES,
-    live: process.env.DISCORD_CHANNEL_LIVE
+    live: CONFIG.DISCORD.CHANNEL.LIVE
   },
   spplice: {
     address: `${CONFIG.USE_HTTPS ? "https" : "http"}://${CONFIG.WEB_URL}`,

@@ -113,7 +113,11 @@ export const CONFIG: object = {
             /**
              * The channel ID of the Discord update channel
              */
-            UPDATES: requireEnv("DISCORD_CHANNEL_UPDATE")
+            UPDATES: requireEnv("DISCORD_CHANNEL_UPDATE"),
+            /**
+             * The channel ID of the Discord update channel for Epochtal Live
+             */
+            LIVE: requireEnv("DISCORD_CHANNEL_LIVE")
         },
         /**
          * The Discord roles used for this deployment
