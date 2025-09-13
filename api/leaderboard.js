@@ -9,6 +9,7 @@ const categories = require("../util/categories.js");
 const config = require("../util/config.js");
 const users = require("../util/users.js");
 const shared = require("../pages/shared.js");
+const {sanitizeForDiscord} = require("../common.js")
 
 const api_users = require("./users.js");
 
@@ -29,12 +30,12 @@ async function discordUpdate (steamid, category) {
   const time = shared.ticksToString(run.time);
 
   let emoji = "🎲";
-  let output = `**${user.name.replaceAll(/[*@_~`#[\]()\-.>\\:]/g, "\\$&")}**`;
+  let output = `**${sanitizeForDiscord(user.name)}**`;
 
   if (currCategory.coop) {
     const partners = await config(["get", "partners"]);
     const partner = await users(["get", partners[steamid]]);
-    output += ` and **${partner.name.replaceAll(/[*@_~`#[\]()\-.>\\:]/g, "\\$&")}**`;
+    output += ` and **${sanitizeForDiscord(partner.name)}**`;
   }
 
   output += ` submitted a new${run.segmented ? " segmented" : ""} run to "${currCategory.title}" with a time of \`${time}\``;
@@ -135,7 +136,7 @@ module.exports = async function (args, request) {
           fs.rmSync(path);
 
           // Report the run on the discord
-          const reportText = `${user.username.replaceAll(/[*@_~`#[\]()\-.>\\:]/g, "\\$&")}'s run was rejected. ${verdict}\nSteam ID: \`${user.steamid}\``;
+          const reportText = `${sanitizeForDiscord(user.username)}'s run was rejected. ${verdict}\nSteam ID: \`${user.steamid}\``;
           await discord(["report", reportText]);
 
           // Return the verdict to the user

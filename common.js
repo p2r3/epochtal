@@ -27,4 +27,20 @@ async function getWorkshopData (mapid) {
 
 }
 
-module.exports = { getWorkshopData, STEAM_API };
+/**
+ * Prevents special characters from changing formatting of a Discord message
+ *
+ * @author Misheus
+ * @param {string}string text to sanitize
+ * @returns {string} sanitized text
+ */
+function sanitizeForDiscord (string) {
+  // Prepend a backslash to all reserved Discord characters
+  return string.replaceAll(/[*@_~`#[\]()\-.>\\:]/g, "\\$&")
+    // Due to bug in discord backslashing @everyone and @here still results in a ping. To fix this,
+    // add a Zero-Width Space between @ and everyone or here.
+    .replaceAll("@everyone", "@​everyone")
+    .replaceAll("@here", "@​here");
+}
+
+module.exports = { getWorkshopData, sanitizeForDiscord, STEAM_API };

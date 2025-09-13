@@ -17,6 +17,7 @@ const profilelog = require("../util/profilelog.js");
 const points = require("../util/points.js");
 const curator = require("../util/curator.js");
 const {CONFIG} = require("../config.ts");
+const {sanitizeForDiscord} = require("../common.js");
 
 // Scheduled routines are designed to revert all changes upon failing or to fail invisibly
 // This causes messy try/catches, but is better than leaving the system in a half-broken state
@@ -358,7 +359,7 @@ async function releaseMap (context) {
   await Bun.write(context.file.log, "");
 
   // Announce the new week on Discord
-  await discord(["announce", CONFIG.DISCORD.ROLE.ANNOUNCE + " " + announceText.replaceAll(/[*@_~`#[\]()\-.>\\:]/g, "\\$&")], context);
+  await discord(["announce", CONFIG.DISCORD.ROLE.ANNOUNCE + " " + sanitizeForDiscord(announceText)], context);
 
   return "SUCCESS";
 
