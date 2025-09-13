@@ -17,6 +17,15 @@ const [LOBBY_IDLE, LOBBY_INGAME] = [0, 1];
 
 const lobbyPlayersList = document.querySelector("#lobby-players-list");
 
+function updatePlayerCount() {
+  const lobbyPlayerCountText = document.querySelector("#lobby-playercount");
+  if (lobby.data.maxplayers !== null) {
+    lobbyPlayerCountText.textContent = `(${lobby.listEntry.players.length - lobby.data.spectators.length} / ${lobby.data.maxplayers})`;
+  } else {
+    lobbyPlayerCountText.textContent = `(${lobby.listEntry.players.length - lobby.data.spectators.length})`;
+  }
+}
+
 /**
  * Update player list with current players in the lobby
  */
@@ -143,13 +152,7 @@ async function updatePlayerList () {
 
   lobbyPlayersList.innerHTML = output;
 
-  // Update player count text
-  const lobbyPlayerCountText = document.querySelector("#lobby-playercount");
-  if (lobby.data.maxplayers !== null) {
-    lobbyPlayerCountText.textContent = `(${lobby.listEntry.players.length - lobby.data.spectators.length} / ${lobby.data.maxplayers})`;
-  } else {
-    lobbyPlayerCountText.textContent = `(${lobby.listEntry.players.length - lobby.data.spectators.length})`;
-  }
+  updatePlayerCount()
 
 }
 
@@ -363,13 +366,7 @@ async function lobbyEventHandler (event) {
       // Update the lobby size in the UI
       lobby.data.maxplayers = data.maxplayers;
 
-      const lobbyPlayerCountText = document.querySelector("#lobby-playercount");
-
-      if (lobby.data.maxplayers !== null) {
-        lobbyPlayerCountText.textContent = `(${lobby.listEntry.players.length - lobby.data.spectators.length} / ${lobby.data.maxplayers})`;
-      } else {
-        lobbyPlayerCountText.textContent = `(${lobby.listEntry.players.length - lobby.data.spectators.length})`;
-      }
+      updatePlayerCount()
 
       return;
     }

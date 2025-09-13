@@ -2,6 +2,7 @@ const UtilError = require("./error.js");
 
 const curator = require("./curator.js");
 const {CONFIG} = require("../config.ts");
+const {getWorkshopData} = require("../common.js");
 
 const STEAM_API = "https://api.steampowered.com";
 
@@ -15,18 +16,10 @@ const STEAM_API = "https://api.steampowered.com";
 async function getData (mapid, raw) {
 
   // Fetch the map details
-  const detailsRequest = await fetch(`${STEAM_API}/IPublishedFileService/GetDetails/v1/?key=${CONFIG.API_KEY.STEAM}&publishedfileids[0]=${mapid}&includeadditionalpreviews=true`);
-  if (detailsRequest.status !== 200) return "ERR_STEAMAPI";
+  const details = await getWorkshopData(mapid);
 
-  // Ensure the response is valid
-  const detailsData = await detailsRequest.json();
-  if (!("response" in detailsData && "publishedfiledetails" in detailsData.response)) return "ERR_STEAMAPI";
-
-  const details = detailsData.response.publishedfiledetails[0];
-  if (details.result !== 1) return "ERR_MAPID";
-
-  // Return the raw data if requested
-  if (raw) return details;
+  // Return the raw data if requested or return error
+  if (raw || typeof details === "string") return details;
 
   // Fetch the author details
   const authorRequest = await fetch(`${STEAM_API}/ISteamUser/GetPlayerSummaries/v2/?key=${CONFIG.API_KEY.STEAM}&steamids=${details.creator}`);
