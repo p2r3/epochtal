@@ -8,7 +8,7 @@ const weights = require(`${CONFIG.DIR.SECRETS}/weights.js`);
 
 const weeklog = require("./weeklog.js");
 const archive = require("./archive.js");
-const {getWorkshopData} = require("../common.js");
+const {getWorkshopData, STEAM_API} = require("../common.js");
 
 /**
  * Fetches the entity lump for a given map and ignores everything else.
