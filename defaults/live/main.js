@@ -130,6 +130,113 @@ function processVersionCheck () {
   }
 }
 
+/**
+ * Processes individual lines of Portal 2 console output
+ *
+ * @param {string} line A single complete line of console output
+ */
+function processConsoleLine (line) {
+  // Process WebSocket token
+  if (line.indexOf("ws : ") === 0) {
+    webSocketToken = line.slice(5, -1);
+    return;
+  }
+
+  // The events below this only apply to connected clients
+  if (!webSocket) return;
+
+  // Process map start event
+  if (expectRoundStart && line.indexOf("elStart") !== -1) {
+    expectRoundStart = false;
+    // Reset run timer
+    totalTicks = 0;
+    lastTicksReport = 0;
+    // Make saves to prevent accidentally loading into a different map
+    sendToConsole(gameSocket, "save quick");
+    sendToConsole(gameSocket, "save autosave");
+    return;
+  };
+
+  // Process map finish event
+  if (line.indexOf("elFinish ") === 0) {
+    // Don't process time updates from spectators
+    if (amSpectator) return;
+    // Add run finish tick report to running tick total
+    totalTicks += parseInt(line.slice(9));
+    // Close the map after the run has finished
+    sendToConsole(gameSocket, "disconnect");
+    sendToConsole(gameSocket, "echo;echo Round finished.");
+    sendToConsole(gameSocket, "echo \"Final time: " + (totalTicks / 30).toFixed(3) + " seconds.\";echo");
+    // Clear current map to indicate that we're not in a run anymore
+    lastRunMap = runMap;
+    runMap = null;
+    // Send the finishRun event
+    const success = ws.send(webSocket, '{"type":"finishRun","value":{"time":'+ (totalTicks * 2) +',"portals":0}}');
+    // Disconnect from socket on failure
+    if (!success) {
+      sendToConsole(gameSocket, "echo Failed to send finishRun event.");
+      sendToConsole(gameSocket, "echo Please reconnect to the lobby with a new token.");
+      ws.disconnect(webSocket);
+      webSocket = null;
+    }
+  }
+
+  // Process timer updates from VScript
+  if (line.indexOf("spec_goto_tick ") === 0) {
+    // Don't process time updates from spectators
+    if (amSpectator) return;
+    // Parse the fragment of the string containing the tick count
+    const ticks = parseInt(line.slice(15));
+    // Tick count decrease marks a load - add previous report to total
+    if (ticks < lastTicksReport) totalTicks += lastTicksReport;
+    // Update previous report
+    lastTicksReport = ticks;
+  }
+
+  // Send spectator position output to server for spectators
+  if (line.indexOf("spec_goto ") === 0) {
+    ws.send(webSocket, '{"type":"spectate","player":"'+ line.slice(10).trim() +'","portals":"'+ spectatorData.portals +'","cube":"'+ spectatorData.cube +'"}');
+    return;
+  }
+  // Update last known position of portals
+  if (line.indexOf("spec_goto_portals ") === 0) {
+    spectatorData.portals = line.slice(18).trim();
+    return;
+  }
+  // Update last known position of the nearest cube
+  if (line.indexOf("spec_goto_cube ") === 0) {
+    spectatorData.cube = line.slice(15).trim();
+    return;
+  }
+
+  // The events below this only apply to spectators
+  if (!amSpectator) return;
+
+  // Handle switching spectated player
+  if (line.indexOf("Switching spectated player...") === 0) {
+    spectatorData.target ++;
+    if (spectatorData.target >= spectatorData.targets.length) {
+      spectatorData.target = 0;
+    }
+    // Close previous player's portals
+    sendToConsole("ent_fire prop_portal SetActivatedState 0");
+
+    return;
+  }
+
+  // Ensure that godmode remains on while spectating
+  if (line.indexOf("godmode ON") === 0) {
+    spectatorData.god = true;
+    return;
+  }
+  if (line.indexOf("godmode OFF") === 0) {
+    sendToConsole(gameSocket, "god");
+    return;
+  }
+
+}
+
+
 // Store the last partially received line until it can be processed
 var lastLine = "";
 
@@ -169,104 +276,16 @@ function processConsoleOutput () {
   }
 
   // Parse output line-by-line
-  const lines = lastLine.split("\n");
+  try {
+    var lines  = lastLine.split("\n");
+  } catch (_) {
+    return;
+  }
   lines.forEach(function (line) {
-
-    // Process WebSocket token
-    if (line.indexOf("ws : ") === 0) {
-      webSocketToken = line.slice(5, -1);
-      return;
-    }
-
-    // The events below this only apply to connected clients
-    if (!webSocket) return;
-
-    // Process map start event
-    if (expectRoundStart && line.indexOf("elStart") !== -1) {
-      expectRoundStart = false;
-      // Reset run timer
-      totalTicks = 0;
-      lastTicksReport = 0;
-      // Make saves to prevent accidentally loading into a different map
-      sendToConsole(gameSocket, "save quick");
-      sendToConsole(gameSocket, "save autosave");
-      return;
-    };
-
-    // Process map finish event
-    if (line.indexOf("elFinish ") === 0) {
-      // Don't process time updates from spectators
-      if (amSpectator) return;
-      // Add run finish tick report to running tick total
-      totalTicks += parseInt(line.slice(9));
-      // Close the map after the run has finished
-      sendToConsole(gameSocket, "disconnect");
-      sendToConsole(gameSocket, "echo;echo Round finished.");
-      sendToConsole(gameSocket, "echo \"Final time: " + (totalTicks / 30).toFixed(3) + " seconds.\";echo");
-      // Clear current map to indicate that we're not in a run anymore
-      lastRunMap = runMap;
-      runMap = null;
-      // Send the finishRun event
-      const success = ws.send(webSocket, '{"type":"finishRun","value":{"time":'+ (totalTicks * 2) +',"portals":0}}');
-      // Disconnect from socket on failure
-      if (!success) {
-        sendToConsole(gameSocket, "echo Failed to send finishRun event.");
-        sendToConsole(gameSocket, "echo Please reconnect to the lobby with a new token.");
-        ws.disconnect(webSocket);
-        webSocket = null;
-      }
-    }
-
-    // Process timer updates from VScript
-    if (line.indexOf("spec_goto_tick ") === 0) {
-      // Don't process time updates from spectators
-      if (amSpectator) return;
-      // Parse the fragment of the string containing the tick count
-      const ticks = parseInt(line.slice(15));
-      // Tick count decrease marks a load - add previous report to total
-      if (ticks < lastTicksReport) totalTicks += lastTicksReport;
-      // Update previous report
-      lastTicksReport = ticks;
-    }
-
-    // Send spectator position output to server for spectators
-    if (line.indexOf("spec_goto ") === 0) {
-      ws.send(webSocket, '{"type":"spectate","player":"'+ line.slice(10).trim() +'","portals":"'+ spectatorData.portals +'","cube":"'+ spectatorData.cube +'"}');
-      return;
-    }
-    // Update last known position of portals
-    if (line.indexOf("spec_goto_portals ") === 0) {
-      spectatorData.portals = line.slice(18).trim();
-      return;
-    }
-    // Update last known position of the nearest cube
-    if (line.indexOf("spec_goto_cube ") === 0) {
-      spectatorData.cube = line.slice(15).trim();
-      return;
-    }
-
-    // The events below this only apply to spectators
-    if (!amSpectator) return;
-
-    // Handle switching spectated player
-    if (line.indexOf("Switching spectated player...") === 0) {
-      spectatorData.target ++;
-      if (spectatorData.target >= spectatorData.targets.length) {
-        spectatorData.target = 0;
-      }
-      // Close previous player's portals
-      sendToConsole("ent_fire prop_portal SetActivatedState 0");
-
-      return;
-    }
-
-    // Ensure that godmode remains on while spectating
-    if (line.indexOf("godmode ON") === 0) {
-      spectatorData.god = true;
-      return;
-    }
-    if (line.indexOf("godmode OFF") === 0) {
-      sendToConsole(gameSocket, "god");
+    try{
+      processConsoleLine(line);
+    } catch (_) {
+      // Sometimes console has non-printable characters on which duktape fails
       return;
     }
 
@@ -513,8 +532,12 @@ function processWebSocket () {
 // Run each processing function on an interval
 while (true) {
   processVersionCheck();
-  processConsoleOutput();
-  processWebSocket();
+  try {
+    processConsoleOutput();
+  } catch (_) {}
+  try {
+    processWebSocket();
+  } catch (_) {}
 
   // If we're not connected yet, we can afford a slower loop
   if (!webSocket) sleep(500);

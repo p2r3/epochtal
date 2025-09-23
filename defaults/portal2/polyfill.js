@@ -31,6 +31,14 @@ var game = {
   connect () {
     return 1;
   },
+  disconnect () {
+    return 0;
+  },
+  status () {
+    // this gets called in read() or send() failed. I don't know how to handle it in spplice 2, se let's assume stuff
+    // already hit the fan and lie that the game is not running and let script just exit by the logic that calls this
+    return false;
+  },
   // Treat the console data string as a FIFO buffer
   read (_, n = 1024) {
     const out = __pfConsoleData.slice(0, n);
