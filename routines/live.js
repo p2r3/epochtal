@@ -103,7 +103,7 @@ async function createCOTD (context) {
       const mapString = `[**${sanitizeForDiscord(mapName)}** by **${sanitizeForDiscord(mapAuthor)}**](${mapLink})`;
 
       // Announce the beginning of COTD on Discord
-      await discord(["live", `${CONFIG.DISCORD.ROLE.COTD}The [Chamber Of The Day](<https://epochtal.p2r3.com/live>) is starting!\n${mapString}`], context);
+      await discord(["live", `${CONFIG.DISCORD.ROLE.COTD} The [Chamber Of The Day](<https://epochtal.p2r3.com/live>) is starting!\n${mapString}`], context);
 
     } catch {
       setTimeout(trySetMap, 3000);

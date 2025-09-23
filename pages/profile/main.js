@@ -13,7 +13,7 @@ function openSteamProfile () {
 var profilePageInit = async function () {
 
   // Change the login button to a logout button if the user is logged in
-  const whoami = await handleWhoami()
+  const whoami = await handleWhoami();
 
   const users = await (await fetch("/api/users/get")).json();
 

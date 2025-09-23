@@ -39,8 +39,8 @@ function sanitizeForDiscord (string) {
   return string.replaceAll(/[*@_~`#[\]()\-.>\\:]/g, "\\$&")
     // Due to bug in discord backslashing @everyone and @here still results in a ping. To fix this,
     // add a Zero-Width Space between @ and everyone or here.
-    .replaceAll("@everyone", "@​everyone")
-    .replaceAll("@here", "@​here");
+    .replaceAll("@everyone", "@\u200Beveryone")
+    .replaceAll("@here", "@\u200Bhere");
 }
 
 module.exports = { getWorkshopData, sanitizeForDiscord, STEAM_API };

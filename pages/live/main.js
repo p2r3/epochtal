@@ -7,7 +7,7 @@ var lobbies;
 var lobbyListInit = async function () {
 
   // Change the login button to a logout button if the user is logged in
-  const whoami = await handleWhoami()
+  const whoami = await handleWhoami();
 
   const users = await (await fetch("/api/users/get")).json();
   const avatarCache = {};
@@ -135,7 +135,7 @@ var lobbyListInit = async function () {
     history.replaceState(null, document.title, "/live/");
   }
 
-  handleCliPopup()
+  handleCliPopup();
 
 };
 lobbyListInit();
