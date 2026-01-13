@@ -125,6 +125,7 @@ async function releaseMap (context) {
 
   // Load the curated workshop map set, pick some for voting
   const allmaps = await Bun.file(`${CONFIG.DIR.DATA}/maps.json`).json();
+  const VOTING_MAPS_COUNT = CONFIG.VOTING_MAPS_COUNT;
 
   UtilPrint("epochtal(releaseMap): Building voting map list...");
   const votingmaps = [];
@@ -135,7 +136,7 @@ async function releaseMap (context) {
       if (votingmaps.find(curr => curr.author === details.author)) continue;
 
       votingmaps.push(details);
-      if (votingmaps.length === CONFIG.VOTING_MAPS_COUNT) break;
+      if (votingmaps.length === VOTING_MAPS_COUNT) break;
     } catch (e) {
       UtilPrint(`epochtal(releaseMap): Error on voting map ${allmaps[i].id}, skipping...`);
       continue;
@@ -199,15 +200,15 @@ async function releaseMap (context) {
   let newmap;
   try {
 
-    const totalVotes = Array(CONFIG.VOTING_MAPS_COUNT).fill(0);
-    const totalUpvotes = Array(CONFIG.VOTING_MAPS_COUNT).fill(0);
-    const totalDownvotes = Array(CONFIG.VOTING_MAPS_COUNT).fill(0);
+    const totalVotes = Array(VOTING_MAPS_COUNT).fill(0);
+    const totalUpvotes = Array(VOTING_MAPS_COUNT).fill(0);
+    const totalDownvotes = Array(VOTING_MAPS_COUNT).fill(0);
 
     for (const steamid in context.data.week.votes) {
 
       const curr = context.data.week.votes[steamid];
 
-      for (let i = 0; i < CONFIG.VOTING_MAPS_COUNT; i ++) {
+      for (let i = 0; i < VOTING_MAPS_COUNT; i ++) {
         if (curr[i] > 0) totalUpvotes[i] += curr[i];
         else if (curr[i] < 0) totalDownvotes[i] -= curr[i];
         totalVotes[i] += curr[i];
@@ -216,7 +217,7 @@ async function releaseMap (context) {
     }
 
     let highestVoted = 0;
-    for (let i = 1; i < CONFIG.VOTING_MAPS_COUNT; i ++) {
+    for (let i = 1; i < VOTING_MAPS_COUNT; i ++) {
       if (totalVotes[i] > totalVotes[highestVoted]) {
         highestVoted = i;
       }
@@ -359,7 +360,7 @@ async function releaseMap (context) {
   await Bun.write(context.file.log, "");
 
   // Announce the new week on Discord
-  await discord(["announce", CONFIG.DISCORD.ROLE.ANNOUNCE + " " + sanitizeForDiscord(announceText)], context);
+  await discord(["announce", CONFIG.DISCORD.PING.ANNOUNCE + " " + sanitizeForDiscord(announceText)], context);
 
   return "SUCCESS";
 

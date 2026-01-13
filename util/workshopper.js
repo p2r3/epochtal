@@ -16,7 +16,7 @@ async function getData (mapid, raw) {
   // Fetch the map details
   const details = await getWorkshopData(mapid);
 
-  // Return the raw data if requested or return error
+  // Return the raw data if requested or return error if getWorkshopData returned an error string
   if (raw || typeof details === "string") return details;
 
   // Fetch the author details

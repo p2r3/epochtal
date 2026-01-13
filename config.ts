@@ -120,17 +120,17 @@ export const CONFIG: object = {
             LIVE: requireEnv("DISCORD_CHANNEL_LIVE")
         },
         /**
-         * The Discord roles used for this deployment
+         * The Discord pings used for this deployment
          */
-        ROLE: {
+        PING: {
             /**
-             * The ID of the Discord role to ping for announcements
+             * The ping for announcements
              */
-            ANNOUNCE: process.env.DISCORD_ROLE_ANNOUNCE ? "<@&" + process.env.DISCORD_ROLE_ANNOUNCE + ">" : "@everyone",
+            ANNOUNCE: process.env.DISCORD_PING_ANNOUNCE ?? "@everyone",
             /**
-             * The ID of the Discord role to ping for Chamber Of The Day
+             * The ping for Chamber Of The Day
              */
-            COTD: process.env.DISCORD_ROLE_COTD ? "<@&" + process.env.DISCORD_ROLE_COTD + ">" : "@everyone"
+            COTD: process.env.DISCORD_PING_COTD ?? "@everyone"
         },
     },
     /**
@@ -157,5 +157,5 @@ export const CONFIG: object = {
     /**
      * When the Chamber Of The Day should be released
      */
-    COTD_CRON: process.env.COTD_CRON ?? "0 0 19 * * 6",
+    COTD_CRON: process.env.COTD_CRON ?? "0 0 19 * * 6"
 };

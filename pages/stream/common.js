@@ -1,5 +1,5 @@
 /**
- * Requests a bunch of stuff for the ui to render and initializes WebSocket connection
+ * Requests leaderboard, config and users info for the ui to render and initializes WebSocket connection
  *
  * @returns {Promise<{leaderboard: Object, config: Object, users: Object, controllerSocket: WebSocket}>}
  */
@@ -22,6 +22,7 @@ async function initialSetup() {
 
   /**
    * Sends WebSocket events to the stream controller event topic, which the UI, game, and controller listen to
+   *
    * @param {unknown} data Data to send, converted to a JSON string
    */
   window.sendToController = async function (data) {
