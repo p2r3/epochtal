@@ -133,6 +133,14 @@ profilesdir.forEach(steamid => {
   epochtal.data.profiles[steamid] = require(dataPath);
 });
 
+const createJsonResponse = function (object) {
+  return new Response(JSON.stringify(object), {
+    headers: {
+      "Conent-Type": "application/json"
+    }
+  });
+}
+
 /**
  * This function handles all requests made to the web server.
  *
@@ -169,16 +177,16 @@ const fetchHandler = async function (req) {
     } catch (err) {
       // If a util throws an expected error, pass just its message to the client
       if (err instanceof UtilError) {
-        return Response.json(err.message);
+        return createJsonResponse(err.message);
       }
       // Otherwise, it's probably much worse, so pass the full stack
       err = new UtilError("ERR_UNKNOWN: " + err.message, args, epochtal, urlPath[1], err.stack);
-      return Response.json(err.toString(), { status: 500 });
+      return createJsonResponse(err.toString(), { status: 500 });
     }
 
     // Make sure the response is in the correct format before returning it
     if (output instanceof Response) return output;
-    return Response.json(output);
+    return createJsonResponse(output);
 
   }
 
@@ -186,14 +194,14 @@ const fetchHandler = async function (req) {
   if (urlPath[0] === "util" || urlPath[0] === "admin") {
 
     const user = await apis.users(["whoami"], req);
-    if (!user) return Response("ERR_LOGIN", { status: 403 });
-    if (!user.epochtal.admin) return Response("ERR_PERMS", { status: 403 });
+    if (!user) return new Response("ERR_LOGIN", { status: 403 });
+    if (!user.epochtal.admin) return new Response("ERR_PERMS", { status: 403 });
 
   }
 
   // Handle utility calls
   if (urlPath[0] === "util") {
-    if (req.method !== "POST") return Response("ERR_METHOD", { status: 405 });
+    if (req.method !== "POST") return new Response("ERR_METHOD", { status: 405 });
 
     // Get the utility to call
     const util = utils[urlPath[1]];
@@ -201,7 +209,7 @@ const fetchHandler = async function (req) {
     const args = urlPath.slice(2).map(decodeURIComponent);
 
     // Return 404 if the utility does not exist
-    if (!util) return Response("ERR_UTIL", { status: 404 });
+    if (!util) return new Response("ERR_UTIL", { status: 404 });
 
     // Try to parse all arguments as JSON. Leave arguments that fail JSON decode as a string.
     for (let i = 0; i < args.length; i ++) {
@@ -219,10 +227,10 @@ const fetchHandler = async function (req) {
       if (!(err instanceof UtilError)) {
         err = new UtilError("ERR_UNKNOWN: " + err.message, args, epochtal, urlPath[1], err.stack);
       }
-      return Response.json(err.toString());
+      return createJsonResponse(err.toString());
     }
 
-    return Response.json(result);
+    return createJsonResponse(output);
 
   }
 
@@ -231,10 +239,10 @@ const fetchHandler = async function (req) {
 
     const path = `${epochtal.file.spplice.repository}/${urlPath[0]}`;
     if (!fs.existsSync(path) || !urlPath[0]) {
-      return Response.json(await utils.spplice(["get"]));
+      return createJsonResponse(await utils.spplice(["get"]));
     }
 
-    return Response(Bun.file(path));
+    return new Response(Bun.file(path));
 
   }
 
@@ -246,14 +254,14 @@ const fetchHandler = async function (req) {
 
   // Detects probable path traversal attempts, better safe than sorry
   if (path.normalize(pathDecoded) !== pathDecoded) {
-    return Response(file404, { status: 404 });
+    return new Response(file404, { status: 404 });
   }
 
   let outputFilePath = "pages" + pathDecoded;
 
   // Check if the file exists
   if (!fs.existsSync(outputFilePath)) {
-    return Response(file404, { status: 404 });
+    return new Response(file404, { status: 404 });
   }
   // Fetch the index.html file if the path is pointing to a directory
   if (fs.lstatSync(outputFilePath).isDirectory()) {
@@ -264,11 +272,11 @@ const fetchHandler = async function (req) {
 
   // Check if the file is empty
   if (file.size === 0) {
-    return Response(file404, { status: 404 });
+    return new Response(file404, { status: 404 });
   }
 
   // Finally, if all checks pass, return the file to the client
-  return Response(file);
+  return new Response(file);
 
 };
 
