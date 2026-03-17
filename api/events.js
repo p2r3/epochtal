@@ -22,15 +22,15 @@ module.exports = async function (args, request) {
 
       // Check if the given event exists
       const eventData = await events(["get", event]);
-      if (!eventData) return Response("ERR_NAME", { status: 404 });
+      if (!eventData) return new Response("ERR_NAME", { status: 404 });
 
       // Make sure the user is logged in
       const user = await api_users(["whoami"], request);
-      if (!user) return Response("ERR_LOGIN", { status: 403 });
+      if (!user) return new Response("ERR_LOGIN", { status: 403 });
 
       // Check if the user has permission to access the event
       if (!(await eventData.auth(user.steamid))) {
-        return Response("ERR_PERMS", { status: 403 });
+        return new Response("ERR_PERMS", { status: 403 });
       }
 
       // Calculate a unique auth token

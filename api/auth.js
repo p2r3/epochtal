@@ -77,7 +77,7 @@ module.exports = async function (args, request) {
 
       // Redirect the user to the Steam login page
       const url = await steam.getRedirectUrl();
-      return Response.redirect(url, 302);
+      return new Response.redirect(url, 302);
 
     }
 

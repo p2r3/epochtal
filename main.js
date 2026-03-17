@@ -230,7 +230,7 @@ const fetchHandler = async function (req) {
       return createJsonResponse(err.toString());
     }
 
-    return createJsonResponse(output);
+    return createJsonResponse(result);
 
   }
 
