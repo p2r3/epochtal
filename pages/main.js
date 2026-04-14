@@ -200,6 +200,11 @@ var homepageInit = async function () {
 
     }
 
+    // Add Random Maps Ranked leaderboard to player profiles category dropdown.
+    // Note: not sure if it should be here? While this does seem like the
+    // only sensible spot, this list is generally reserved for the weekly categories.
+    outputPlayers += `<option value="random_ranked">Random Maps Ranked</option>`;
+
     leaderboardCategorySelect.innerHTML = outputLeaderboard;
     playersCategorySelect.innerHTML = outputPlayers;
 
@@ -901,6 +906,8 @@ var homepageInit = async function () {
       let pointsString = "Points hidden";
       const outputPoints = Math.round(user.points[category]);
       if (user.points[category] !== -Infinity) pointsString = `${outputPoints} point${outputPoints === 1 ? "" : "s"}`;
+      // HACK: For Random Maps Ranked, don't show players who've never played it
+      else if (category === "random_ranked") continue;
 
       output += `<a href="${window.location.protocol}//${window.location.host}/profile/#${user.steamid}" target="_blank" style="color:white;text-decoration:none"><div class="lb-entry lb-rank${placement}">
         <p class="lb-text">${username}</p>

@@ -93,6 +93,14 @@ async function updatePlayerList () {
     const run = leaderboard.find(c => c.steamid === steamid);
     // Get the player's win count
     const wins = lobby.data.players[steamid].wins || 0;
+    // Generate displayed text for win count
+    let winsText = `${wins} win${wins === 1 ? "" : "s"}`;
+    // In Random Maps Ranked mode, replace win count with player Elo
+    if (lobby.listEntry.mode === "random_ranked") {
+      const points = Math.round(users[steamid].points.random_ranked);
+      if (!points) winsText = `No points yet`;
+      else winsText = `${points} point${points === 1 ? "" : "s"}`;
+    }
 
     // Get the player's ready state
     const ready = lobby.data.players[steamid].ready;
@@ -121,7 +129,7 @@ async function updatePlayerList () {
       onclick="transferHost('${steamid}')"
       ` : "")}
   >
-  <p class="lobby-player-name">${username}${run ? ` - ${ticksToString(run.time)}` : ""}<br><span class="lobby-player-wins">${wins} win${wins === 1 ? "" : "s"}</span></p>
+  <p class="lobby-player-name">${username}${run ? ` - ${ticksToString(run.time)}` : ""}<br><span class="lobby-player-wins">${winsText}</span></p>
   <i
     class="${isSpectator ? "fa-regular fa-eye" : (ready ? (ingame ? "fa-solid fa-circle-play" : "fa-solid fa-circle-check") : "fa-regular fa-circle")} lobby-player-ready"
     onmouseover="showTooltip('${isSpectator ? "Spectating" : (ready ? (ingame ? "Playing" : "Ready") : "Not ready")}')"
@@ -407,6 +415,7 @@ async function lobbyEventHandler (event) {
       if (lobby.listEntry.mode === "random_ranked") {
         updateLobbyMap();
       }
+      updatePlayerList();
 
       // Change the lobby mode text
       const modeString = lobbyModeStrings[lobby.listEntry.mode];
@@ -510,6 +519,10 @@ async function lobbyEventHandler (event) {
         if (run.placement !== 1) continue;
         if (!(run.steamid in lobby.data.players)) continue;
         lobby.data.players[run.steamid].wins ++;
+      }
+      // In Random Maps Ranked mode, re-fetch player list to update Elo
+      if (lobby.listEntry.mode === "random_ranked") {
+        users = await (await fetch("/api/users/get")).json();
       }
       updatePlayerList();
 

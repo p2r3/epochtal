@@ -4,6 +4,7 @@ const users = require("./users.js");
 const events = require("./events.js");
 const workshopper = require("./workshopper.js");
 const leaderboard = require("./leaderboard.js");
+const points = require("./points.js");
 
 const [LOBBY_IDLE, LOBBY_INGAME] = [0, 1];
 
@@ -124,7 +125,48 @@ async function handleStateChange (id, context, init = false) {
 
   switch (mode) {
     case "ffa": break;
-    case "random_ranked":
+    case "random_ranked": {
+      // When a match finishes, calculate new Elo for all players
+      if (state === LOBBY_IDLE && !init) {
+        // Get user data
+        const usersFile = context.file.users;
+        const usersData = context.data.users;
+        // Get leaderboard of runs
+        const lb = await leaderboard(["get", "lobby"], dataEntry.context);
+        // Calculate new Elo deltas for each matchup
+        const deltas = new Map(); // <steamid, elo delta>
+        for (let i = 0; i < lb.length; i ++) {
+          const selfID = lb[i].steamid;
+          // Don't count spectators in Elo calculation
+          if (dataEntry.spectators.includes(selfID)) continue;
+          // Get current Elo, assume 1000 if unset
+          const selfPoints = usersData[selfID].points.random_ranked || 1000
+          for (let j = 0; j < lb.length; j ++) {
+            if (i === j) continue;
+            const opponentID = lb[j].steamid;
+            // Don't count spectators in Elo calculation
+            if (dataEntry.spectators.includes(opponentID)) continue;
+            const opponentPoints = usersData[opponentID].points.random_ranked || 1000;
+            const outcome = (lb[i].time < lb[j].time) ? 1 : (lb[i].time === lb[j].time ? 0 : -1);
+            const delta = await points(["delta", selfPoints, opponentPoints, outcome]);
+            if (!deltas.has(selfID)) deltas.set(selfID, delta);
+            else deltas.set(selfID, deltas.get(selfID) + delta);
+          }
+        }
+        // Apply deltas to user profiles, scaled by player count
+        for (const player of listEntry.players) {
+          if (!deltas.has(player)) continue;
+          // Start new players at 1000 Elo
+          const currentPoints = usersData[player].points.random_ranked || 1000;
+          // Scale applied delta to (player count - 1)
+          const scaledDelta = deltas.get(player) / (deltas.size - 1);
+          const newPoints = Number((currentPoints + scaledDelta).toFixed(2));
+          usersData[player].points.random_ranked = newPoints;
+        }
+        if (usersFile) Bun.write(usersFile, JSON.stringify(usersData));
+      }
+      // Fall through to "random" case
+    }
     case "random": {
       if (state === LOBBY_INGAME) break;
       // Pick a random map whenever the lobby becomes idle
@@ -836,8 +878,8 @@ module.exports = async function (args, context = epochtal) {
           const previousState = dataEntry.state;
           dataEntry.state = LOBBY_IDLE;
           if (previousState === LOBBY_INGAME) {
-            await events(["send", eventName, { type: "lobby_finish" }], context);
             await handleStateChange(lobbyid, context);
+            await events(["send", eventName, { type: "lobby_finish" }], context);
           }
         }
 

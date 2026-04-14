@@ -398,6 +398,10 @@ module.exports = async function (args, context = epochtal) {
 
     }
 
+    case "delta": {
+      return calculateEloDelta(...args.slice(1)).player;
+    }
+
   }
 
   throw new UtilError("ERR_COMMAND", args, context);
