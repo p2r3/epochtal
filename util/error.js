@@ -30,7 +30,7 @@ module.exports = class UtilError extends Error {
 
     // Extract the utility name from the stack trace
     if (util) this.util = util;
-    else this.util = this.stack.split("util/")[2].split(".js:")[0];
+    else this.util = this.stack.split("util/").at(-1).split(".js:")[0];
 
     if (stack) this.stack = stack;
 
