@@ -90,7 +90,9 @@ async function updatePlayerList () {
     }
 
     // Get the player's last run in this mode, if they have one
-    const run = leaderboard.find(c => c.steamid === steamid);
+    let run = leaderboard.find(c => c.steamid === steamid);
+    // Don't display times longer than 24 hours (special case)
+    if (run && run.time >= 24 * 60 * 60 * 60) run = null;
     // Get the player's win count
     const wins = lobby.data.players[steamid].wins || 0;
     // Generate displayed text for win count
@@ -170,29 +172,35 @@ async function updateLobbyMap () {
 
   const lobbyMap = lobby.data.context.map;
 
-  const hidden = lobby.listEntry.mode === "random_ranked" && lobby.data.state === LOBBY_IDLE;
+  const hidden = lobby.listEntry.mode === "random_ranked";
 
   // If no map is selected, display a placeholder
   if (!lobbyMap) {
     lobbyMapContainer.innerHTML = `
       <p class="votes-text">No map selected</p>
-      <button id="lobby-map-button" onclick="selectLobbyMap()" ${amHost ? "" : `style="display: none"`}>Select</button>
+      <button id="lobby-map-button" onclick="selectLobbyMap()" ${(amHost && !hidden) ? "" : `style="display: none"`}>Select</button>
     `;
     return;
   }
 
+  const mapLink = hidden ? "" : `https://steamcommunity.com/sharedfiles/filedetails/?id=${lobbyMap.id}`;
+
   // Display the map thumbnail and title
   lobbyMapContainer.innerHTML = `
-    <a href="https://steamcommunity.com/sharedfiles/filedetails/?id=${lobbyMap.id}" target="_blank">
+    <a href="${mapLink || "javascript:"}" ${mapLink ? `target="_blank"` : ""}>
       <img class="votes-image" alt="thumbnail" src="${lobbyMap.thumbnail}?impolicy=Letterbox&imw=640&imh=360">
       <p class="votes-text">
         ${hidden ? "Title hidden" : lobbyMap.title}<br>
         <i class="font-light">${hidden ? "author hidden" : `by ${lobbyMap.author}`}</i>
       </p>
     </a>
-    <button id="lobby-map-button" onclick="selectLobbyMap()" ${amHost ? "" : `style="display: none"`}>Select</button>
+    <button id="lobby-map-button" onclick="selectLobbyMap()" ${(amHost && !hidden) ? "" : `style="display: none"`}>Select</button>
     <p id="lobby-map-history-button"><a href="javascript:toggleMapHistoryWindow()">See map history</a></p>
   `;
+
+  if (!lobby.data.context.maps?.length) {
+    document.querySelector("#lobby-map-history-button").style.display = "none";
+  }
 
 }
 
@@ -213,6 +221,8 @@ function updateLobbyHost () {
     document.querySelector("#lobby-force-button")
   ];
 
+  const hidden = lobby.listEntry.mode === "random_ranked";
+
   if (amHost) {
     for (const button of grayedButtons) {
       button.style.opacity = 1.0;
@@ -221,6 +231,7 @@ function updateLobbyHost () {
       button.removeAttribute("onmouseleave");
     }
     for (const button of hiddenButtons) {
+      if (hidden) continue;
       button.style.display = "inline";
     }
   } else {
@@ -388,7 +399,10 @@ async function lobbyEventHandler (event) {
       lobby.data.context.map = data.newMap;
       updateLobbyMap();
       // Update lobby map history
-      lobby.data.context.maps.push(data.newMap);
+      if (data.previousMap) {
+        lobby.data.context.maps.push(data.previousMap);
+        document.querySelector("#lobby-map-history-button").style.display = "unset";
+      }
 
       // Set all player ready states to false
       for (const steamid in lobby.data.players) lobby.data.players[steamid].ready = false;
@@ -412,10 +426,16 @@ async function lobbyEventHandler (event) {
       lobby.listEntry.mode = data.newMode;
 
       // In Random Maps Ranked mode, make sure map details are hidden
+      // and disable the force-start/abort button.
+      const forceButton = document.querySelector("#lobby-force-button");
       if (lobby.listEntry.mode === "random_ranked") {
         updateLobbyMap();
+        forceButton.style.display = "none";
+      } else {
+        forceButton.style.display = "inline";
       }
       updatePlayerList();
+      updateLobbyHost();
 
       // Change the lobby mode text
       const modeString = lobbyModeStrings[lobby.listEntry.mode];
@@ -839,7 +859,7 @@ async function lobbyInit () {
 
   }
 
-    // Handle the lobby change mode button
+  // Handle the lobby change mode button
   window.changeLobbyMode = function () {
 
     // Exit early if we don't have host permissions
@@ -1031,7 +1051,7 @@ async function lobbyInit () {
     }
 
     switch (requestData) {
-      case "SUCCESS": return;
+      case "SUCCESS": return true;
 
       case "ERR_LOGIN": return showPopup("Not logged in", "Please log in via Steam before editing lobby details.", POPUP_ERROR);
       case "ERR_STEAMID": return showPopup("Unrecognized user", "Your SteamID is not present in the users database. WTF?", POPUP_ERROR);
@@ -1053,13 +1073,16 @@ async function lobbyInit () {
   lobbyAutoReadyButton.style.opacity = 0.5;
 
   // Toggles the auto-ready feature
-  window.toggleAutoReady = function () {
+  window.toggleAutoReady = async function () {
     autoReady = !autoReady;
     if (autoReady) {
+      if (!readyState && lobby.data.context.map) {
+        // Exit early if readying doesn't succeed
+        if (!(await window.toggleReadyState())) return;
+      }
       showTooltip("Auto-ready: Enabled");
       lobbyAutoReadyButton.onmouseover = () => showTooltip("Auto-ready: Enabled");
       lobbyAutoReadyButton.style.opacity = 1;
-      if (!readyState && lobby.data.context.map) window.toggleReadyState();
     } else {
       showTooltip("Auto-ready: Disabled");
       lobbyAutoReadyButton.onmouseover = () => showTooltip("Auto-ready: Disabled");

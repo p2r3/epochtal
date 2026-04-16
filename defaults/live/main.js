@@ -25,6 +25,24 @@ function pathExists (path) {
   return true;
 }
 
+/**
+ * Converts demo ticks to a string representation
+ * @param {number} t The number of ticks
+ * @returns {string} The formatted string
+ */
+function ticksToString (t) {
+  // Split the ticks into hours, minutes, and seconds
+  var output = "";
+  const hrs = Math.floor(t / 216000),
+    min = Math.floor(t / 3600),
+    sec = t % 3600 / 60;
+  // Format the output string
+  if (hrs !== 0) output += hrs + ":" + (min % 60 < 10 ? "0" : "") + (min % 60);
+  else if (min !== 0) output += min + ":";
+  if (sec < 10) output += "0";
+  return output + sec.toFixed(3);
+}
+
 do { // Attempt connection with the game's console
   var gameSocket = game.connect();
   sleep(200);
@@ -154,6 +172,7 @@ function processConsoleLine (line) {
     // Make saves to prevent accidentally loading into a different map
     sendToConsole(gameSocket, "save quick");
     sendToConsole(gameSocket, "save autosave");
+    sendToConsole(gameSocket, "save lobby");
     return;
   };
 
@@ -206,6 +225,36 @@ function processConsoleLine (line) {
   // Update last known position of the nearest cube
   if (line.indexOf("spec_goto_cube ") === 0) {
     spectatorData.cube = line.slice(15).trim();
+    return;
+  }
+
+  // Detect blatant cheating
+  const cheater = !amSpectator && (
+    (
+      line.indexOf("Server cvar 'sv_cheats' changed to ") !== -1
+      && parseInt(line.slice(line.indexOf("Server cvar 'sv_cheats' changed to ") + 35)) !== 0
+    )
+    || line.indexOf("noclip ON") !== -1
+    || line.indexOf("godmode ON") !== -1
+    || line.indexOf("Buddha Mode on...") !== -1
+  );
+  if (cheater) {
+    // Close the map and display message to user
+    sendToConsole(gameSocket, "disconnect \"Cheats detected. Your run has been disqualified.\"");
+    sendToConsole(gameSocket, "echo;echo Cheats detected. Run disqualified.");
+    // Clear current map to indicate that we're not in a run anymore
+    lastRunMap = runMap;
+    runMap = null;
+    // Send the finishRun event, with time being 24 hours
+    const dayTicks = (24 * 60 * 60 * 60);
+    const success = ws.send(webSocket, '{"type":"finishRun","value":{"time":' + dayTicks + ',"portals":' + dayTicks + '}}');
+    // Disconnect from socket on failure
+    if (!success) {
+      sendToConsole(gameSocket, "echo Failed to send finishRun event.");
+      sendToConsole(gameSocket, "echo Please reconnect to the lobby with a new token.");
+      ws.disconnect(webSocket);
+      webSocket = null;
+    }
     return;
   }
 
@@ -392,6 +441,22 @@ function processServerEvent (data) {
       sendToConsole(gameSocket, "sv_cheats 0");
       sendToConsole(gameSocket, "alias +remote_view \"\"");
 
+      return;
+    }
+
+    // Print notice of another player's run completion
+    case "lobby_submit": {
+      if (data.value.notify) {
+        const name = data.value.notify;
+        // There are 23 em-spaces, followed by a regular space
+        // This ensures(?) that the text starts two lines below the player's name
+        if (data.value.time === 24 * 60 * 60 * 60) {
+          const time = ticksToString(data.value.time);
+          sendToConsole(gameSocket, 'say "                        ' + name + ' finished in ' + time + '"');
+        } else {
+          sendToConsole(gameSocket, 'say "                        ' + name + ' was disqualified"');
+        }
+      }
       return;
     }
 
