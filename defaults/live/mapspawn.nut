@@ -40,6 +40,14 @@ if (!("Entities" in this)) return;
   }
 };
 
+// Creates saves to prevent users from accidentally loading into a different
+// map, and to help them load back into the current map if they do.
+::__elMakeSaves <- function () {
+  SendToConsole("save quick");
+  SendToConsole("save autosave");
+  SendToConsole("save lobby");
+};
+
 // Called only once on the initial map load
 ::__elSetup <- function () {
 
@@ -88,6 +96,11 @@ if (!("Entities" in this)) return;
     };
     scope["Inputdisplay"] <- scope["InputDisplay"];
   }
+
+  // Create one batch of saves as soon as the run starts
+  ::__elMakeSaves();
+  // Create another batch of saves 1 second after the run has started
+  EntFire("worldspawn", "RunScriptCode", "::__elMakeSaves()", 1.0);
 
 };
 

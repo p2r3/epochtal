@@ -169,10 +169,6 @@ function processConsoleLine (line) {
     // Reset run timer
     totalTicks = 0;
     lastTicksReport = 0;
-    // Make saves to prevent accidentally loading into a different map
-    sendToConsole(gameSocket, "save quick");
-    sendToConsole(gameSocket, "save autosave");
-    sendToConsole(gameSocket, "save lobby");
     return;
   };
 
