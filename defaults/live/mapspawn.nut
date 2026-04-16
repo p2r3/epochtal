@@ -56,14 +56,14 @@ if (!("Entities" in this)) return;
 ::__elLoad <- function () {
   // Store the server time for the start of the current session
   // This is later used as an offset to calculate time since last load
-  ::__elSessionOffset <- Time() * 30.0;
+  ::__elSessionOffset <- Time() * 60.0;
   // Start (or resume) elTick recursion
   ::__elTick();
 };
 
 // Returns the time in ticks since the last load
 ::__elGetSessionTicks <- function () {
-  return (Time() * 30.0 - ::__elSessionOffset).tointeger();
+  return (Time() * 60.0 - ::__elSessionOffset).tointeger();
 };
 
 // Called when the map end condition is reached
@@ -74,7 +74,8 @@ if (!("Entities" in this)) return;
 };
 
 /**
- * This function is called on every console tick, i.e. ~30 times per second.
+ * This function is called on every console tick. In most cases, that's
+ * 30 TPS, except during normal (non-console) pauses, for which it's 60 TPS.
  *
  * We achieve this by recursively running the `script` console command to
  * delay the next execution of the function into the next console tick.
@@ -84,7 +85,13 @@ if (!("Entities" in this)) return;
 
   // If we're paused (engine frame time is zero), decrement session offset
   // This effectively times paused ticks, albeit not entirely accurately
-  if (FrameTime() == 0.0) ::__elSessionOffset --;
+  if (FrameTime() == 0.0) {
+    ::__elSessionOffset --;
+    // The line below will only take effect during console pauses
+    // This effectively double-ticks 30 TPS pauses to normalize all pauses to 60 TPS
+    // TODO: Might cause freeze/crash after long pause! Investigate.
+    EntFire("worldspawn", "RunScriptCode", "if (FrameTime() == 0.0) ::__elSessionOffset--");
+  }
 
   // Print the current session time (the time since the last load)
   // This is monitored in main.js to sum up times of different segments
