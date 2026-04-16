@@ -225,7 +225,7 @@ function processConsoleLine (line) {
   }
 
   // Detect blatant cheating
-  const cheater = !amSpectator && (
+  const cheater = !amSpectator && runMap && (
     (
       line.indexOf("Server cvar 'sv_cheats' changed to ") !== -1
       && parseInt(line.slice(line.indexOf("Server cvar 'sv_cheats' changed to ") + 35)) !== 0
@@ -235,8 +235,8 @@ function processConsoleLine (line) {
     || line.indexOf("Buddha Mode on...") !== -1
   );
   if (cheater) {
-    // Close the map and display message to user
-    sendToConsole(gameSocket, "disconnect \"Cheats detected. Your run has been disqualified.\"");
+    // Display notification of cheats flagged to user
+    sendToConsole(gameSocket, "script ScriptShowHudMessageAll(\"Cheats detected.\\nYour run has been disqualified.\", 10.0)");
     sendToConsole(gameSocket, "echo;echo Cheats detected. Run disqualified.");
     // Clear current map to indicate that we're not in a run anymore
     lastRunMap = runMap;
