@@ -169,10 +169,6 @@ function processConsoleLine (line) {
     // Reset run timer
     totalTicks = 0;
     lastTicksReport = 0;
-    // Make saves to prevent accidentally loading into a different map
-    sendToConsole(gameSocket, "save quick");
-    sendToConsole(gameSocket, "save autosave");
-    sendToConsole(gameSocket, "save lobby");
     return;
   };
 
@@ -229,7 +225,7 @@ function processConsoleLine (line) {
   }
 
   // Detect blatant cheating
-  const cheater = !amSpectator && (
+  const cheater = !amSpectator && runMap && (
     (
       line.indexOf("Server cvar 'sv_cheats' changed to ") !== -1
       && parseInt(line.slice(line.indexOf("Server cvar 'sv_cheats' changed to ") + 35)) !== 0
@@ -239,8 +235,8 @@ function processConsoleLine (line) {
     || line.indexOf("Buddha Mode on...") !== -1
   );
   if (cheater) {
-    // Close the map and display message to user
-    sendToConsole(gameSocket, "disconnect \"Cheats detected. Your run has been disqualified.\"");
+    // Display notification of cheats flagged to user
+    sendToConsole(gameSocket, "script ScriptShowHudMessageAll(\"Cheats detected.\\nYour run has been disqualified.\", 10.0)");
     sendToConsole(gameSocket, "echo;echo Cheats detected. Run disqualified.");
     // Clear current map to indicate that we're not in a run anymore
     lastRunMap = runMap;
@@ -448,13 +444,20 @@ function processServerEvent (data) {
     case "lobby_submit": {
       if (data.value.notify) {
         const name = data.value.notify;
-        // There are 23 em-spaces, followed by a regular space
-        // This ensures(?) that the text starts two lines below the player's name
+        /**
+         * There are 23 em-spaces in the string, followed by a regular space.
+         * This ensures(?) that the text starts two lines below the player's name.
+         *
+         * TODO: The `cmd` prefix here fixes crashes when the command happens to
+         * be called during a load, but it also means that those mid-load messages
+         * are never displayed. Ideally, we'd set up some sort of queue, but that
+         * would require far more testing.
+         */
         if (data.value.time === 24 * 60 * 60 * 60) {
-          sendToConsole(gameSocket, 'say "                        ' + name + ' was disqualified"');
+          sendToConsole(gameSocket, 'cmd say "                        ' + name + ' was disqualified"');
         } else {
           const time = ticksToString(data.value.time);
-          sendToConsole(gameSocket, 'say "                        ' + name + ' finished in ' + time + '"');
+          sendToConsole(gameSocket, 'cmd say "                        ' + name + ' finished in ' + time + '"');
         }
       }
       return;
@@ -597,9 +600,7 @@ function processWebSocket () {
 // Run each processing function on an interval
 while (true) {
   processVersionCheck();
-  try {
-    processConsoleOutput();
-  } catch (_) {}
+  processConsoleOutput();
   try {
     processWebSocket();
   } catch (_) {}
