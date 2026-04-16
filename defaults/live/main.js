@@ -166,12 +166,12 @@ function processConsoleLine (line) {
     // Close the map after the run has finished
     sendToConsole(gameSocket, "disconnect");
     sendToConsole(gameSocket, "echo;echo Round finished.");
-    sendToConsole(gameSocket, "echo \"Final time: " + (totalTicks / 30).toFixed(3) + " seconds.\";echo");
+    sendToConsole(gameSocket, "echo \"Final time: " + (totalTicks / 60).toFixed(3) + " seconds.\";echo");
     // Clear current map to indicate that we're not in a run anymore
     lastRunMap = runMap;
     runMap = null;
     // Send the finishRun event
-    const success = ws.send(webSocket, '{"type":"finishRun","value":{"time":'+ (totalTicks * 2) +',"portals":0}}');
+    const success = ws.send(webSocket, '{"type":"finishRun","value":{"time":'+ totalTicks +',"portals":0}}');
     // Disconnect from socket on failure
     if (!success) {
       sendToConsole(gameSocket, "echo Failed to send finishRun event.");
