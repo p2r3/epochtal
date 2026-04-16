@@ -451,10 +451,10 @@ function processServerEvent (data) {
         // There are 23 em-spaces, followed by a regular space
         // This ensures(?) that the text starts two lines below the player's name
         if (data.value.time === 24 * 60 * 60 * 60) {
+          sendToConsole(gameSocket, 'say "                        ' + name + ' was disqualified"');
+        } else {
           const time = ticksToString(data.value.time);
           sendToConsole(gameSocket, 'say "                        ' + name + ' finished in ' + time + '"');
-        } else {
-          sendToConsole(gameSocket, 'say "                        ' + name + ' was disqualified"');
         }
       }
       return;
