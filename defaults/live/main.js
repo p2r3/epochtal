@@ -593,9 +593,7 @@ function processWebSocket () {
 // Run each processing function on an interval
 while (true) {
   processVersionCheck();
-  try {
-    processConsoleOutput();
-  } catch (_) {}
+  processConsoleOutput();
   try {
     processWebSocket();
   } catch (_) {}
