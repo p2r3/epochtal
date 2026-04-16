@@ -444,13 +444,20 @@ function processServerEvent (data) {
     case "lobby_submit": {
       if (data.value.notify) {
         const name = data.value.notify;
-        // There are 23 em-spaces, followed by a regular space
-        // This ensures(?) that the text starts two lines below the player's name
+        /**
+         * There are 23 em-spaces in the string, followed by a regular space.
+         * This ensures(?) that the text starts two lines below the player's name.
+         *
+         * TODO: The `cmd` prefix here fixes crashes when the command happens to
+         * be called during a load, but it also means that those mid-load messages
+         * are never displayed. Ideally, we'd set up some sort of queue, but that
+         * would require far more testing.
+         */
         if (data.value.time === 24 * 60 * 60 * 60) {
-          sendToConsole(gameSocket, 'say "                        ' + name + ' was disqualified"');
+          sendToConsole(gameSocket, 'cmd say "                        ' + name + ' was disqualified"');
         } else {
           const time = ticksToString(data.value.time);
-          sendToConsole(gameSocket, 'say "                        ' + name + ' finished in ' + time + '"');
+          sendToConsole(gameSocket, 'cmd say "                        ' + name + ' finished in ' + time + '"');
         }
       }
       return;
