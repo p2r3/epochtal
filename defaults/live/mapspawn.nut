@@ -98,7 +98,7 @@ if (!("Entities" in this)) return;
   }
 
   // Create one batch of saves as soon as the run starts
-  ::__elMakeSaves();
+  EntFire("worldspawn", "RunScriptCode", "::__elMakeSaves()", 0.1);
   // Create another batch of saves 1 second after the run has started
   EntFire("worldspawn", "RunScriptCode", "::__elMakeSaves()", 1.0);
 
