@@ -42,14 +42,53 @@ if (!("Entities" in this)) return;
 
 // Called only once on the initial map load
 ::__elSetup <- function () {
+
   // Print run start signature
   printl("elStart");
+
   // Connect outputs to run finish events
   EntFire("@relay_pti_level_end", "AddOutput", "OnTrigger !self:RunScriptCode:__elFinish():0:1");
   EntFire("@changelevel", "AddOutput", "OnChangeLevel !self:RunScriptCode:__elFinish():0:1");
+  ::RequestMapRating <- ::__elFinish;
+
   // Fix BEEmod maps with pellet dependency
   local pelletWarning = Entities.FindByName(null, "@stop_for_pellets");
   if (pelletWarning) pelletWarning.Destroy();
+
+  // End run on PTI restart trigger
+  local restartTrigger = Entities.FindByName(null, "@preview_restart_trigger");
+  if (restartTrigger) {
+    local hookFunction = function ():(restartTrigger) {
+      if (activator == restartTrigger || caller == restartTrigger) {
+        ::__elFinish();
+        return false;
+      }
+      return true;
+    };
+    for (local i = 0; i < 3; i ++) {
+      local commandClass = ["point_clientcommand", "point_servercommand", "point_broadcastclientcommand"][i];
+      local ent = null;
+      while (ent = Entities.FindByClassname(ent, commandClass)) {
+        if (!ent.IsValid()) continue;
+        if (!ent.ValidateScriptScope()) continue;
+        ent.GetScriptScope()["InputCommand"] <- hookFunction;
+        ent.GetScriptScope()["Inputcommand"] <- hookFunction;
+      }
+    }
+  }
+
+  // End run on "End of playtest" text
+  local playtestText = Entities.FindByName(null, "@end_of_playtest_text");
+  if (!playtestText) playtestText = Entities.FindByName(null, "end_of_playtest_text");
+  if (playtestText) if (playtestText.ValidateScriptScope()) {
+    local scope = playtestText.GetScriptScope();
+    scope["InputDisplay"] <- function () {
+      ::__elFinish();
+      return false;
+    };
+    scope["Inputdisplay"] <- scope["InputDisplay"];
+  }
+
 };
 
 // Called after the map has finished loading, on every load
@@ -66,8 +105,13 @@ if (!("Entities" in this)) return;
   return (Time() * 60.0 - ::__elSessionOffset).tointeger();
 };
 
+::__elFinishLock <- false;
 // Called when the map end condition is reached
 ::__elFinish <- function () {
+  // Overwrite this function with a no-op to prevent repeat calls
+  ::__elFinish <- function () { };
+  if (__elFinishLock) return;
+  ::__elFinishLock <- true;
   // Print run end signature followed by the session time in ticks
   // This is later detected by main.js and used for submitting the run
   printl("\nelFinish " + ::__elGetSessionTicks());

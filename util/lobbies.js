@@ -52,10 +52,9 @@ function createLobbyContext (name) {
  * that is relevant to lobbies.
  *
  * @param {object} details The JSON output of a Steam workshop API request
- * @param {boolean} [hidden] Whether the map thumbnail should be hidden
  * @returns {object} An object describing the map in an Epochtal context
  */
-async function createMapEntry (details, hidden = false) {
+async function createMapEntry (details) {
 
   const map = {
     id: details.publishedfileid,
@@ -63,11 +62,6 @@ async function createMapEntry (details, hidden = false) {
     thumbnail: details.preview_url,
     link: details.file_url
   };
-
-  // If marked as hidden, don't store the map thumbnail
-  if (hidden) {
-    map.thumbnail = "https://epochtal.p2r3.com/icons/unknown-wide.jpg";
-  }
 
   // Fetch the map author's username
   try {
@@ -137,15 +131,11 @@ async function handleStateChange (id, context, init = false) {
         const deltas = new Map(); // <steamid, elo delta>
         for (let i = 0; i < lb.length; i ++) {
           const selfID = lb[i].steamid;
-          // Don't count spectators in Elo calculation
-          if (dataEntry.spectators.includes(selfID)) continue;
           // Get current Elo, assume 1000 if unset
           const selfPoints = usersData[selfID].points.random_ranked || 1000
           for (let j = 0; j < lb.length; j ++) {
             if (i === j) continue;
             const opponentID = lb[j].steamid;
-            // Don't count spectators in Elo calculation
-            if (dataEntry.spectators.includes(opponentID)) continue;
             const opponentPoints = usersData[opponentID].points.random_ranked || 1000;
             const outcome = (lb[i].time < lb[j].time) ? 1 : (lb[i].time === lb[j].time ? 0 : -1);
             const delta = await points(["delta", selfPoints, opponentPoints, outcome]);
@@ -154,16 +144,36 @@ async function handleStateChange (id, context, init = false) {
           }
         }
         // Apply deltas to user profiles, scaled by player count
-        for (const player of listEntry.players) {
-          if (!deltas.has(player)) continue;
+        for (const [steamid, delta] of deltas) {
           // Start new players at 1000 Elo
-          const currentPoints = usersData[player].points.random_ranked || 1000;
+          const currentPoints = usersData[steamid].points.random_ranked || 1000;
           // Scale applied delta to (player count - 1)
-          const scaledDelta = deltas.get(player) / (deltas.size - 1);
+          const scaledDelta = delta / (deltas.size - 1);
           const newPoints = Number((currentPoints + scaledDelta).toFixed(2));
-          usersData[player].points.random_ranked = newPoints;
+          usersData[steamid].points.random_ranked = newPoints;
         }
         if (usersFile) Bun.write(usersFile, JSON.stringify(usersData));
+      } else if (state === LOBBY_INGAME) {
+        // After starting a round, schedule force-abort in 15 minutes
+        dataEntry.roundTimeout = setTimeout(async function () {
+          try {
+            if (dataEntry.state === LOBBY_IDLE) return;
+            await module.exports(["chat", lobbyid,
+              "15 minutes have passed, ending round.<br>" +
+              "Players who didn't finish are tied for last place."
+            ], context);
+            await module.exports(["abort", id], context);
+            delete dataEntry.roundTimeout;
+          } catch { }
+        }, 15 * 60 * 1000);
+        // Preemptively add all runners to the leaderboard with terrible times.
+        // This way, even if someone leaves or doesn't submit, they will
+        // still be considered for Elo calculation.
+        const worstTime = 24 * 60 * 60 * 60;
+        for (const steamid of listEntry.players) {
+          if (dataEntry.spectators.includes(steamid)) continue;
+          await leaderboard(["add", "lobby", steamid, worstTime, "", worstTime], dataEntry.context);
+        }
       }
       // Fall through to "random" case
     }
@@ -175,7 +185,7 @@ async function handleStateChange (id, context, init = false) {
         await module.exports(["map", id, "random", hidden], context);
       } catch {
         // If that failed, keep trying on an interval
-        // Even we keep throwing, it'll stop on mode change or lobby deletion
+        // Even if we keep throwing, it'll stop on mode change or lobby deletion
         setTimeout(function () {
           handleStateChange(id, context, init).catch(e => { });
         }, 3000);
@@ -405,7 +415,11 @@ module.exports = async function (args, context = epochtal) {
             // Submit this run to the lobby leaderboard
             await leaderboard(["add", "lobby", steamid, time, "", portals], dataEntry.context);
             // Broadcast submission to all lobby clients
-            await events(["send", eventName, { type: "lobby_submit", value: { time, portals, steamid } }], context);
+            let notify = false;
+            if (listEntry.mode === "random_ranked") {
+              notify = (await users(["get", steamid])).name;
+            }
+            await events(["send", eventName, { type: "lobby_submit", value: { time, portals, steamid, notify } }], context);
             // Change the client's ready state to false
             await module.exports(["ready", newID, false, steamid, true], context);
 
@@ -670,13 +684,13 @@ module.exports = async function (args, context = epochtal) {
         } else {
           // Otherwise, request a new random map from the workshopper
           const details = await workshopper(["random"]);
-          newMap = await createMapEntry(details, hidden);
+          newMap = await createMapEntry(details);
         }
 
         // Precache the next random map to make transitions seamless
         workshopper(["random"]).then(async function (details) {
           try {
-            dataEntry.context.data.nextMap = await createMapEntry(details, hidden);
+            dataEntry.context.data.nextMap = await createMapEntry(details);
             // Ask all clients to predownload the cached map
             const { file, link } = dataEntry.context.data.nextMap;
             await events(["send", eventName, { type: "getMap", value: { file, link } }], context);
@@ -706,15 +720,26 @@ module.exports = async function (args, context = epochtal) {
 
       }
 
+      // Append map to lobby map history
+      // This is done before the "hidden" check to avoid obfuscating history
+      const previousMap = dataEntry.context.data.maps.at(-1) || null;
+      if (newMap) dataEntry.context.data.maps.push(structuredClone(newMap));
+
+      // If requested, hide all distinguishable map details from players
+      if (newMap && hidden) {
+        newMap.id = "0";
+        newMap.title = "Title hidden";
+        newMap.author = "Author hidden";
+        newMap.thumbnail = "https://epochtal.p2r3.com/icons/unknown-wide.jpg";
+      }
+
       // Set the lobby map
       dataEntry.context.data.map = newMap;
-      // Append map to lobby map history
-      if (newMap) dataEntry.context.data.maps.push(newMap);
 
       // Force all player ready states to false
       for (const player in dataEntry.players) dataEntry.players[player].ready = false;
       // Brodcast map change to clients
-      await events(["send", eventName, { type: "lobby_map", newMap }], context);
+      await events(["send", eventName, { type: "lobby_map", newMap, previousMap }], context);
 
       // Write the lobbies to file if it exists
       if (file) Bun.write(file, JSON.stringify(lobbies));
