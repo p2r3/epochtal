@@ -97,7 +97,7 @@ var homepageInit = async function () {
   const archives = await (await fetch("/api/archive/list")).json();
   const mapvotes = await (await fetch("/api/votes/get")).json();
 
-  const whoami = await handleWhoami()
+  const whoami = await handleWhoami();
 
   // Update week number
   document.querySelector("#intro-week").innerHTML = config.number;
