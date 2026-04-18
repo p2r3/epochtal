@@ -158,7 +158,7 @@ async function handleStateChange (id, context, init = false) {
         dataEntry.roundTimeout = setTimeout(async function () {
           try {
             if (dataEntry.state === LOBBY_IDLE) return;
-            await module.exports(["chat", lobbyid,
+            await module.exports(["chat", id,
               "15 minutes have passed, ending round.<br>" +
               "Players who didn't finish are tied for last place."
             ], context);
