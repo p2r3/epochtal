@@ -84,6 +84,20 @@ if (!("Entities" in this)) return;
       }
     }
   }
+  // Slightly more rigorous check for PTI restart text
+  local restartText = Entities.FindByName(null, "@preview_complete_message");
+  if (!restartText) restartText = Entities.FindByName(null, "preview_complete_message");
+  if (restartText) if (restartText.ValidateScriptScope()) {
+    local scope = restartText.GetScriptScope();
+    scope["InputDisplay"] <- function () {
+      ::__elFinish();
+      EntFire("point_clientcommand", "Kill");
+      EntFire("point_servercommand", "Kill");
+      EntFire("point_broadcastclientcommand", "Kill");
+      return false;
+    };
+    scope["Inputdisplay"] <- scope["InputDisplay"];
+  }
 
   // End run on "End of playtest" text
   local playtestText = Entities.FindByName(null, "@end_of_playtest_text");
