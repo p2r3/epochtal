@@ -375,6 +375,14 @@ async function lobbyEventHandler (event) {
       lobby.data.spectators = steamids;
       updatePlayerList();
 
+      // Update spectator button
+      const spectateButton = document.querySelector("#lobby-spectate-button");
+      if (lobby.data.spectators.includes(whoami.steamid)) {
+        spectateButton.innerHTML = "Stop Spectating";
+      } else {
+        spectateButton.innerHTML = "Spectate";
+      }
+
       return;
     }
 
@@ -1214,15 +1222,15 @@ async function lobbyInit () {
     const spectateButton = document.querySelector("#lobby-spectate-button");
 
     if (amSpectator) {
+      await fetch(`/api/lobbies/spectate/${lobbyid}/false`);
+      if (readyState) await fetch(`/api/lobbies/ready/${lobbyid}/false`);
       document.head.innerHTML = document.head.innerHTML.replace(`<link rel="stylesheet" href="/live/spectate.css">`, "");
       spectateButton.innerHTML = "Spectate";
-      if (readyState) fetch(`/api/lobbies/ready/${lobbyid}/false`);
-      return await fetch(`/api/lobbies/spectate/${lobbyid}/false`);
     } else {
-      if (!readyState) fetch(`/api/lobbies/ready/${lobbyid}/true`);
+      await fetch(`/api/lobbies/spectate/${lobbyid}/true`);
+      if (!readyState) await fetch(`/api/lobbies/ready/${lobbyid}/true`);
       if (applyStylesheet) document.head.innerHTML += `<link rel="stylesheet" href="/live/spectate.css">`;
       spectateButton.innerHTML = "Stop Spectating";
-      return await fetch(`/api/lobbies/spectate/${lobbyid}/true`);
     }
 
   }

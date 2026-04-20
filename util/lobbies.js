@@ -122,6 +122,10 @@ async function handleStateChange (id, context, init = false) {
     case "random_ranked": {
       // When a match finishes, calculate new Elo for all players
       if (state === LOBBY_IDLE && !init) {
+        // Clear all spectators to prevent accidentaly spectating into the next round
+        for (const steamid of dataEntry.spectators) {
+          module.exports(["spectate", id, false, steamid]);
+        }
         // Get user data
         const usersFile = context.file.users;
         const usersData = context.data.users;
