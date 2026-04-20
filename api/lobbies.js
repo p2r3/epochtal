@@ -71,7 +71,7 @@ module.exports = async function (args, request) {
 
     case "create": {
 
-      const name = args[1];
+      const name = args[1].toString();
       // Disallow imitations of the "Chamber Of The Day"
       if (name.trim().toLowerCase() === "chamber of the day") return "ERR_NAME";
 
@@ -168,7 +168,7 @@ module.exports = async function (args, request) {
 
     case "rename": {
 
-      const newName = args[2];
+      const newName = args[2].toString();
       // Disallow imitations of the "Chamber Of The Day"
       if (newName.trim().toLowerCase() === "chamber of the day") return "ERR_NAME";
 
@@ -331,7 +331,7 @@ module.exports = async function (args, request) {
 
     case "chat": {
 
-      const message = args[2];
+      const message = args[2].toString();
 
       // Ensure the message is within 200 characters
       if (message.length > 200) return "ERR_LENGTH";
