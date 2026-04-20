@@ -227,12 +227,12 @@ function processConsoleLine (line) {
   // Detect blatant cheating
   const cheater = !amSpectator && runMap && (
     (
-      line.indexOf("Server cvar 'sv_cheats' changed to ") !== -1
-      && parseInt(line.slice(line.indexOf("Server cvar 'sv_cheats' changed to ") + 35)) !== 0
+      line.indexOf("Server cvar 'sv_cheats' changed to ") === 0
+      && parseInt(line.slice(35)) !== 0
     )
-    || line.indexOf("noclip ON") !== -1
-    || line.indexOf("godmode ON") !== -1
-    || line.indexOf("Buddha Mode on...") !== -1
+    || line.indexOf("noclip ON") === 0
+    || line.indexOf("godmode ON") === 0
+    || line.indexOf("Buddha Mode on...") === 0
   );
   if (cheater) {
     // Display notification of cheats flagged to user
