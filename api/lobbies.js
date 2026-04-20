@@ -273,6 +273,11 @@ module.exports = async function (args, request) {
       const permsCheck = await checkUserPerms(request, lobbyid, true);
       if (typeof permsCheck === "string") return permsCheck;
 
+      // Prohibit kicking in Random Maps Ranked mode
+      if (permsCheck.listEntry.mode === "random_ranked") {
+        throw new UtilError("ERR_PERMS", args, context);
+      }
+
       // Force the specified player to leave
       return lobbies(["leave", lobbyid, steamid]);
 

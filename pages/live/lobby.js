@@ -98,7 +98,8 @@ async function updatePlayerList () {
     // Generate displayed text for win count
     let winsText = `${wins} win${wins === 1 ? "" : "s"}`;
     // In Random Maps Ranked mode, replace win count with player Elo
-    if (lobby.listEntry.mode === "random_ranked") {
+    const ranked = lobby.listEntry.mode === "random_ranked";
+    if (ranked) {
       const points = Math.round(users[steamid].points.random_ranked);
       if (!points) winsText = `No points yet`;
       else winsText = `${points} point${points === 1 ? "" : "s"}`;
@@ -113,7 +114,7 @@ async function updatePlayerList () {
 
     output += `
 <div class="lobby-player ${isSpectator ? "lobby-spectator" : ""}" ${isSpectator ? `style="opacity: 0.5"` : ""}>
-  ${(amHost && !isHost) ? `<i
+  ${(amHost && !isHost && !ranked) ? `<i
     class="fa-solid fa-xmark lobby-player-kick"
     onmouseover="showTooltip('Kick player')"
     onmouseleave="hideTooltip()"
