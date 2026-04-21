@@ -375,7 +375,7 @@ module.exports = async function (args, context = epochtal) {
               const { file, link } = dataEntry.context.data.map;
               ws.send(JSON.stringify({ type: "getMap", value: { file, link } }));
               // Client WS is synchronous, this will only take effect after the download
-              ws.send(JSON.stringify({ type: "lobby_start", map: file }));
+              ws.send(JSON.stringify({ type: "lobby_start", map: file, crash: true }));
             }
 
             // Ask joining clients to predownload cached map (if any)

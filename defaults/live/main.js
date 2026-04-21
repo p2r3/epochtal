@@ -115,6 +115,8 @@ var totalTicks = 0;
 var lastTicksReport = 0;
 // Whether to expect an elStart event
 var expectRoundStart = false;
+// Whether we're recovering from a crash
+var recoverFromCrash = false;
 // Name of the map we're running
 var runMap = null;
 // Name of the map we were just running
@@ -185,6 +187,7 @@ function processConsoleLine (line) {
     // Clear current map to indicate that we're not in a run anymore
     lastRunMap = runMap;
     runMap = null;
+    recoverFromCrash = false;
     // Send the finishRun event
     const success = ws.send(webSocket, '{"type":"finishRun","value":{"time":'+ totalTicks +',"portals":0}}');
     // Disconnect from socket on failure
@@ -206,6 +209,16 @@ function processConsoleLine (line) {
     if (ticks < lastTicksReport) totalTicks += lastTicksReport;
     // Update previous report
     lastTicksReport = ticks;
+  }
+
+  // Process request for creating save files on map start to prevent users
+  // from accidentally loading into a different map, and to help them load
+  // back into the current map if they do.
+  if (!recoverFromCrash && line.indexOf("elMakeSaves") === 0) {
+    sendToConsole(gameSocket, "save quick");
+    sendToConsole(gameSocket, "save autosave");
+    sendToConsole(gameSocket, "save lobby");
+    return;
   }
 
   // Send spectator position output to server for spectators
@@ -436,6 +449,9 @@ function processServerEvent (data) {
       sendToConsole(gameSocket, "in_forceuser 0");
       sendToConsole(gameSocket, "sv_cheats 0");
       sendToConsole(gameSocket, "alias +remote_view \"\"");
+
+      // Flag recovery from game crash
+      if (data.crash) recoverFromCrash = true;
 
       return;
     }
