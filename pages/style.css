@@ -127,6 +127,8 @@ footer {
   text-align: justify;
   text-align-last: center;
   transition: opacity 0.5s, transform 0.5s;
+  max-height: 60vh;
+  overflow-y: scroll;
 }
 
 #global-popup-title {

@@ -1,0 +1,13 @@
+[
+  {
+    "version": "welcome",
+    "list": false,
+    "html": [
+      "Epochtal Live is a platform for competitive multiplayer in Portal 2.",
+      "",
+      "Create a lobby, invite your friends, and compete head-to-head on campaign or workshop maps.",
+      "",
+      "To get started, join or create a lobby and click \"Help\" in the top-right corner of the lobby window."
+    ]
+  }
+]

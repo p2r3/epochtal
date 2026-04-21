@@ -2,6 +2,44 @@
 var lobbies;
 
 /**
+ * Displays a changelog or welcome message using the global popup system.
+ * @param {} pages List of changelog pages to display:
+ *  { version: string, list: boolean, html: string[] }
+ */
+var showChangelog = async function (pages) {
+
+  if (!pages) {
+    pages = await (await fetch("/live/changelog.json")).json();
+  }
+  if (!pages || pages.length === 0) return;
+
+  const isWelcome = pages[0].version === "welcome";
+  const title = isWelcome
+    ? "Welcome to Epochtal Live!"
+    : "Here's what's new since you last played:";
+
+  let popupHTML = "";
+  for (const page of pages) {
+    const { version, list, html } = page;
+    if (list) {
+      popupHTML += `<p style="text-align:center"><i>v${version}</i></p>`;
+      popupHTML += `<ul style="text-align:left;text-align-last:left">`;
+      popupHTML += html.map(c => {
+        return c.startsWith("- ") ? `<li>${c.slice(2)}</li>` : `<b>${c}</b>`;
+      }).join("");
+      popupHTML += "</ul>"
+    } else {
+      popupHTML += `<p style="text-align:center">`;
+      popupHTML += html.join("<br>");
+      popupHTML += "</p>"
+    }
+  }
+
+  showPopup(title, popupHTML);
+
+};
+
+/**
  * Initializes the lobby list page.
  */
 var lobbyListInit = async function () {
@@ -24,6 +62,29 @@ var lobbyListInit = async function () {
 
   const listContainer = document.querySelector("#lobby-list");
   const lobbySearch = document.querySelector("#lobby-search");
+
+  try {
+    const changelog = await (await fetch("/live/changelog.json")).json();
+    const localVersion = window.localStorage.getItem("changelog");
+    const latestVersion = changelog.at(-1).version;
+    if (!localVersion) {
+      // For first time users, display first changelog entry (welcome text).
+      window.localStorage.setItem("changelog", latestVersion);
+      if (changelog.length !== 0) {
+        showChangelog([changelog[0]]);
+      }
+    } else if (localVersion !== latestVersion) {
+      // For returning users, display everything they've missed.
+      window.localStorage.setItem("changelog", latestVersion);
+      const localVersionIndex = changelog.findIndex(c => c.version === localVersion);
+      if (localVersionIndex !== -1) {
+        showChangelog(changelog.slice(localVersionIndex + 1));
+      }
+    }
+  } catch (e) {
+    // Probably don't want changelog errors breaking the whole site
+    console.error(e);
+  }
 
   /**
    * Update the lobby list HTML
