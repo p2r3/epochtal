@@ -1222,13 +1222,27 @@ async function lobbyInit () {
 
     const spectateButton = document.querySelector("#lobby-spectate-button");
 
+    const handleResponse = (str) => {
+      switch (str) {
+        case "SUCCESS": return true;
+
+        case "ERR_LOGIN": return showPopup("Not logged in", "Please log in via Steam before editing lobby details.", POPUP_ERROR);
+        case "ERR_STEAMID": return showPopup("Unrecognized user", "Your SteamID is not present in the users database. WTF?", POPUP_ERROR);
+        case "ERR_LOBBYID": return showPopup("Lobby not found", "An open lobby with this ID does not exist.", POPUP_ERROR);
+        case "ERR_PERMS": return showPopup("Permission denied", "You do not have permission to perform this action.", POPUP_ERROR);
+        case "ERR_INGAME": return showPopup("Failed to spectate", "You cannot become a spectator while playing the round.", POPUP_ERROR);
+      }
+    };
+
     if (amSpectator) {
-      await fetch(`/api/lobbies/spectate/${lobbyid}/false`);
+      const response = await (await fetch(`/api/lobbies/spectate/${lobbyid}/false`)).json();
+      if (!handleResponse(response)) return;
       if (readyState) await fetch(`/api/lobbies/ready/${lobbyid}/false`);
       document.head.innerHTML = document.head.innerHTML.replace(`<link rel="stylesheet" href="/live/spectate.css">`, "");
       spectateButton.innerHTML = "Spectate";
     } else {
-      await fetch(`/api/lobbies/spectate/${lobbyid}/true`);
+      const response = await (await fetch(`/api/lobbies/spectate/${lobbyid}/true`)).json();
+      if (!handleResponse(response)) return;
       if (!readyState) await fetch(`/api/lobbies/ready/${lobbyid}/true`);
       if (applyStylesheet) document.head.innerHTML += `<link rel="stylesheet" href="/live/spectate.css">`;
       spectateButton.innerHTML = "Stop Spectating";

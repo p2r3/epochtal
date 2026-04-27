@@ -1113,6 +1113,10 @@ module.exports = async function (args, context = epochtal) {
       // Add or remove this player from the spectators list
       if (spectatorState) {
         if (dataEntry.spectators.includes(steamid)) return;
+        // Prevent spectating if the player is supposed to be playing
+        if (dataEntry.state === LOBBY_INGAME && dataEntry.players[steamid].ready) {
+          throw new UtilError("ERR_INGAME", args, context);
+        }
         dataEntry.spectators.push(steamid);
       } else {
         const index = dataEntry.spectators.indexOf(steamid);
