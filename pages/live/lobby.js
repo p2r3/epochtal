@@ -913,6 +913,7 @@ async function lobbyInit () {
         case "ERR_STEAMID": return showPopup("Unrecognized user", "Your SteamID is not present in the users database. WTF?", POPUP_ERROR);
         case "ERR_LOBBYID": return showPopup("Lobby not found", "An open lobby with this ID does not exist.", POPUP_ERROR);
         case "ERR_PERMS": return showPopup("Permission denied", "You do not have permission to perform this action.", POPUP_ERROR);
+        case "ERR_INGAME": return showPopup("Game started", "The game has started, you cannot change the lobby mode.", POPUP_ERROR);
 
         default: return showPopup("Unknown error", "The server returned an unexpected response: " + requestData, POPUP_ERROR);
       }

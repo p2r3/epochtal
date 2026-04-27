@@ -1,6 +1,9 @@
 const lobbies = require("../util/lobbies.js");
 const api_users = require("./users.js");
 
+// TODO: Deduplicate from util, maybe?
+const [LOBBY_IDLE, LOBBY_INGAME] = [0, 1];
+
 /**
  * Checks if the user making the request is a member of the given lobby.
  * Returns the user object and lobby list data as products.
@@ -214,9 +217,7 @@ module.exports = async function (args, request) {
       if (typeof permsCheck === "string") return permsCheck;
 
       // Reject player-initiated map changes in Random Maps Ranked mode
-      if (permsCheck.listEntry.mode === "random_ranked") {
-        throw new UtilError("ERR_PERMS", args, context);
-      }
+      if (permsCheck.listEntry.mode === "random_ranked") return "ERR_PERMS";
 
       // Set the specified lobby's map
       return lobbies(["map", lobbyid, mapid]);
@@ -232,6 +233,10 @@ module.exports = async function (args, request) {
       // Check if the player is the host of this lobby
       const permsCheck = await checkUserPerms(request, lobbyid, true);
       if (typeof permsCheck === "string") return permsCheck;
+
+      // Prohibit changing mode while in-game
+      const dataEntry = await lobbies(["getdata", lobbyid]);
+      if (dataEntry.state === LOBBY_INGAME) return "ERR_INGAME";
 
       // Change the mode of the specified lobby
       return lobbies(["mode", lobbyid, newMode]);
@@ -274,9 +279,7 @@ module.exports = async function (args, request) {
       if (typeof permsCheck === "string") return permsCheck;
 
       // Prohibit kicking in Random Maps Ranked mode
-      if (permsCheck.listEntry.mode === "random_ranked") {
-        throw new UtilError("ERR_PERMS", args, context);
-      }
+      if (permsCheck.listEntry.mode === "random_ranked") return "ERR_PERMS";
 
       // Force the specified player to leave
       return lobbies(["leave", lobbyid, steamid]);
