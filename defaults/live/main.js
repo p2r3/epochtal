@@ -180,6 +180,15 @@ function processConsoleLine (line) {
     if (amSpectator) return;
     // Add run finish tick report to running tick total
     totalTicks += parseInt(line.slice(9));
+    // Check that this is the correct map
+    const finishMap = line.split(" ").slice(2).join(" ").replace(/\\/g, "/").trim();
+    const expectMap = runMap.replace(/\\/g, "/").trim();
+    if (finishMap !== expectMap) {
+      sendToConsole(gameSocket, "disconnect \"Run finished on wrong map.\"");
+      sendToConsole(gameSocket, "echo;echo Finished on wrong map.");
+      sendToConsole(gameSocket, "echo \"Expected '" + expectMap + "', got '" + finishMap + "'.\"; echo");
+      return;
+    }
     // Close the map after the run has finished
     sendToConsole(gameSocket, "disconnect");
     sendToConsole(gameSocket, "echo;echo Round finished.");

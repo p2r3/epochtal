@@ -133,7 +133,7 @@ if (!("Entities" in this)) return;
   ::__elFinishLock <- true;
   // Print run end signature followed by the session time in ticks
   // This is later detected by main.js and used for submitting the run
-  printl("\nelFinish " + ::__elGetSessionTicks());
+  printl("\nelFinish " + ::__elGetSessionTicks() + " " + GetMapName());
 };
 
 /**
