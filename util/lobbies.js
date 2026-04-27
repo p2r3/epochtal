@@ -408,12 +408,21 @@ module.exports = async function (args, context = epochtal) {
 
             let { time, portals } = data.value;
 
+            // Calculate RTA time since start of round
+            const realSeconds = Date.now() / 1000 - dataEntry.context.data.week.date;
+            const realTime = Math.round(realSeconds * 60);
+
+            // If the player had crashed, use real-time for timing instead
             if (dataEntry.crashed.includes(steamid)) {
-              // If the player had crashed, use real-time for timing instead
-              const seconds = Date.now() / 1000 - dataEntry.context.data.week.date;
-              time = Math.round(seconds * 60);
+              time = realTime;
               // Remove the player from the crashed players list
               dataEntry.crashed = dataEntry.crashed.filter(p => p !== steamid);
+            }
+
+            // If IGT exceeds RTA, fall back to RTA and warn player
+            if (time > realTime) {
+              time = realTime;
+              await events(["send", eventName, { type: "lobby_time_error", steamid }], context);
             }
 
             // Submit this run to the lobby leaderboard

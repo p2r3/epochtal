@@ -633,6 +633,22 @@ async function lobbyEventHandler (event) {
       return;
     }
 
+    case "lobby_time_error": {
+
+      // Warn player about invalid time submission
+      showPopup(
+        "Timing error",
+        `The game client returned an invalid run time.
+        Your submission has been adjusted to use real-time.
+        Consider restarting Portal 2 before starting a new round.`,
+        POPUP_WARN);
+
+      // Disable auto-ready if enabled
+      if (autoReady) window.toggleAutoReady();
+
+      return;
+    }
+
   }
 
 }
