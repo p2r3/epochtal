@@ -419,6 +419,7 @@ async function lobbyEventHandler (event) {
       // Update our own ready state
       readyState = false;
       lobbyReadyButton.innerHTML = "I'm ready!";
+      lobbyReadyButton.className = "";
 
       // If we're a spectator, or if autoReady is enabled, automatically ready up
       if (amSpectator || autoReady) {
@@ -465,7 +466,18 @@ async function lobbyEventHandler (event) {
       // If the given player is us, update the client ready state
       if (data.steamid === whoami.steamid) {
         readyState = data.readyState;
-        if (readyState) lobbyReadyButton.innerHTML = "Not ready!";
+        lobbyReadyButton.className = "";
+        lobbyReadyButton.style.boxShadow = "";
+        if (readyState) {
+          if (lobby.data.state === LOBBY_INGAME) {
+            // If in game, switch "Ready" button to "Forfeit" text
+            lobbyReadyButton.className = "dangerous-button";
+            lobbyReadyButton.style.boxShadow = "0px 0px 5px";
+            lobbyReadyButton.innerHTML = "Forfeit round";
+          } else {
+            lobbyReadyButton.innerHTML = "Not ready!";
+          }
+        }
         else lobbyReadyButton.innerHTML = "I'm ready!";
       }
 
@@ -1042,6 +1054,21 @@ async function lobbyInit () {
       return showPopup("No map selected", "Please select a map for the lobby.", POPUP_ERROR);
     }
 
+    // Ask for confirmation if the player is forfeiting
+    if (readyState && lobby.data.state === LOBBY_INGAME) {
+      showPopup("Are you sure?",
+        "Are you sure you want to give up?",
+        POPUP_WARN, true);
+      const confirm = await new Promise(resolve => {
+        window.popupOnOkay = () => resolve(true);
+        window.popupOnCancel = () => resolve(false);
+      });
+      hidePopup();
+      if (!confirm) return;
+      // Exit if it's no longer possible to forfeit
+      if (!readyState || lobby.data.state !== LOBBY_INGAME) return;
+    }
+
     // This might take a while, prevent the user from spamming the button
     lobbyReadyButton.style.opacity = 0.5;
     lobbyReadyButton.style.pointerEvents = "none";
@@ -1071,7 +1098,7 @@ async function lobbyInit () {
       case "ERR_TIMEOUT": return showPopup("Game client timeout", "Timed out while waiting for a response from your game client. Try reconnecting?", POPUP_ERROR);
       case "ERR_MAP": return showPopup("Failed to get map", "An error occurred while automatically downloading the map. Please try subscribing to it on the workshop instead.", POPUP_ERROR);
       case "ERR_NOMAP": return showPopup("No map selected", "Please select a map for the lobby.", POPUP_ERROR);
-      case "ERR_INGAME": return showPopup("Game started", "The game has started, you cannot change your ready state.", POPUP_ERROR);
+      case "ERR_INGAME": return showPopup("Round in progess", "You cannot ready up now, the round has already started.", POPUP_ERROR);
 
       default: return showPopup("Unknown error", "The server returned an unexpected response: " + requestData, POPUP_ERROR);
     }

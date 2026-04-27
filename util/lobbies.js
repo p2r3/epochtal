@@ -791,9 +791,26 @@ module.exports = async function (args, context = epochtal) {
       // Ensure the lobby exists
       if (!listEntry || !dataEntry) throw new UtilError("ERR_LOBBYID", args, context);
 
-      // Throw ERR_INGAME if the game has already started
+      // Throw ERR_INGAME if trying to ready up when the game has already started
       if (!force && dataEntry.state === LOBBY_INGAME) {
-        throw new UtilError("ERR_INGAME", args, context);
+        if (readyState) {
+          throw new UtilError("ERR_INGAME", args, context);
+        } else {
+          // If forfeiting, inform other players by broadcasting a 24-hour time
+          const worstTime = 24 * 60 * 60 * 60;
+          let notify = false;
+          if (listEntry.mode === "random_ranked") {
+            notify = (await users(["get", steamid])).name;
+          }
+          await events(["send", eventName, {
+            type: "lobby_submit",
+            value: {
+              time: worstTime,
+              portals: worstTime,
+              steamid, notify
+            }
+          }], context);
+        }
       }
 
       // Get the player's lobby data
