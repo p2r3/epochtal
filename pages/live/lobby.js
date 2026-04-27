@@ -1310,6 +1310,7 @@ async function lobbyInit () {
     // Add the typed key to the chatbox and focus it
     chatInputField.value += event.key;
     chatInputField.focus();
+    event.preventDefault();
   };
 
   // Toggles displaying the "map history" window
