@@ -420,7 +420,8 @@ module.exports = async function (args, context = epochtal) {
             }
 
             // If IGT exceeds RTA, fall back to RTA and warn player
-            if (time > realTime) {
+            const worstTime = 24 * 60 * 60 * 60;
+            if (time !== worstTime && time > realTime) {
               time = realTime;
               await events(["send", eventName, { type: "lobby_time_error", steamid }], context);
             }
