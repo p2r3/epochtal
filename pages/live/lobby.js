@@ -635,6 +635,9 @@ async function lobbyEventHandler (event) {
 
     case "lobby_time_error": {
 
+      // Relevant only to specified player
+      if (data.steamid !== whoami.steamid) return;
+
       // Warn player about invalid time submission
       showPopup(
         "Timing error",
