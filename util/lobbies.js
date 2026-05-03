@@ -148,7 +148,7 @@ async function handleStateChange (id, context, init = false) {
             const opponentID = lb[j].steamid;
             const opponentPoints = usersData[opponentID].points.random_ranked || 1000;
             const outcome = (lb[i].time < lb[j].time) ? 1 : (lb[i].time === lb[j].time ? 0 : -1);
-            const delta = await points(["delta", selfPoints, opponentPoints, outcome]);
+            const delta = await points(["delta", selfPoints, opponentPoints, outcome, 64]);
             if (!deltas.has(selfID)) deltas.set(selfID, delta);
             else deltas.set(selfID, deltas.get(selfID) + delta);
           }
