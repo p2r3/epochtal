@@ -133,12 +133,18 @@ async function handleStateChange (id, context, init = false) {
         const lb = await leaderboard(["get", "lobby"], dataEntry.context);
         // Calculate new Elo deltas for each matchup
         const deltas = new Map(); // <steamid, elo delta>
+        // Placeholder "worst possible time" (24h)
+        const worstTime = 24 * 60 * 60 * 60;
         for (let i = 0; i < lb.length; i ++) {
           const selfID = lb[i].steamid;
           // Get current Elo, assume 1000 if unset
           const selfPoints = usersData[selfID].points.random_ranked || 1000
           for (let j = 0; j < lb.length; j ++) {
             if (i === j) continue;
+            // Ignore matchups where both players did not finish
+            if (lb[i].time === worstTime && lb[j].time === worstTime) {
+              continue;
+            }
             const opponentID = lb[j].steamid;
             const opponentPoints = usersData[opponentID].points.random_ranked || 1000;
             const outcome = (lb[i].time < lb[j].time) ? 1 : (lb[i].time === lb[j].time ? 0 : -1);
