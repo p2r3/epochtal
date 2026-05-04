@@ -252,7 +252,7 @@ autoRebuildRandomMapCache();
 // Log any impossible maps found, and re-fetch another map
 async function handleImpossibleMap (mapid) {
   const impossible = await Bun.file(`${__dirname}/../data/impossible.json`).json();
-  if (impossible.includes(mapid)) impossible.push(mapid);
+  if (!impossible.includes(mapid)) impossible.push(mapid);
   await Bun.write(`${__dirname}/../data/impossible.json`, JSON.stringify(impossible));
   return await fetchRandomMap(null);
 }
