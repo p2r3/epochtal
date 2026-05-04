@@ -333,7 +333,7 @@ async function isMapPossible (data) {
   const blacklistData = await fetch(`https://docs.google.com/spreadsheets/d/${blacklistSheetID}/gviz/tq`).then(r => r.text());
   const blacklistJSON = JSON.parse(blacklistData.split(".setResponse(")[1].split(");")[0]);
   const blacklist = blacklistJSON.table.rows.map(r => parseInt(r.c[0].v.split("id=").pop(), 10));
-  if (blacklist.includes(mapid)) return false;
+  if (blacklist.includes(parseInt(mapid, 10))) return false;
 
   // Download the map's entity lump and extract an array of entities
   // This is used to reject maps that are verifiably unsolvable
