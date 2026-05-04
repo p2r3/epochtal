@@ -252,7 +252,7 @@ autoRebuildRandomMapCache();
 // Log any impossible maps found, and re-fetch another map
 async function handleImpossibleMap (mapid) {
   const impossible = await Bun.file(`${__dirname}/../data/impossible.json`).json();
-  impossible.push(mapid);
+  if (impossible.includes(mapid)) impossible.push(mapid);
   await Bun.write(`${__dirname}/../data/impossible.json`, JSON.stringify(impossible));
   return await fetchRandomMap(null);
 }
@@ -325,6 +325,15 @@ function traceConnections (outputs, entities, current = new Set()) {
 
 // Returns true if the given map can be completed, false otherwise
 async function isMapPossible (data) {
+
+  // First, check the blacklist to filter out known-bad maps
+  const mapid = data.publishedfileid;
+  const blacklistSheetID = `1Xdr83G1aZqnh6s7SmbpuYeVjUB4qfev0W6__1GS5lTc`;
+
+  const blacklistData = await fetch(`https://docs.google.com/spreadsheets/d/${blacklistSheetID}/gviz/tq`).then(r => r.text());
+  const blacklistJSON = JSON.parse(blacklistData.split(".setResponse(")[1].split(");")[0]);
+  const blacklist = blacklistJSON.table.rows.map(r => parseInt(r.c[0].v.split("id=").pop(), 10));
+  if (blacklist.includes(mapid)) return false;
 
   // Download the map's entity lump and extract an array of entities
   // This is used to reject maps that are verifiably unsolvable
