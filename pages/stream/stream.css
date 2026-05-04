@@ -26,19 +26,6 @@ h2 {
 .podium2 { border: 2px solid #95cbe1; }
 .podium3 { border: 2px solid #c88971; }
 
-#bg-anim-container {
-  position: fixed;
-  left: 0;
-  top: 0;
-  width: 100vw;
-  height: 100vh;
-  z-index: 1;
-  opacity: 1;
-  pointer-events: none;
-  will-change: opacity;
-  transition: opacity 0.5s;
-}
-
 #bg-anim-container * {
   position: absolute;
   width: 100%;

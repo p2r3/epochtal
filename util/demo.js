@@ -115,8 +115,6 @@ async function parseMDP (file, context) {
  * VERDICT_UNSURE: No certain verdict
  */
 const [VERDICT_SAFE, VERDICT_UNSURE, VERDICT_ILLEGAL] = [0, 1, 2];
-// Demo expiry time in milliseconds
-const EXPIRY_TIME = 1000 * 60 * 60;
 
 /**
  * Handles the `demo` utility call. This utility is used to parse and verify demo files.
@@ -246,7 +244,7 @@ module.exports = async function (args, context = epochtal) {
           // Ensure demo is submitted within the expiry time
           case "timestamp": {
 
-            if (timestampNow - Date.parse(event.value) > EXPIRY_TIME) {
+            if (timestampNow - Date.parse(event.value) > CONFIG.DEMO_EXPIRY_TIME) {
               return "Demo was recorded more than 1h ago, according to system clock.";
             }
             break;
@@ -332,7 +330,7 @@ module.exports = async function (args, context = epochtal) {
       if (lastTimestamp === null) return "Server timestamp not found.";
       if (speedrunTimer === null) return "Speedrun timer not stopped.";
 
-      if (timestampNow - lastTimestamp > EXPIRY_TIME) {
+      if (timestampNow - lastTimestamp > CONFIG.DEMO_EXPIRY_TIME) {
         return "Demo was recorded more than 1h ago, according to server clock.";
       }
       if (lastTimestamp > timestampNow) {
