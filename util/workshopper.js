@@ -224,7 +224,7 @@ async function rebuildRandomMapCache (node = null) {
 
   // Assign totals to each of the branch nodes
   node.left.total = leftData.response.total;
-  node.right.total = leftData.response.total;
+  node.right.total = rightData.response.total;
   // If necessary, assign a total for this node too
   if (!("total" in node)) node.total = node.left.total + node.right.total;
 
