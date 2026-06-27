@@ -462,7 +462,6 @@ function processServerEvent (data) {
       sendToConsole(gameSocket, "sv_allow_mobile_portals 0");
       sendToConsole(gameSocket, "map_wants_save_disable 0");
       sendToConsole(gameSocket, "r_portal_use_pvs_optimization 1");
-      sendToConsole(gameSocket, "sv_soundemitter_flush");
 
       // Flag recovery from game crash
       if (data.crash) recoverFromCrash = true;

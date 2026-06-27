@@ -108,6 +108,9 @@ if (!("Entities" in this)) return;
   // Create another batch of saves 1 second after the run has started
   EntFire("worldspawn", "RunScriptCode", "printl(\"elMakeSaves\")", 1.0);
 
+  // Fix any residual custom sounds
+  SendToConsole("sv_soundemitter_flush");
+
 };
 
 // Called after the map has finished loading, on every load
