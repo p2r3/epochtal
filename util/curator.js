@@ -40,13 +40,14 @@ async function getWorkshopData (mapid) {
 }
 
 /**
- * Fetches the entity lump for a given map and ignores everything else.
- *
- * @author PancakeTAS
- * @param {string|object} data The map to fetch the entity lump for.
- * @returns {Promise<string>} The entity lump for the map.
+ * Fetches the requested lumps for a given map, ignoring everything else in the BSP file.
+ * Originally written by PancakeTAS, now generalized to download any requested lumps.
+ * 
+ * @param {string|object} data Map from which to fetch the BSP lumps.
+ * @param {number[]} lumpIndices BSP lump indices to download.
+ * @returns {Promise<string>} The requested BSP lumps for the map.
  */
-async function downloadEntityLump (data) {
+async function downloadBSPLumps (data, lumpIndices) {
 
   // Fetch the workshop data for the map
   if (typeof data !== "object") {
@@ -58,7 +59,7 @@ async function downloadEntityLump (data) {
   if (data.file_url === undefined) return "ERR_BADMAP";
   if (data.consumer_appid !== 620) return "ERR_BADMAP";
 
-  // Fetch the BSP file for the map and read the entity lump
+  // Fetch the BSP file for the map and extract the requested lumps
   return await (new Promise(function (resolve, _reject) {
     https.request(data.file_url, function (response) {
 
@@ -71,72 +72,78 @@ async function downloadEntityLump (data) {
       const header_size = 4 + 4 + 64 * (4 + 4 + 4 + 4) + 4;
 
       const header = [];
-      const entities = [];
-      let entities_size = 0; // size of entities lump
-      let entities_offset = 0; // byte offset into file
+      const lumpBuffers = {}; // An array of buffers for each lump
+      let lumpRanges = null; // {offset, size} for each requested lump index
+      let endOfLastLump = 0; // The byte index of the end of the last requested lump
 
       let bytes_read = 0;
       response.on("data", function (chunk) {
 
-        // read until header is fully read
-        if (bytes_read < header_size) {
+        const chunkStart = bytes_read;
+        bytes_read += chunk.length;
+        const chunkEnd = bytes_read;
+
+        // If this chunk is, at least in part, in the header
+        if (chunkStart < header_size) {
           header.push(chunk);
-          bytes_read += chunk.length;
 
-          // header is fully read, grab offset and length for entities lump (0)
-          if (bytes_read >= header_size) {
+          // If the header just became fully read, grab offset and length for each requested
+		  // lump, and use them to compute the byte range of each requested lump
+          if (chunkEnd >= header_size) {
             const buffer = Buffer.concat(header);
-            entities_offset = buffer.readUInt32LE(4 + 4);
-            entities_size = buffer.readUInt32LE(4 + 4 + 4);
+            lumpRanges = {};
+            for (const i of lumpIndices) {
+              const offset = buffer.readUInt32LE(4 + 4 + i * (4 + 4 + 4 + 4));
+              const length = buffer.readUInt32LE(4 + 4 + i * (4 + 4 + 4 + 4) + 4);
+              lumpRanges[i] = {
+                start: offset,
+                end: offset + length
+              };
+            }
+            const endOfEachLump = lumpIndices.map((i) => lumpRanges[i].end);
+            endOfLastLump = Math.max(...endOfEachLump);
 
-            // check if entities lump was already partially read
-            if (bytes_read > entities_offset) {
-              entities.push(buffer.subarray(entities_offset, bytes_read));
+            // For each requested lump, prepare an array to hold chunk slices
+            for (const i of lumpIndices) lumpBuffers[i] = [];
+          }
+          // If we just read the last chunk of the header file, pass through to the next
+          // section of code to see if part of this chunk included part of a requested lump
+          // Otherwise, return
+          else return;
+        }
+
+        // If this chunk is, at least in part, after the header
+        if (chunkEnd > header_size) {
+          // If we're here, the header is fully read, so we have already computed the byte
+		  // range for each requested lump
+
+          // For each requested lump, store the portion of this chunk that overlaps that lump
+          for (const i of lumpIndices) {
+            const overlapStart = Math.max(chunkStart, lumpRanges[i].start);
+            const overlapEnd = Math.min(chunkEnd, lumpRanges[i].end);
+            if (overlapStart < overlapEnd) {
+              const overlapOfChunkAndThisLump = chunk.subarray(overlapStart - chunkStart, overlapEnd - chunkStart);
+              lumpBuffers[i].push(overlapOfChunkAndThisLump);
             }
           }
-
-          return;
         }
 
-        // skip buffers until entities lump
-        if ((bytes_read + chunk.length) < entities_offset) {
-          bytes_read += chunk.length;
-          return;
-        }
+        // If all lumps are fully read
+        if (chunkEnd >= endOfLastLump) {
 
-        // read partial entities lump
-        if (bytes_read < entities_offset) {
-          entities.push(chunk.subarray(entities_offset - bytes_read, chunk.length));
-          bytes_read += chunk.length;
-          return;
-        }
+          // Concatenate each requested lump into a single buffer
+          const result = {};
+          for (const i of lumpIndices) result[i] = Buffer.concat(lumpBuffers[i]);
 
-        // read rest of entities lump
-        if (bytes_read >= entities_offset) {
-          entities.push(chunk);
-          bytes_read += chunk.length;
+          // Resolve promise with requested lumps
+          resolve(result);
 
-          // entities lump is fully read
-          if (bytes_read >= entities_offset + entities_size) {
-            const buffer = Buffer.concat(entities).subarray(0, entities_size);
-
-            // resolve promise with entities lump
-            const outputString = buffer.toString();
-
-            resolve(outputString);
-
-            // close connection early
-            response.destroy();
-
-            // ensure previously discarded data is cleared from memory
-            Bun.gc(true);
-          }
-
-          return;
+          // Close connection early
+          response.destroy();
         }
       });
 
-      // if the response ended and we have no entities lump, resolve with ERR_BADMAP
+      // If the response ended and we do not have all requested lumps, resolve with ERR_BADMAP
       response.on("end", function () {
         setTimeout(function () {
           resolve("ERR_BADMAP");
@@ -144,7 +151,25 @@ async function downloadEntityLump (data) {
       });
 
     }).end();
-  }));
+  }))
+
+}
+
+/**
+ * Fetches the entity lump for a given map, ignoring everything else in the BSP file.
+ *
+ * @param {string|object} data Map from which to extract the entity lump.
+ * @returns {Promise<string>} The map's entity lump or an error string.
+ */
+async function downloadEntityLump (data) {
+
+  const indexOfEntityLump = 0;
+
+  const result = await downloadBSPLumps(data, [indexOfEntityLump]);
+  if (typeof result === "string") return result;
+
+  const entityLump = result[indexOfEntityLump];
+  return entityLump.toString();
 
 }
 
