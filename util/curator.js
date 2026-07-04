@@ -6,6 +6,7 @@ const https = require("https");
 const fs = require("node:fs");
 const weights = require(`${CONFIG.DIR.SECRETS}/weights.js`);
 
+const unzipper = require("unzipper");
 const weeklog = require("./weeklog.js");
 const archive = require("./archive.js");
 
@@ -14,11 +15,28 @@ const archive = require("./archive.js");
 // Besides, this has slightly less overhead, which is arguably important here
 const STEAM_API = "https://api.steampowered.com";
 
+// Mapping from lump name to lump index in BSP files
+const LUMP_INDEX_FROM_NAME = {
+  entities: 0, planes: 1, texdata: 2, vertexes: 3, visibility: 4,
+  nodes: 5, texinfo: 6, faces: 7, lighting: 8, occlusion: 9,
+  leafs: 10, faceids: 11, edges: 12, surfedges: 13, models: 14,
+  worldlights: 15, leaffaces: 16, leafbrushes: 17, brushes: 18, brushsides: 19,
+  areas: 20, areaportals: 21, portals: 22, clusters: 23, portalverts: 24,
+  clusterportals: 25, dispinfo: 26, originalfaces: 27, physdisp: 28, physcollide: 29,
+  vertnormals: 30, vertnormalindices: 31, disp_lightmap_alphas: 32, dispverts: 33, disp_lightmap_sample_positions: 34,
+  game_lump: 35, leafwaterdata: 36, primitives: 37, primverts: 38, primindices: 39,
+  pakfile: 40, clipportalverts: 41, cubemaps: 42, texdata_string_data: 43, texdata_string_table: 44,
+  overlays: 45, leafmindisttowater: 46, face_macro_texture_info: 47, disp_tris: 48, physcollidesurface: 49,
+  wateroverlays: 50, lightmappages: 51, lightmappageinfos: 52, lighting_hdr: 53, worldlights_hdr: 54,
+  leaf_ambient_lighting_hdr: 55, leaf_ambient_lighting: 56, xzippakfile: 57, faces_hdr: 58, map_flags: 59,
+  overlay_fades: 60
+};
+
 /**
  * Fetches the workshop data for a given map ID.
  *
- * @param {string} mapid The map ID to fetch data for.
- * @return {json} The workshop data for the map.
+ * @param {string} mapid The map ID to fetch data for
+ * @return {json} The workshop data for the map
  */
 async function getWorkshopData (mapid) {
 
@@ -40,13 +58,14 @@ async function getWorkshopData (mapid) {
 }
 
 /**
- * Fetches the entity lump for a given map and ignores everything else.
- *
- * @author PancakeTAS
- * @param {string|object} data The map to fetch the entity lump for.
- * @returns {Promise<string>} The entity lump for the map.
+ * Fetches the requested lumps for a given map, ignoring everything else in the BSP file.
+ * Originally written by PancakeTAS, now generalized to download any requested lumps.
+ * 
+ * @param {string|object} data Map from which to fetch the BSP lumps
+ * @param {number[]} lumpIndices BSP lump indices to download
+ * @returns {Promise<string>} The requested BSP lumps for the map
  */
-async function downloadEntityLump (data) {
+async function downloadBSPLumps (data, lumpIndices) {
 
   // Fetch the workshop data for the map
   if (typeof data !== "object") {
@@ -58,84 +77,91 @@ async function downloadEntityLump (data) {
   if (data.file_url === undefined) return "ERR_BADMAP";
   if (data.consumer_appid !== 620) return "ERR_BADMAP";
 
-  // Fetch the BSP file for the map
-  const request = await fetch(data.file_url);
-  if (request.status !== 200) return "ERR_STEAMAPI";
-
-  // Read the entity lump from the BSP file
+  // Fetch the BSP file for the map and extract the requested lumps
   return await (new Promise(function (resolve, _reject) {
     https.request(data.file_url, function (response) {
+
+      if (response.statusCode !== 200) {
+        resolve("ERR_STEAMAPI");
+        return;
+      }
 
       // ident, version, lumps[64] ( offset, length, version, cc ), map_revision
       const header_size = 4 + 4 + 64 * (4 + 4 + 4 + 4) + 4;
 
       const header = [];
-      const entities = [];
-      let entities_size = 0; // size of entities lump
-      let entities_offset = 0; // byte offset into file
+      const lumpBuffers = {}; // An array of buffers for each lump
+      let lumpRanges = null; // {offset, size} for each requested lump index
+      let endOfLastLump = 0; // The byte index of the end of the last requested lump
 
       let bytes_read = 0;
       response.on("data", function (chunk) {
 
-        // read until header is fully read
-        if (bytes_read < header_size) {
+        const chunkStart = bytes_read;
+        bytes_read += chunk.length;
+        const chunkEnd = bytes_read;
+
+        // If this chunk is, at least in part, in the header
+        if (chunkStart < header_size) {
           header.push(chunk);
-          bytes_read += chunk.length;
 
-          // header is fully read, grab offset and length for entities lump (0)
-          if (bytes_read >= header_size) {
+          // If the header just became fully read, grab offset and length for each requested
+          // lump, and use them to compute the byte range of each requested lump
+          if (chunkEnd >= header_size) {
             const buffer = Buffer.concat(header);
-            entities_offset = buffer.readUInt32LE(4 + 4);
-            entities_size = buffer.readUInt32LE(4 + 4 + 4);
+            lumpRanges = {};
+            for (const i of lumpIndices) {
+              const offset = buffer.readUInt32LE(4 + 4 + i * (4 + 4 + 4 + 4));
+              const length = buffer.readUInt32LE(4 + 4 + i * (4 + 4 + 4 + 4) + 4);
+              lumpRanges[i] = {
+                start: offset,
+                end: offset + length
+              };
+            }
+            const endOfEachLump = lumpIndices.map((i) => lumpRanges[i].end);
+            endOfLastLump = Math.max(...endOfEachLump);
 
-            // check if entities lump was already partially read
-            if (bytes_read > entities_offset) {
-              entities.push(buffer.subarray(entities_offset, bytes_read));
+            // For each requested lump, prepare an array to hold chunk slices
+            for (const i of lumpIndices) lumpBuffers[i] = [];
+          }
+          // If we just read the last chunk of the header file, pass through to the next
+          // section of code to see if part of this chunk included part of a requested lump
+          // Otherwise, return
+          else return;
+        }
+
+        // If this chunk is, at least in part, after the header
+        if (chunkEnd > header_size) {
+          // If we're here, the header is fully read, so we have already computed the byte
+          // range for each requested lump
+
+          // For each requested lump, store the portion of this chunk that overlaps that lump
+          for (const i of lumpIndices) {
+            const overlapStart = Math.max(chunkStart, lumpRanges[i].start);
+            const overlapEnd = Math.min(chunkEnd, lumpRanges[i].end);
+            if (overlapStart < overlapEnd) {
+              const overlapOfChunkAndThisLump = chunk.subarray(overlapStart - chunkStart, overlapEnd - chunkStart);
+              lumpBuffers[i].push(overlapOfChunkAndThisLump);
             }
           }
-
-          return;
         }
 
-        // skip buffers until entities lump
-        if ((bytes_read + chunk.length) < entities_offset) {
-          bytes_read += chunk.length;
-          return;
-        }
+        // If all lumps are fully read
+        if (chunkEnd >= endOfLastLump) {
 
-        // read partial entities lump
-        if (bytes_read < entities_offset) {
-          entities.push(chunk.subarray(entities_offset - bytes_read, chunk.length));
-          bytes_read += chunk.length;
-          return;
-        }
+          // Concatenate each requested lump into a single buffer
+          const result = {};
+          for (const i of lumpIndices) result[i] = Buffer.concat(lumpBuffers[i]);
 
-        // read rest of entities lump
-        if (bytes_read >= entities_offset) {
-          entities.push(chunk);
-          bytes_read += chunk.length;
+          // Resolve promise with requested lumps
+          resolve(result);
 
-          // entities lump is fully read
-          if (bytes_read >= entities_offset + entities_size) {
-            const buffer = Buffer.concat(entities).subarray(0, entities_size);
-
-            // resolve promise with entities lump
-            const outputString = buffer.toString();
-
-            resolve(outputString);
-
-            // close connection early
-            response.destroy();
-
-            // ensure previously discarded data is cleared from memory
-            Bun.gc(true);
-          }
-
-          return;
+          // Close connection early
+          response.destroy();
         }
       });
 
-      // if the response ended and we have no entities lump, resolve with ERR_BADMAP
+      // If the response ended and we do not have all requested lumps, resolve with ERR_BADMAP
       response.on("end", function () {
         setTimeout(function () {
           resolve("ERR_BADMAP");
@@ -143,25 +169,31 @@ async function downloadEntityLump (data) {
       });
 
     }).end();
-  }));
+  }))
 
 }
 
 /**
- * Parses the entity lump string into an array of entities.
+ * Parses the entities lump into an array of entities.
  *
- * @param {string} inputString The entity lump string to parse.
- * @returns {object[]} The array of entities.
+ * @param {Buffer|string} input A BSP's entities lump buffer or string
+ * @returns {object[]} Array of entities
  */
-function parseLump (inputString) {
+function parseEntitiesLump (input) {
+
+  const keysWithStringValues = ["targetname", "classname", "model"];
+
+  const inputString = input.toString();
 
   const entities = [];
   const entityStrings = inputString.replaceAll("\n}\n{\n", "}{").split("{");
 
-  for (let i = 0; i < entityStrings.length; i ++) {
+  for (const segment of entityStrings) {
+
+    if (!segment.trim()) continue;
 
     const entity = { outputs: {} };
-    const keyvals = entityStrings[i].split("\n");
+    const keyvals = segment.split("\n");
 
     for (const keyval of keyvals) {
 
@@ -170,7 +202,6 @@ function parseLump (inputString) {
       if (key === undefined || val === undefined) continue;
 
       const lowerCaseKey = key.toLowerCase();
-      const valArray = val.split(" ");
 
       if (val.includes("\x1B")) {
         if (!(lowerCaseKey in entity.outputs)) {
@@ -180,10 +211,15 @@ function parseLump (inputString) {
         continue;
       }
 
-      if (valArray.length > 1) {
-        entity[lowerCaseKey] = valArray.map(v => isNaN(v) ? v : Number(v));
-      } else {
-        entity[lowerCaseKey] = isNaN(val) ? val : Number(val);
+      if (keysWithStringValues.includes(lowerCaseKey))
+        entity[lowerCaseKey] = val;
+      else {
+        const valArray = val.split(" ");
+        if (valArray.length > 1) {
+          entity[lowerCaseKey] = valArray.map(v => isNaN(v) ? v : Number(v));
+        } else {
+          entity[lowerCaseKey] = isNaN(val) ? val : Number(val);
+        }
       }
 
     }
@@ -196,13 +232,129 @@ function parseLump (inputString) {
 
 }
 
+/**
+ * Parses the planes lump into an array of planes.
+ * Each plane is 20 bytes (Source's dplane_t): normal (3 floats), dist (float), type (int).
+ *
+ * @param {Buffer} buffer A BSP's planes lump buffer
+ * @returns {{ normal: { x: number, y: number, z: number }, dist: number, type: number }[]} Array of planes
+ */
+function parsePlanesLump (buffer) {
+
+  const planes = [];
+  for (let i = 0; i + 20 <= buffer.length; i += 20) {
+    planes.push({
+      normal: {
+        x: buffer.readFloatLE(i),
+        y: buffer.readFloatLE(i + 4),
+        z: buffer.readFloatLE(i + 8)
+      },
+      dist: buffer.readFloatLE(i + 12),
+      type: buffer.readInt32LE(i + 16)
+    });
+  }
+  return planes;
+
+}
+
+/**
+ * Parses the brushes lump into an array of brushes.
+ * Each brush is 12 bytes (Source's dbrush_t): firstside (int), numsides (int), contents (int).
+ *
+ * @param {Buffer} buffer A BSP's brushes lump buffer
+ * @returns {{ firstside: number, numsides: number, contents: number }[]} Array of brushes
+ */
+function parseBrushesLump (buffer) {
+
+  const brushes = [];
+  for (let i = 0; i + 12 <= buffer.length; i += 12) {
+    brushes.push({
+      firstside: buffer.readInt32LE(i),
+      numsides: buffer.readInt32LE(i + 4),
+      contents: buffer.readInt32LE(i + 8)
+    });
+  }
+  return brushes;
+
+}
+
+/**
+ * Parses the brushsides lump into an array of brush sides.
+ * Each brushside is 8 bytes (Source's dbrushside_t): planenum (unsigned short), texinfo (short), dispinfo (short), bevel (byte), thin (byte).
+ *
+ * @param {Buffer} buffer A BSP's brushsides lump buffer
+ * @returns {{ planenum: number, texinfo: number, dispinfo: number, bevel: number, thin: number }[]} Array of brush sides
+ */
+function parseBrushSidesLump (buffer) {
+
+  const sides = [];
+  for (let i = 0; i + 8 <= buffer.length; i += 8) {
+    sides.push({
+      planenum: buffer.readUInt16LE(i),
+      texinfo: buffer.readInt16LE(i + 2),
+      dispinfo: buffer.readInt16LE(i + 4),
+      bevel: buffer.readUInt8(i + 6),
+      thin: buffer.readUInt8(i + 7)
+    });
+  }
+  return sides;
+
+}
+
+/**
+ * Parses the pakfile lump by simply opening the ZIP archive.
+ * Returns the zip object.
+ * (If you want to decompress some individual files, call entry.buffer() on the corresponding entries of zip.files.)
+ *
+ * @param {Buffer} buffer A BSP's pakfile lump buffer
+ * @returns {Promise<object|null>} Opened zip object, or null if buffer is empty or invalid
+ */
+async function parsePakfileLump (buffer) {
+
+  if (buffer.length === 0) return null;
+  try {
+    return await unzipper.Open.buffer(buffer);
+  } catch (_) {
+    return null;
+  }
+
+}
+
+// Parsers for BSP lumps
+const LUMP_PARSERS = {
+  entities: parseEntitiesLump,
+  planes: parsePlanesLump,
+  brushes: parseBrushesLump,
+  brushsides: parseBrushSidesLump,
+  pakfile: parsePakfileLump
+};
+
+/**
+ * Fetches and parses the entities lump for a given map, ignoring everything else in the BSP file.
+ *
+ * @param {string|object} data Map from which to extract the entities
+ * @returns {Promise<string>} The map's parsed entities lump or an error string
+ */
+async function extractEntities (data) {
+
+  const indexOfEntitiesLump = LUMP_INDEX_FROM_NAME.entities;
+
+  const result = await downloadBSPLumps(data, [indexOfEntitiesLump]);
+  if (typeof result === "string") return result;
+
+  const entitiesLump = result[indexOfEntitiesLump];
+
+  return parseEntitiesLump(entitiesLump);
+
+}
+
 const VOLUME_BLOCK_SIZE = 2097152;
 
 /**
  * Calculates the densities of objects in the map.
  *
- * @param {object} entities The entities in the map.
- * @returns {object} The densities of objects in the map.
+ * @param {object} entities The entities in the map
+ * @returns {object} The densities of objects in the map
  */
 function calculateDensities (entities) {
 
@@ -282,9 +434,10 @@ function calculateDensities (entities) {
  * Handles the `curator` utility call. This utility is used to curate maps based on various criteria.
  *
  * The following subcommands are available:
- * - `v1`: The "original" Epochtal metadata curation algorithm.
- * - `v2`: The "new" Repochtal object density curation algorithm.
- * - `entities`: Returns an array of entities in the given workshop map.
+ * - `v1`: The "original" Epochtal metadata curation algorithm
+ * - `v2`: The "new" Repochtal object density curation algorithm
+ * - `entities`: Returns an array of entities in the given workshop map
+ * - `lumps`: Parses and returns the requested BSP lumps of the given workshop map
  *
  * The mapid is specified in `args[1]`.
  *
@@ -438,11 +591,10 @@ module.exports = async function (args, context = epochtal) {
       // Whether to report density anomalies
       const report = args[2];
 
-      // Convert entity lump to an object density graph
-      const entityLump = await downloadEntityLump(mapid);
-      if (entityLump.startsWith("ERR_")) throw new UtilError(entityLump, args, context);
+      // Convert entities lump to an object density graph
+      const entities = await extractEntities(mapid);
+      if (typeof entities === "string") throw new UtilError(entities, args, context);
 
-      const entities = parseLump(entityLump);
       const density = calculateDensities(entities);
 
       // Fetch graphs against which to compare the map
@@ -511,8 +663,41 @@ module.exports = async function (args, context = epochtal) {
 
     case "entities": {
 
-      // Return a parsed entity lump from the map BSP
-      return parseLump(await downloadEntityLump(mapid));
+      // Download and parse the entities lump of the map's BSP
+      const entitiesLump = await extractEntities(mapid);
+      if (typeof entitiesLump === "string") throw new UtilError(entitiesLump, args, context);
+
+      return entitiesLump;
+
+    }
+
+    case "lumps": {
+
+      // If only one lump was requested and it was not given in an array, put it in an array
+      // Also, lowercase all given lump names
+      const names = (Array.isArray(args[2]) ? args[2] : [args[2]]).map(s => s.toLowerCase());
+
+      // Convert the requested lump names to lump indices of a BSP
+      const lumpIndices = [];
+      for (const name of names) {
+        const lumpIndex = LUMP_INDEX_FROM_NAME[name];
+        if (lumpIndex === undefined) throw new UtilError(`Unknown lump: ${name}`, args, context);
+        lumpIndices.push(lumpIndex);
+      }
+
+      // Download the requested lumps of the map's BSP
+      const result = await downloadBSPLumps(mapid, lumpIndices);
+      if (typeof result === "string") throw new UtilError(result, args, context);
+
+      // Parse each extracted lump and format a data structure to return using the lump names
+      const output = {};
+      for (const name of names) {
+        const lumpIndex = LUMP_INDEX_FROM_NAME[name];
+        const buffer = result[lumpIndex];
+        const parser = LUMP_PARSERS[name];
+        output[name] = parser ? await parser(buffer) : buffer;
+      }
+      return output;
 
     }
 
@@ -563,10 +748,9 @@ module.exports = async function (args, context = epochtal) {
           mapDensity = await Bun.file(densityCachePath).json();
         } else {
           // If a cache was not found, try to download the BSP and calculate graphs
-          const entityLump = await downloadEntityLump(archiveContext.data.week.map.id);
-          if (entityLump.startsWith("ERR_")) continue; // If we failed, too bad.
+          const entities = await extractEntities(archiveContext.data.week.map.id);
+          if (typeof entities === "string") continue; // If we failed, too bad
 
-          const entities = parseLump(entityLump);
           mapDensity = calculateDensities(entities);
 
           await Bun.write(densityCachePath, JSON.stringify(mapDensity));
