@@ -239,7 +239,7 @@ function calculateDensities (entities) {
   entities.sort((a, b) => a.distance - b.distance);
   const median = entities[Math.floor(entities.length / 2)];
   const mapSize = median.distance * 1.5;
-  // The volume of the map in 128x128x128 chunks (PTI blocks)
+  // The volume of the map in 128x128x128 chunks (PeTI blocks)
   const mapSizeBlocks = Math.pow(mapSize, 3) / VOLUME_BLOCK_SIZE;
 
   // Count the amount of entities in the map, with separate counters for each entity type
@@ -329,7 +329,7 @@ module.exports = async function (args, context = epochtal) {
       const description = data.file_description.replaceAll("\r", "").toLowerCase();
       const allText = title + description;
 
-      // Tags aren't overused (PTI and BEEMod maps often do this by default)
+      // Tags aren't overused (PeTI and BEEmod maps often do this by default)
       if (data.tags.length < 10) points += weights.v1.TAGS_COUNT;
 
       // Custom visuals (sometimes indicative of genuine attention to detail)
@@ -338,7 +338,7 @@ module.exports = async function (args, context = epochtal) {
       // Map was published through Portal 2 Authoring Tools
       if (data.creator_appid === 644) points += weights.v1.HAMMER;
 
-      // Custom filename - some maps are brought in from PTI into Hammer, this might filter some of those out
+      // Custom filename - some maps are brought in from PeTI into Hammer, this might filter some of those out
       if (isNaN(data.filename.split("/").pop().split(".bsp")[0])) points += weights.v1.FILENAME;
 
       // Multi-line description
@@ -352,7 +352,7 @@ module.exports = async function (args, context = epochtal) {
       // Map doesn't focus on turrets (subjectively makes for a worse speedrunning experience)
       if (!allText.includes("turret")) points += weights.v1.TEXT_TURRETS;
 
-      // Doesn't mention BEEMod - might indicate less overuse of BEEMod-specific elements
+      // Doesn't mention BEEmod - might indicate less overuse of BEEmod-specific elements
       if (!allText.includes("beemod") && !(/bee\d/.test(allText)) && !(/bee \d/.test(allText))) points += weights.v1.TEXT_BEEMOD;
 
       // Map isn't a chamber recreation - this is important, we want to have original routes

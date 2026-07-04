@@ -176,7 +176,7 @@ async function rebuildRandomMapCache (node = null) {
     node = randomMapCache;
     // Store cache creation date for expiry checks later
     randomMapCache.created = Date.now();
-    // Use date range between PTI release and today
+    // Use date range between PeTI release and today
     node.start = Math.floor(new Date("2012-05-08").getTime() / 1000);
     node.end = Math.floor(new Date().getTime() / 1000);
   }
@@ -339,11 +339,11 @@ async function isMapPossible (data) {
   // This is used to reject maps that are verifiably unsolvable
   const entities = await curator(["entities", data]);
 
-  // If this specific entity starts enabled, it's the preview build of a PTI map
+  // If this specific entity starts enabled, it's the preview build of a PeTI map
   // These are unbeatable, because they'll restart once you cross the exit door
   if (entities.find(e => e.targetname === "InstanceAuto3-player_start_rl" && e.startdisabled == 0)) return false;
 
-  // In Hammer maps, the only risk is a missing PTI level end output
+  // In Hammer maps, the only risk is a missing PeTI level end output
   if (data.creator_appid !== 620) {
     // Reroll maps that have no entities pointing to the level end relay
     if (!entities.find(function (entity) {

@@ -283,7 +283,7 @@ ppmod.onauto(async(function () {
     local player = IsMultiplayer() ? ppmod.get("blue") : GetPlayer();
     local startPos = player.GetOrigin();
 
-    // PeTI and BEEMod maps have world portals at the entrance
+    // PeTI and BEEmod maps have world portals at the entrance
     local wPartner, wPortal = ppmod.get(startPos, 1024, "linked_portal_door");
     if (wPortal) {
       wPartner = wPortal.GetPartnerInstance();
