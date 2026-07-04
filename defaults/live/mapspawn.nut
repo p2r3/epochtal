@@ -54,6 +54,28 @@ if (!("Entities" in this)) return;
   // Fix BEEmod maps with pellet dependency
   local pelletWarning = Entities.FindByName(null, "@stop_for_pellets");
   if (pelletWarning) pelletWarning.Destroy();
+  
+  // Fix broken PeTI exit airlock door in maps last updated in June 2012
+  IncludeScript("june_2012_airlock_fixup");
+  local mapName = GetMapName();
+  local mapKey = mapName.slice(9); // 9 is the length of "workshop/"
+  local indexOfBackslash = mapKey.find("\\");
+  if (indexOfBackslash != null) {
+    mapKey = mapKey.slice(0, indexOfBackslash) + "/" + mapKey.slice(indexOfBackslash + 1);
+  }
+  if (mapKey in ::__elAirlockFixupTable) {
+    local existingRelayIdx = ::__elAirlockFixupTable[mapKey];
+    local existingRelayName = "InstanceAuto" + existingRelayIdx + "-relay_leaving_level";
+    local newRelay = Entities.CreateByClassname("logic_relay");
+    newRelay.__KeyValueFromString("Targetname", "doorexit1-relay_leaving_level");
+    if (newRelay.ValidateScriptScope()) {
+      local scope = newRelay.GetScriptScope();
+      scope["InputEnable"] <- function ():(existingRelayName) {
+        EntFire(existingRelayName, "Enable");
+      };
+      scope["Inputenable"] <- scope["InputEnable"];
+    }
+  }
 
   // End run on PeTI restart trigger
   local restartTrigger = Entities.FindByName(null, "@preview_restart_trigger");
