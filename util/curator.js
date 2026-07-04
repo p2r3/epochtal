@@ -58,13 +58,14 @@ async function downloadEntityLump (data) {
   if (data.file_url === undefined) return "ERR_BADMAP";
   if (data.consumer_appid !== 620) return "ERR_BADMAP";
 
-  // Fetch the BSP file for the map
-  const request = await fetch(data.file_url);
-  if (request.status !== 200) return "ERR_STEAMAPI";
-
-  // Read the entity lump from the BSP file
+  // Fetch the BSP file for the map and read the entity lump
   return await (new Promise(function (resolve, _reject) {
     https.request(data.file_url, function (response) {
+
+      if (response.statusCode !== 200) {
+        resolve("ERR_STEAMAPI");
+        return;
+      }
 
       // ident, version, lumps[64] ( offset, length, version, cc ), map_revision
       const header_size = 4 + 4 + 64 * (4 + 4 + 4 + 4) + 4;

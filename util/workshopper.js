@@ -465,8 +465,10 @@ async function fetchRandomMap (node = null) {
     if (data.result !== 1) return await fetchRandomMap(null);
 
     // Some maps can't be downloaded, reroll
-    const fileFetch = await fetch(data.file_url);
-    if (fileFetch.status !== 200) return await fetchRandomMap(null);
+    const firstByteOfFileFetch = await fetch(data.file_url, { headers: { Range: "bytes=0-0" } });
+    // If the map can be downloaded, 206 is expected (or 200 if the header was ignored)
+    const downloadable = (firstByteOfFileFetch.status === 206 || firstByteOfFileFetch.status === 200);
+    if (!downloadable) return await fetchRandomMap(null);
 
     // Determine whether the map can be completed
     if (await isMapPossible(data)) return data;
