@@ -55,7 +55,7 @@ if (!("Entities" in this)) return;
   local pelletWarning = Entities.FindByName(null, "@stop_for_pellets");
   if (pelletWarning) pelletWarning.Destroy();
 
-  // End run on PTI restart trigger
+  // End run on PeTI restart trigger
   local restartTrigger = Entities.FindByName(null, "@preview_restart_trigger");
   if (restartTrigger) {
     local hookFunction = function ():(restartTrigger) {
@@ -76,7 +76,7 @@ if (!("Entities" in this)) return;
       }
     }
   }
-  // Slightly more rigorous check for PTI restart text
+  // Slightly more rigorous check for PeTI restart text
   local restartText = Entities.FindByName(null, "@preview_complete_message");
   if (!restartText) restartText = Entities.FindByName(null, "preview_complete_message");
   if (restartText) if (restartText.ValidateScriptScope()) {
