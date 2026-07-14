@@ -52,9 +52,11 @@ if (!("Entities" in this)) return;
   ::RequestMapRating <- ::__elFinish;
 
   // Fix BEEmod maps with pellet dependency
-  local pelletWarning = Entities.FindByName(null, "@stop_for_pellets");
-  if (pelletWarning) pelletWarning.Destroy();
-  
+  local pelletWarning = null;
+  while (pelletWarning = Entities.FindByName(pelletWarning, "@stop_for_pellets")) {
+    pelletWarning.Destroy();
+  }
+
   // Fix broken PeTI exit airlock door in maps last updated in June 2012
   IncludeScript("june_2012_airlock_fixup");
   local mapName = GetMapName();
