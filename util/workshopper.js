@@ -161,6 +161,10 @@ const randomMapCache = {
   created: 0,
   map: null
 };
+const randomMapCacheCoop = {
+  created: 0,
+  map: null
+};
 
 /**
  * Rebuilds the random map total count cache tree.
@@ -170,13 +174,13 @@ const randomMapCache = {
  * until a child node has less than 50'000 total maps, which is the upper
  * workshop API query limit.
  */
-async function rebuildRandomMapCache (node = null) {
+async function rebuildRandomMapCache (node = null, coop = false) {
 
   if (!node) {
     // Start iteration with global tree cache
-    node = randomMapCache;
+    node = coop ? randomMapCacheCoop : randomMapCache;
     // Store cache creation date for expiry checks later
-    randomMapCache.created = Date.now();
+    (coop ? randomMapCacheCoop : randomMapCache).created = Date.now();
     // Use date range between PeTI release and today
     node.start = Math.floor(new Date("2012-05-08").getTime() / 1000);
     node.end = Math.floor(new Date().getTime() / 1000);
@@ -199,8 +203,8 @@ async function rebuildRandomMapCache (node = null) {
   const baseParams = {
     query_type: 1,
     appid: 620,
-    requiredtags: ["Singleplayer"],
-    excludedtags: ["Cooperative"],
+    requiredtags: [coop ? "Cooperative" : "Singleplayer"],
+    excludedtags: [coop ? "Singleplayer" : "Cooperative"],
     totalonly: true
   };
   const baseQuery = `${STEAM_API}/IPublishedFileService/QueryFiles/v1/?key=${CONFIG.API_KEY.STEAM}`;
@@ -231,8 +235,8 @@ async function rebuildRandomMapCache (node = null) {
 
   // Recursively (and asynchronously) generate caches for the rest of the tree
   const remaining = [];
-  if (node.left.total > 50000) remaining.push(rebuildRandomMapCache(node.left));
-  if (node.right.total > 50000) remaining.push(rebuildRandomMapCache(node.right));
+  if (node.left.total > 50000) remaining.push(rebuildRandomMapCache(node.left, coop));
+  if (node.right.total > 50000) remaining.push(rebuildRandomMapCache(node.right, coop));
   await Promise.all(remaining);
 
 }
@@ -242,7 +246,8 @@ async function autoRebuildRandomMapCache () {
   // If the cache has expired, rebuild it
   const cacheAge = Date.now() - randomMapCache.created;
   if (cacheAge > 86400000) {
-    await rebuildRandomMapCache();
+    await rebuildRandomMapCache(null, false);
+    await rebuildRandomMapCache(null, true);
   }
   // Schedule a rebuild for a minute after the cache expires
   const untilExpiry = Math.max(0, 86400000 - cacheAge);
@@ -251,27 +256,29 @@ async function autoRebuildRandomMapCache () {
 autoRebuildRandomMapCache();
 
 // Log any impossible maps found, and re-fetch another map
-async function handleImpossibleMap (mapid) {
+async function handleImpossibleMap (mapid, coop = false) {
   const impossible = await Bun.file(`${__dirname}/../data/impossible.json`).json();
   if (!impossible.includes(mapid)) impossible.push(mapid);
   await Bun.write(`${__dirname}/../data/impossible.json`, JSON.stringify(impossible));
-  return await fetchRandomMap(null);
+  return await fetchRandomMap(null, coop);
 }
 
 // Fetches a truly random singleplayer map from the Steam workshop
-async function fetchRandomMap (node = null) {
+async function fetchRandomMap (node = null, coop = false) {
+
+  const relevantMapCache = coop ? randomMapCacheCoop : randomMapCache;
 
   // Start the recursion with the top of the cached tree
   if (!node) {
     // Rebuild bucket cache tree if it has expired
-    if (Date.now() - randomMapCache.created > 86400000) {
+    if (Date.now() - relevantMapCache.created > 86400000) {
       await rebuildRandomMapCache();
     }
-    node = randomMapCache;
+    node = relevantMapCache;
   }
 
   // If no maps found in this node, reroll the entire selection
-  if (node.total === 0) return await fetchRandomMap(null);
+  if (node.total === 0) return await fetchRandomMap(null, coop);
 
   // If the map count in this node is within the query limit, pick a map
   if (node.total <= 50000) {
@@ -280,8 +287,8 @@ async function fetchRandomMap (node = null) {
     const queryParams = {
       query_type: 1,
       appid: 620,
-      requiredtags: ["Singleplayer"],
-      excludedtags: ["Cooperative"],
+      requiredtags: [coop ? "Cooperative" : "Singleplayer"],
+      excludedtags: [coop ? "Singleplayer" : "Cooperative"],
       numperpage: 1,
       page: Math.floor(Math.random() * node.total) + 1,
       return_details: true,
@@ -293,21 +300,21 @@ async function fetchRandomMap (node = null) {
     const baseQuery = `${STEAM_API}/IPublishedFileService/QueryFiles/v1/?key=${CONFIG.API_KEY.STEAM}&input_json=${encodeURIComponent(JSON.stringify(queryParams))}`;
     const { response } = await (await fetch(baseQuery)).json();
     // Some queries don't return anything, reroll
-    if (!("publishedfiledetails" in response)) return await fetchRandomMap(null);
+    if (!("publishedfiledetails" in response)) return await fetchRandomMap(null, coop);
     const data = response.publishedfiledetails[0];
 
     // If we've picked a deleted map, reroll
-    if (data.result !== 1) return await fetchRandomMap(null);
+    if (data.result !== 1) return await fetchRandomMap(null, coop);
 
     // Some maps can't be downloaded, reroll
     const firstByteOfFileFetch = await fetch(data.file_url, { headers: { Range: "bytes=0-0" } });
     // If the map can be downloaded, 206 is expected (or 200 if the header was ignored)
     const downloadable = (firstByteOfFileFetch.status === 206 || firstByteOfFileFetch.status === 200);
-    if (!downloadable) return await fetchRandomMap(null);
+    if (!downloadable) return await fetchRandomMap(null, coop);
 
     // Determine whether the map can be completed
     if (await solvability(["solvability", data], epochtal)) return data;
-    else return await handleImpossibleMap(data.publishedfileid);
+    else return await handleImpossibleMap(data.publishedfileid, coop);
 
   }
 
@@ -316,9 +323,9 @@ async function fetchRandomMap (node = null) {
 
   // Pick the left or right branch of the tree with a weighted probability
   if (Math.random() < node.left.total / node.total) {
-    return await fetchRandomMap(node.left);
+    return await fetchRandomMap(node.left, coop);
   } else {
-    return await fetchRandomMap(node.right);
+    return await fetchRandomMap(node.right, coop);
   }
 
 }
@@ -378,16 +385,19 @@ module.exports = async function (args, context = epochtal) {
 
     case "random": {
 
+      const coop = !!args[1];
+      const relevantMapCache = coop ? randomMapCacheCoop : randomMapCache;
+
       // Save the precached query result and clear it
-      const cachedMap = randomMapCache.map;
-      const cacheAge = Date.now() - randomMapCache.created;
-      randomMapCache.map = null;
+      const cachedMap = relevantMapCache.map;
+      const cacheAge = Date.now() - relevantMapCache.created;
+      relevantMapCache.map = null;
 
       // Cache a result for the next query
-      fetchRandomMap().then(result => {
+      fetchRandomMap(null, coop).then(result => {
         // Leave cache blank in case of an error
         if (typeof result === "string") return;
-        randomMapCache.map = result;
+        relevantMapCache.map = result;
       }).catch(e => {});
 
       // Return the previously cached result if it is valid
@@ -396,7 +406,7 @@ module.exports = async function (args, context = epochtal) {
       }
 
       // Otherwise, perform the query on the spot
-      const output = await fetchRandomMap();
+      const output = await fetchRandomMap(null, coop);
       if (typeof output === "string") {
         throw new UtilError(output, args, context);
       }
