@@ -54,7 +54,7 @@ module.exports = async function (args, request) {
 
       if (source) {
         if (!(source in randomMapSources)) {
-          randomMapSources[source] = [null, null];
+          randomMapSources[source] = [null, map];
         } else {
           randomMapSources[source][0] = randomMapSources[source][1];
           randomMapSources[source][1] = map;
