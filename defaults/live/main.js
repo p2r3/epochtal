@@ -25,6 +25,24 @@ function pathExists (path) {
   return true;
 }
 
+/**
+ * Converts demo ticks to a string representation
+ * @param {number} t The number of ticks
+ * @returns {string} The formatted string
+ */
+function ticksToString (t) {
+  // Split the ticks into hours, minutes, and seconds
+  var output = "";
+  const hrs = Math.floor(t / 216000),
+    min = Math.floor(t / 3600),
+    sec = t % 3600 / 60;
+  // Format the output string
+  if (hrs !== 0) output += hrs + ":" + (min % 60 < 10 ? "0" : "") + (min % 60);
+  else if (min !== 0) output += min + ":";
+  if (sec < 10) output += "0";
+  return output + sec.toFixed(3);
+}
+
 do { // Attempt connection with the game's console
   var gameSocket = game.connect();
   sleep(200);
@@ -97,6 +115,8 @@ var totalTicks = 0;
 var lastTicksReport = 0;
 // Whether to expect an elStart event
 var expectRoundStart = false;
+// Whether we're recovering from a crash
+var recoverFromCrash = false;
 // Name of the map we're running
 var runMap = null;
 // Name of the map we were just running
@@ -129,6 +149,160 @@ function processVersionCheck () {
     doCleanup();
   }
 }
+
+/**
+ * Processes individual lines of Portal 2 console output
+ *
+ * @param {string} line A single complete line of console output
+ */
+function processConsoleLine (line) {
+  // Process WebSocket token
+  if (line.indexOf("ws : ") === 0) {
+    webSocketToken = line.slice(5, -1);
+    return;
+  }
+
+  // The events below this only apply to connected clients
+  if (!webSocket) return;
+
+  // Process map start event
+  if (expectRoundStart && line.indexOf("elStart") !== -1) {
+    expectRoundStart = false;
+    // Reset run timer
+    totalTicks = 0;
+    lastTicksReport = 0;
+    return;
+  };
+
+  // Process map finish event
+  if (line.indexOf("elFinish ") === 0) {
+    // Don't process time updates from spectators
+    if (amSpectator) return;
+    // Add run finish tick report to running tick total
+    totalTicks += parseInt(line.slice(9));
+    // Check that this is the correct map
+    const finishMap = line.split(" ").slice(2).join(" ").replace(/\\/g, "/").trim();
+    const expectMap = runMap.replace(/\\/g, "/").trim();
+    if (finishMap !== expectMap) {
+      sendToConsole(gameSocket, "disconnect \"Run finished on wrong map.\"");
+      sendToConsole(gameSocket, "echo;echo Finished on wrong map.");
+      sendToConsole(gameSocket, "echo \"Expected '" + expectMap + "', got '" + finishMap + "'.\"; echo");
+      return;
+    }
+    // Close the map after the run has finished
+    sendToConsole(gameSocket, "disconnect");
+    sendToConsole(gameSocket, "echo;echo Round finished.");
+    sendToConsole(gameSocket, "echo \"Final time: " + (totalTicks / 60).toFixed(3) + " seconds.\";echo");
+    // Clear current map to indicate that we're not in a run anymore
+    lastRunMap = runMap;
+    runMap = null;
+    recoverFromCrash = false;
+    // Send the finishRun event
+    const success = ws.send(webSocket, '{"type":"finishRun","value":{"time":'+ totalTicks +',"portals":0}}');
+    // Disconnect from socket on failure
+    if (!success) {
+      sendToConsole(gameSocket, "echo Failed to send finishRun event.");
+      sendToConsole(gameSocket, "echo Please reconnect to the lobby with a new token.");
+      ws.disconnect(webSocket);
+      webSocket = null;
+    }
+  }
+
+  // Process timer updates from VScript
+  if (line.indexOf("spec_goto_tick ") === 0) {
+    // Don't process time updates from spectators
+    if (amSpectator) return;
+    // Parse the fragment of the string containing the tick count
+    const ticks = parseInt(line.slice(15));
+    // Tick count decrease marks a load - add previous report to total
+    if (ticks < lastTicksReport) totalTicks += lastTicksReport;
+    // Update previous report
+    lastTicksReport = ticks;
+  }
+
+  // Process request for creating save files on map start to prevent users
+  // from accidentally loading into a different map, and to help them load
+  // back into the current map if they do.
+  if (!recoverFromCrash && line.indexOf("elMakeSaves") === 0) {
+    sendToConsole(gameSocket, "save quick");
+    sendToConsole(gameSocket, "save autosave");
+    sendToConsole(gameSocket, "save lobby");
+    return;
+  }
+
+  // Send spectator position output to server for spectators
+  if (line.indexOf("spec_goto ") === 0) {
+    ws.send(webSocket, '{"type":"spectate","player":"'+ line.slice(10).trim() +'","portals":"'+ spectatorData.portals +'","cube":"'+ spectatorData.cube +'"}');
+    return;
+  }
+  // Update last known position of portals
+  if (line.indexOf("spec_goto_portals ") === 0) {
+    spectatorData.portals = line.slice(18).trim();
+    return;
+  }
+  // Update last known position of the nearest cube
+  if (line.indexOf("spec_goto_cube ") === 0) {
+    spectatorData.cube = line.slice(15).trim();
+    return;
+  }
+
+  // Detect blatant cheating
+  const cheater = !amSpectator && runMap && (
+    (
+      line.indexOf("Server cvar 'sv_cheats' changed to ") === 0
+      && parseInt(line.slice(35)) !== 0
+    )
+    || line.indexOf("noclip ON") === 0
+    || line.indexOf("godmode ON") === 0
+    || line.indexOf("Buddha Mode on...") === 0
+  );
+  if (cheater) {
+    // Display notification of cheats flagged to user
+    sendToConsole(gameSocket, "script ScriptShowHudMessageAll(\"Cheats detected.\\nYour run has been disqualified.\", 10.0)");
+    sendToConsole(gameSocket, "echo;echo Cheats detected. Run disqualified.");
+    // Clear current map to indicate that we're not in a run anymore
+    lastRunMap = runMap;
+    runMap = null;
+    // Send the finishRun event, with time being 24 hours
+    const dayTicks = (24 * 60 * 60 * 60);
+    const success = ws.send(webSocket, '{"type":"finishRun","value":{"time":' + dayTicks + ',"portals":' + dayTicks + '}}');
+    // Disconnect from socket on failure
+    if (!success) {
+      sendToConsole(gameSocket, "echo Failed to send finishRun event.");
+      sendToConsole(gameSocket, "echo Please reconnect to the lobby with a new token.");
+      ws.disconnect(webSocket);
+      webSocket = null;
+    }
+    return;
+  }
+
+  // The events below this only apply to spectators
+  if (!amSpectator) return;
+
+  // Handle switching spectated player
+  if (line.indexOf("Switching spectated player...") === 0) {
+    spectatorData.target ++;
+    if (spectatorData.target >= spectatorData.targets.length) {
+      spectatorData.target = 0;
+    }
+    // Close previous player's portals
+    sendToConsole("ent_fire prop_portal SetActivatedState 0");
+
+    return;
+  }
+
+  // Ensure that godmode remains on while spectating
+  if (line.indexOf("godmode ON") === 0) {
+    spectatorData.god = true;
+    return;
+  }
+  if (line.indexOf("godmode OFF") === 0) {
+    sendToConsole(gameSocket, "god");
+    return;
+  }
+
+}
+
 
 // Store the last partially received line until it can be processed
 var lastLine = "";
@@ -169,104 +343,16 @@ function processConsoleOutput () {
   }
 
   // Parse output line-by-line
-  const lines = lastLine.split("\n");
+  try {
+    var lines  = lastLine.split("\n");
+  } catch (_) {
+    return;
+  }
   lines.forEach(function (line) {
-
-    // Process WebSocket token
-    if (line.indexOf("ws : ") === 0) {
-      webSocketToken = line.slice(5, -1);
-      return;
-    }
-
-    // The events below this only apply to connected clients
-    if (!webSocket) return;
-
-    // Process map start event
-    if (expectRoundStart && line.indexOf("elStart") !== -1) {
-      expectRoundStart = false;
-      // Reset run timer
-      totalTicks = 0;
-      lastTicksReport = 0;
-      // Make saves to prevent accidentally loading into a different map
-      sendToConsole(gameSocket, "save quick");
-      sendToConsole(gameSocket, "save autosave");
-      return;
-    };
-
-    // Process map finish event
-    if (line.indexOf("elFinish ") === 0) {
-      // Don't process time updates from spectators
-      if (amSpectator) return;
-      // Add run finish tick report to running tick total
-      totalTicks += parseInt(line.slice(9));
-      // Close the map after the run has finished
-      sendToConsole(gameSocket, "disconnect");
-      sendToConsole(gameSocket, "echo;echo Round finished.");
-      sendToConsole(gameSocket, "echo \"Final time: " + (totalTicks / 30).toFixed(3) + " seconds.\";echo");
-      // Clear current map to indicate that we're not in a run anymore
-      lastRunMap = runMap;
-      runMap = null;
-      // Send the finishRun event
-      const success = ws.send(webSocket, '{"type":"finishRun","value":{"time":'+ (totalTicks * 2) +',"portals":0}}');
-      // Disconnect from socket on failure
-      if (!success) {
-        sendToConsole(gameSocket, "echo Failed to send finishRun event.");
-        sendToConsole(gameSocket, "echo Please reconnect to the lobby with a new token.");
-        ws.disconnect(webSocket);
-        webSocket = null;
-      }
-    }
-
-    // Process timer updates from VScript
-    if (line.indexOf("spec_goto_tick ") === 0) {
-      // Don't process time updates from spectators
-      if (amSpectator) return;
-      // Parse the fragment of the string containing the tick count
-      const ticks = parseInt(line.slice(15));
-      // Tick count decrease marks a load - add previous report to total
-      if (ticks < lastTicksReport) totalTicks += lastTicksReport;
-      // Update previous report
-      lastTicksReport = ticks;
-    }
-
-    // Send spectator position output to server for spectators
-    if (line.indexOf("spec_goto ") === 0) {
-      ws.send(webSocket, '{"type":"spectate","player":"'+ line.slice(10).trim() +'","portals":"'+ spectatorData.portals +'","cube":"'+ spectatorData.cube +'"}');
-      return;
-    }
-    // Update last known position of portals
-    if (line.indexOf("spec_goto_portals ") === 0) {
-      spectatorData.portals = line.slice(18).trim();
-      return;
-    }
-    // Update last known position of the nearest cube
-    if (line.indexOf("spec_goto_cube ") === 0) {
-      spectatorData.cube = line.slice(15).trim();
-      return;
-    }
-
-    // The events below this only apply to spectators
-    if (!amSpectator) return;
-
-    // Handle switching spectated player
-    if (line.indexOf("Switching spectated player...") === 0) {
-      spectatorData.target ++;
-      if (spectatorData.target >= spectatorData.targets.length) {
-        spectatorData.target = 0;
-      }
-      // Close previous player's portals
-      sendToConsole("ent_fire prop_portal SetActivatedState 0");
-
-      return;
-    }
-
-    // Ensure that godmode remains on while spectating
-    if (line.indexOf("godmode ON") === 0) {
-      spectatorData.god = true;
-      return;
-    }
-    if (line.indexOf("godmode OFF") === 0) {
-      sendToConsole(gameSocket, "god");
+    try{
+      processConsoleLine(line);
+    } catch (_) {
+      // Sometimes console has non-printable characters on which duktape fails
       return;
     }
 
@@ -372,7 +458,37 @@ function processServerEvent (data) {
       sendToConsole(gameSocket, "in_forceuser 0");
       sendToConsole(gameSocket, "sv_cheats 0");
       sendToConsole(gameSocket, "alias +remote_view \"\"");
+      // Reset persistent cvars
+      sendToConsole(gameSocket, "sv_allow_mobile_portals 0");
+      sendToConsole(gameSocket, "map_wants_save_disable 0");
+      sendToConsole(gameSocket, "r_portal_use_pvs_optimization 1");
 
+      // Flag recovery from game crash
+      if (data.crash) recoverFromCrash = true;
+
+      return;
+    }
+
+    // Print notice of another player's run completion
+    case "lobby_submit": {
+      if (data.value.notify) {
+        const name = data.value.notify;
+        /**
+         * There are 23 em-spaces in the string, followed by a regular space.
+         * This ensures(?) that the text starts two lines below the player's name.
+         *
+         * TODO: The `cmd` prefix here fixes crashes when the command happens to
+         * be called during a load, but it also means that those mid-load messages
+         * are never displayed. Ideally, we'd set up some sort of queue, but that
+         * would require far more testing.
+         */
+        if (data.value.time === 24 * 60 * 60 * 60) {
+          sendToConsole(gameSocket, 'cmd say "                        ' + name + ' was disqualified"');
+        } else {
+          const time = ticksToString(data.value.time);
+          sendToConsole(gameSocket, 'cmd say "                        ' + name + ' finished in ' + time + '"');
+        }
+      }
       return;
     }
 
@@ -514,7 +630,9 @@ function processWebSocket () {
 while (true) {
   processVersionCheck();
   processConsoleOutput();
-  processWebSocket();
+  try {
+    processWebSocket();
+  } catch (_) {}
 
   // If we're not connected yet, we can afford a slower loop
   if (!webSocket) sleep(500);

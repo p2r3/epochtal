@@ -1,6 +1,9 @@
 const lobbies = require("../util/lobbies.js");
 const api_users = require("./users.js");
 
+// TODO: Deduplicate from util, maybe?
+const [LOBBY_IDLE, LOBBY_INGAME] = [0, 1];
+
 /**
  * Checks if the user making the request is a member of the given lobby.
  * Returns the user object and lobby list data as products.
@@ -71,7 +74,7 @@ module.exports = async function (args, request) {
 
     case "create": {
 
-      const name = args[1];
+      const name = args[1].toString();
       // Disallow imitations of the "Chamber Of The Day"
       if (name.trim().toLowerCase() === "chamber of the day") return "ERR_NAME";
 
@@ -135,7 +138,12 @@ module.exports = async function (args, request) {
         host: data.host,
         spectators: data.spectators,
         state: data.state,
-        context: data.context.data
+        context: {
+          map: data.context.data.map,
+          maps: data.context.data.maps.slice(0, -1),
+          leaderboard: data.context.data.leaderboard,
+          week: data.context.data.week
+        }
       };
       /** The above results in an object with the following pseudo-structure:
        * {
@@ -150,7 +158,7 @@ module.exports = async function (args, request) {
        *   state,
        *   context: {
        *     map,
-       *     maps,
+       *     maps, // last element removed
        *     leaderboard,
        *     week
        *   }
@@ -163,7 +171,7 @@ module.exports = async function (args, request) {
 
     case "rename": {
 
-      const newName = args[2];
+      const newName = args[2].toString();
       // Disallow imitations of the "Chamber Of The Day"
       if (newName.trim().toLowerCase() === "chamber of the day") return "ERR_NAME";
 
@@ -208,6 +216,9 @@ module.exports = async function (args, request) {
       const permsCheck = await checkUserPerms(request, lobbyid, true);
       if (typeof permsCheck === "string") return permsCheck;
 
+      // Reject player-initiated map changes in Random Maps Ranked mode
+      if (permsCheck.listEntry.mode === "random_ranked") return "ERR_PERMS";
+
       // Set the specified lobby's map
       return lobbies(["map", lobbyid, mapid]);
 
@@ -222,6 +233,10 @@ module.exports = async function (args, request) {
       // Check if the player is the host of this lobby
       const permsCheck = await checkUserPerms(request, lobbyid, true);
       if (typeof permsCheck === "string") return permsCheck;
+
+      // Prohibit changing mode while in-game
+      const dataEntry = await lobbies(["getdata", lobbyid]);
+      if (dataEntry.state === LOBBY_INGAME) return "ERR_INGAME";
 
       // Change the mode of the specified lobby
       return lobbies(["mode", lobbyid, newMode]);
@@ -263,6 +278,9 @@ module.exports = async function (args, request) {
       const permsCheck = await checkUserPerms(request, lobbyid, true);
       if (typeof permsCheck === "string") return permsCheck;
 
+      // Prohibit kicking in Random Maps Ranked mode
+      if (permsCheck.listEntry.mode === "random_ranked") return "ERR_PERMS";
+
       // Force the specified player to leave
       return lobbies(["leave", lobbyid, steamid]);
 
@@ -274,6 +292,11 @@ module.exports = async function (args, request) {
       const permsCheck = await checkUserPerms(request, lobbyid, true);
       if (typeof permsCheck === "string") return permsCheck;
 
+      // Prohibit force-starting in Random Maps Ranked mode
+      if (permsCheck.listEntry.mode === "random_ranked") {
+        return "ERR_PERMS";
+      }
+
       // Force start the game
       return lobbies(["start", lobbyid]);
 
@@ -284,6 +307,11 @@ module.exports = async function (args, request) {
       // Check if the player is the host of this lobby
       const permsCheck = await checkUserPerms(request, lobbyid, true);
       if (typeof permsCheck === "string") return permsCheck;
+
+      // Prohibit force-aborting in Random Maps Ranked mode
+      if (permsCheck.listEntry.mode === "random_ranked") {
+        return "ERR_PERMS";
+      }
 
       // Abort the game
       return lobbies(["abort", lobbyid]);
@@ -306,7 +334,7 @@ module.exports = async function (args, request) {
 
     case "chat": {
 
-      const message = args[2];
+      const message = args[2].toString();
 
       // Ensure the message is within 200 characters
       if (message.length > 200) return "ERR_LENGTH";

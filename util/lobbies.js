@@ -4,6 +4,7 @@ const users = require("./users.js");
 const events = require("./events.js");
 const workshopper = require("./workshopper.js");
 const leaderboard = require("./leaderboard.js");
+const points = require("./points.js");
 
 const [LOBBY_IDLE, LOBBY_INGAME] = [0, 1];
 
@@ -51,10 +52,9 @@ function createLobbyContext (name) {
  * that is relevant to lobbies.
  *
  * @param {object} details The JSON output of a Steam workshop API request
- * @param {boolean} [hidden] Whether the map thumbnail should be hidden
  * @returns {object} An object describing the map in an Epochtal context
  */
-async function createMapEntry (details, hidden = false) {
+async function createMapEntry (details) {
 
   const map = {
     id: details.publishedfileid,
@@ -62,11 +62,6 @@ async function createMapEntry (details, hidden = false) {
     thumbnail: details.preview_url,
     link: details.file_url
   };
-
-  // If marked as hidden, don't store the map thumbnail
-  if (hidden) {
-    map.thumbnail = "https://epochtal.p2r3.com/icons/unknown-wide.jpg";
-  }
 
   // Fetch the map author's username
   try {
@@ -124,7 +119,74 @@ async function handleStateChange (id, context, init = false) {
 
   switch (mode) {
     case "ffa": break;
-    case "random_ranked":
+    case "random_ranked": {
+      // When a match finishes, calculate new Elo for all players
+      if (state === LOBBY_IDLE && !init) {
+        // Clear all spectators to prevent accidentaly spectating into the next round
+        for (const steamid of dataEntry.spectators) {
+          module.exports(["spectate", id, false, steamid]);
+        }
+        // Get user data
+        const usersFile = context.file.users;
+        const usersData = context.data.users;
+        // Get leaderboard of runs
+        const lb = await leaderboard(["get", "lobby"], dataEntry.context);
+        // Calculate new Elo deltas for each matchup
+        const deltas = new Map(); // <steamid, elo delta>
+        // Placeholder "worst possible time" (24h)
+        const worstTime = 24 * 60 * 60 * 60;
+        for (let i = 0; i < lb.length; i ++) {
+          const selfID = lb[i].steamid;
+          // Get current Elo, assume 1000 if unset
+          const selfPoints = usersData[selfID].points.random_ranked || 1000
+          for (let j = 0; j < lb.length; j ++) {
+            if (i === j) continue;
+            // Ignore matchups where both players did not finish
+            if (lb[i].time === worstTime && lb[j].time === worstTime) {
+              continue;
+            }
+            const opponentID = lb[j].steamid;
+            const opponentPoints = usersData[opponentID].points.random_ranked || 1000;
+            const outcome = (lb[i].time < lb[j].time) ? 1 : (lb[i].time === lb[j].time ? 0 : -1);
+            const delta = await points(["delta", selfPoints, opponentPoints, outcome, 64]);
+            if (!deltas.has(selfID)) deltas.set(selfID, delta);
+            else deltas.set(selfID, deltas.get(selfID) + delta);
+          }
+        }
+        // Apply deltas to user profiles, scaled by player count
+        for (const [steamid, delta] of deltas) {
+          // Start new players at 1000 Elo
+          const currentPoints = usersData[steamid].points.random_ranked || 1000;
+          // Scale applied delta to (player count - 1)
+          const scaledDelta = delta / (deltas.size - 1);
+          const newPoints = Number((currentPoints + scaledDelta).toFixed(2));
+          usersData[steamid].points.random_ranked = newPoints;
+        }
+        if (usersFile) Bun.write(usersFile, JSON.stringify(usersData));
+      } else if (state === LOBBY_INGAME) {
+        // After starting a round, schedule force-abort in 15 minutes
+        dataEntry.roundTimeout = setTimeout(async function () {
+          try {
+            if (dataEntry.state === LOBBY_IDLE) return;
+            await module.exports(["chat", id,
+              "15 minutes have passed, ending round.<br>" +
+              "Players who didn't finish are tied for last place."
+            ], context);
+            await module.exports(["abort", id], context);
+            delete dataEntry.roundTimeout;
+          } catch { }
+        }, 15 * 60 * 1000);
+        // Preemptively add all runners to the leaderboard with terrible times.
+        // This way, even if someone leaves or doesn't submit, they will
+        // still be considered for Elo calculation.
+        const worstTime = 24 * 60 * 60 * 60;
+        for (const steamid of listEntry.players) {
+          if (dataEntry.spectators.includes(steamid)) continue;
+          await leaderboard(["add", "lobby", steamid, worstTime, "", worstTime], dataEntry.context);
+        }
+      }
+      // Fall through to "random" case
+    }
     case "random": {
       if (state === LOBBY_INGAME) break;
       // Pick a random map whenever the lobby becomes idle
@@ -133,7 +195,7 @@ async function handleStateChange (id, context, init = false) {
         await module.exports(["map", id, "random", hidden], context);
       } catch {
         // If that failed, keep trying on an interval
-        // Even we keep throwing, it'll stop on mode change or lobby deletion
+        // Even if we keep throwing, it'll stop on mode change or lobby deletion
         setTimeout(function () {
           handleStateChange(id, context, init).catch(e => { });
         }, 3000);
@@ -319,7 +381,7 @@ module.exports = async function (args, context = epochtal) {
               const { file, link } = dataEntry.context.data.map;
               ws.send(JSON.stringify({ type: "getMap", value: { file, link } }));
               // Client WS is synchronous, this will only take effect after the download
-              ws.send(JSON.stringify({ type: "lobby_start", map: file }));
+              ws.send(JSON.stringify({ type: "lobby_start", map: file, crash: true }));
             }
 
             // Ask joining clients to predownload cached map (if any)
@@ -352,18 +414,32 @@ module.exports = async function (args, context = epochtal) {
 
             let { time, portals } = data.value;
 
-            if (dataEntry.crashed.includes(steamid)) {
+            const worstTime = 24 * 60 * 60 * 60;
+            if (time !== worstTime) {
+              // Calculate RTA time since start of round
+              const realSeconds = Date.now() / 1000 - dataEntry.context.data.week.date;
+              const realTime = Math.round(realSeconds * 60);
               // If the player had crashed, use real-time for timing instead
-              const seconds = Date.now() / 1000 - dataEntry.context.data.week.date;
-              time = Math.round(seconds * 60);
-              // Remove the player from the crashed players list
-              dataEntry.crashed = dataEntry.crashed.filter(p => p !== steamid);
+              if (dataEntry.crashed.includes(steamid)) {
+                time = realTime;
+                // Remove the player from the crashed players list
+                dataEntry.crashed = dataEntry.crashed.filter(p => p !== steamid);
+              }
+              // If IGT exceeds RTA, fall back to RTA and warn player
+              if (time > realTime) {
+                time = realTime;
+                await events(["send", eventName, { type: "lobby_time_error", steamid }], context);
+              }
             }
 
             // Submit this run to the lobby leaderboard
             await leaderboard(["add", "lobby", steamid, time, "", portals], dataEntry.context);
             // Broadcast submission to all lobby clients
-            await events(["send", eventName, { type: "lobby_submit", value: { time, portals, steamid } }], context);
+            let notify = false;
+            if (listEntry.mode === "random_ranked") {
+              notify = (await users(["get", steamid])).name;
+            }
+            await events(["send", eventName, { type: "lobby_submit", value: { time, portals, steamid, notify } }], context);
             // Change the client's ready state to false
             await module.exports(["ready", newID, false, steamid, true], context);
 
@@ -628,13 +704,13 @@ module.exports = async function (args, context = epochtal) {
         } else {
           // Otherwise, request a new random map from the workshopper
           const details = await workshopper(["random"]);
-          newMap = await createMapEntry(details, hidden);
+          newMap = await createMapEntry(details);
         }
 
         // Precache the next random map to make transitions seamless
         workshopper(["random"]).then(async function (details) {
           try {
-            dataEntry.context.data.nextMap = await createMapEntry(details, hidden);
+            dataEntry.context.data.nextMap = await createMapEntry(details);
             // Ask all clients to predownload the cached map
             const { file, link } = dataEntry.context.data.nextMap;
             await events(["send", eventName, { type: "getMap", value: { file, link } }], context);
@@ -664,15 +740,26 @@ module.exports = async function (args, context = epochtal) {
 
       }
 
+      // Append map to lobby map history
+      // This is done before the "hidden" check to avoid obfuscating history
+      const previousMap = dataEntry.context.data.maps.at(-1) || null;
+      if (newMap) dataEntry.context.data.maps.push(structuredClone(newMap));
+
+      // If requested, hide all distinguishable map details from players
+      if (newMap && hidden) {
+        newMap.id = "0";
+        newMap.title = "Title hidden";
+        newMap.author = "Author hidden";
+        newMap.thumbnail = "https://epochtal.p2r3.com/icons/unknown-wide.jpg";
+      }
+
       // Set the lobby map
       dataEntry.context.data.map = newMap;
-      // Append map to lobby map history
-      if (newMap) dataEntry.context.data.maps.push(newMap);
 
       // Force all player ready states to false
       for (const player in dataEntry.players) dataEntry.players[player].ready = false;
       // Brodcast map change to clients
-      await events(["send", eventName, { type: "lobby_map", newMap }], context);
+      await events(["send", eventName, { type: "lobby_map", newMap, previousMap }], context);
 
       // Write the lobbies to file if it exists
       if (file) Bun.write(file, JSON.stringify(lobbies));
@@ -720,9 +807,26 @@ module.exports = async function (args, context = epochtal) {
       // Ensure the lobby exists
       if (!listEntry || !dataEntry) throw new UtilError("ERR_LOBBYID", args, context);
 
-      // Throw ERR_INGAME if the game has already started
+      // Throw ERR_INGAME if trying to ready up when the game has already started
       if (!force && dataEntry.state === LOBBY_INGAME) {
-        throw new UtilError("ERR_INGAME", args, context);
+        if (readyState) {
+          throw new UtilError("ERR_INGAME", args, context);
+        } else {
+          // If forfeiting, inform other players by broadcasting a 24-hour time
+          const worstTime = 24 * 60 * 60 * 60;
+          let notify = false;
+          if (listEntry.mode === "random_ranked") {
+            notify = (await users(["get", steamid])).name;
+          }
+          await events(["send", eventName, {
+            type: "lobby_submit",
+            value: {
+              time: worstTime,
+              portals: worstTime,
+              steamid, notify
+            }
+          }], context);
+        }
       }
 
       // Get the player's lobby data
@@ -836,8 +940,8 @@ module.exports = async function (args, context = epochtal) {
           const previousState = dataEntry.state;
           dataEntry.state = LOBBY_IDLE;
           if (previousState === LOBBY_INGAME) {
-            await events(["send", eventName, { type: "lobby_finish" }], context);
             await handleStateChange(lobbyid, context);
+            await events(["send", eventName, { type: "lobby_finish" }], context);
           }
         }
 
@@ -1042,6 +1146,10 @@ module.exports = async function (args, context = epochtal) {
       // Add or remove this player from the spectators list
       if (spectatorState) {
         if (dataEntry.spectators.includes(steamid)) return;
+        // Prevent spectating if the player is supposed to be playing
+        if (dataEntry.state === LOBBY_INGAME && dataEntry.players[steamid].ready) {
+          throw new UtilError("ERR_INGAME", args, context);
+        }
         dataEntry.spectators.push(steamid);
       } else {
         const index = dataEntry.spectators.indexOf(steamid);

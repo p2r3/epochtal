@@ -42,39 +42,130 @@ if (!("Entities" in this)) return;
 
 // Called only once on the initial map load
 ::__elSetup <- function () {
+
   // Print run start signature
   printl("elStart");
+
   // Connect outputs to run finish events
   EntFire("@relay_pti_level_end", "AddOutput", "OnTrigger !self:RunScriptCode:__elFinish():0:1");
   EntFire("@changelevel", "AddOutput", "OnChangeLevel !self:RunScriptCode:__elFinish():0:1");
+  ::RequestMapRating <- ::__elFinish;
+
   // Fix BEEmod maps with pellet dependency
-  local pelletWarning = Entities.FindByName(null, "@stop_for_pellets");
-  if (pelletWarning) pelletWarning.Destroy();
+  local pelletWarning = null;
+  while (pelletWarning = Entities.FindByName(pelletWarning, "@stop_for_pellets")) {
+    pelletWarning.Destroy();
+  }
+
+  // Fix broken PeTI exit airlock door in maps last updated in June 2012
+  IncludeScript("june_2012_airlock_fixup");
+  local mapName = GetMapName();
+  local mapKey = mapName.slice(9); // 9 is the length of "workshop/"
+  local indexOfBackslash = mapKey.find("\\");
+  if (indexOfBackslash != null) {
+    mapKey = mapKey.slice(0, indexOfBackslash) + "/" + mapKey.slice(indexOfBackslash + 1);
+  }
+  if (mapKey in ::__elAirlockFixupTable) {
+    local existingRelayIdx = ::__elAirlockFixupTable[mapKey];
+    local existingRelayName = "InstanceAuto" + existingRelayIdx + "-relay_leaving_level";
+    local newRelay = Entities.CreateByClassname("logic_relay");
+    newRelay.__KeyValueFromString("Targetname", "doorexit1-relay_leaving_level");
+    if (newRelay.ValidateScriptScope()) {
+      local scope = newRelay.GetScriptScope();
+      scope["InputEnable"] <- function ():(existingRelayName) {
+        EntFire(existingRelayName, "Enable");
+      };
+      scope["Inputenable"] <- scope["InputEnable"];
+    }
+  }
+
+  // End run on PeTI restart trigger
+  local restartTrigger = Entities.FindByName(null, "@preview_restart_trigger");
+  if (restartTrigger) {
+    local hookFunction = function ():(restartTrigger) {
+      if (activator == restartTrigger || caller == restartTrigger) {
+        ::__elFinish();
+        return false;
+      }
+      return true;
+    };
+    for (local i = 0; i < 3; i ++) {
+      local commandClass = ["point_clientcommand", "point_servercommand", "point_broadcastclientcommand"][i];
+      local ent = null;
+      while (ent = Entities.FindByClassname(ent, commandClass)) {
+        if (!ent.IsValid()) continue;
+        if (!ent.ValidateScriptScope()) continue;
+        ent.GetScriptScope()["InputCommand"] <- hookFunction;
+        ent.GetScriptScope()["Inputcommand"] <- hookFunction;
+      }
+    }
+  }
+  // Slightly more rigorous check for PeTI restart text
+  local restartText = Entities.FindByName(null, "@preview_complete_message");
+  if (!restartText) restartText = Entities.FindByName(null, "preview_complete_message");
+  if (restartText) if (restartText.ValidateScriptScope()) {
+    local scope = restartText.GetScriptScope();
+    scope["InputDisplay"] <- function () {
+      ::__elFinish();
+      EntFire("point_clientcommand", "Kill");
+      EntFire("point_servercommand", "Kill");
+      EntFire("point_broadcastclientcommand", "Kill");
+      return false;
+    };
+    scope["Inputdisplay"] <- scope["InputDisplay"];
+  }
+
+  // End run on "End of playtest" text
+  local playtestText = Entities.FindByName(null, "@end_of_playtest_text");
+  if (!playtestText) playtestText = Entities.FindByName(null, "end_of_playtest_text");
+  if (playtestText) if (playtestText.ValidateScriptScope()) {
+    local scope = playtestText.GetScriptScope();
+    scope["InputDisplay"] <- function () {
+      ::__elFinish();
+      return false;
+    };
+    scope["Inputdisplay"] <- scope["InputDisplay"];
+  }
+
+  // Create one batch of saves as soon as the run starts
+  EntFire("worldspawn", "RunScriptCode", "printl(\"elMakeSaves\")", 0.1);
+  // Create another batch of saves 1 second after the run has started
+  EntFire("worldspawn", "RunScriptCode", "printl(\"elMakeSaves\")", 1.0);
+
+  // Fix any residual custom sounds
+  SendToConsole("sv_soundemitter_flush");
+
 };
 
 // Called after the map has finished loading, on every load
 ::__elLoad <- function () {
   // Store the server time for the start of the current session
   // This is later used as an offset to calculate time since last load
-  ::__elSessionOffset <- Time() * 30.0;
+  ::__elSessionOffset <- Time() * 60.0;
   // Start (or resume) elTick recursion
   ::__elTick();
 };
 
 // Returns the time in ticks since the last load
 ::__elGetSessionTicks <- function () {
-  return (Time() * 30.0 - ::__elSessionOffset).tointeger();
+  return (Time() * 60.0 - ::__elSessionOffset).tointeger();
 };
 
+::__elFinishLock <- false;
 // Called when the map end condition is reached
 ::__elFinish <- function () {
+  // Overwrite this function with a no-op to prevent repeat calls
+  ::__elFinish <- function () { };
+  if (__elFinishLock) return;
+  ::__elFinishLock <- true;
   // Print run end signature followed by the session time in ticks
   // This is later detected by main.js and used for submitting the run
-  printl("\nelFinish " + ::__elGetSessionTicks());
+  printl("\nelFinish " + ::__elGetSessionTicks() + " " + GetMapName());
 };
 
 /**
- * This function is called on every console tick, i.e. ~30 times per second.
+ * This function is called on every console tick. In most cases, that's
+ * 30 TPS, except during normal (non-console) pauses, for which it's 60 TPS.
  *
  * We achieve this by recursively running the `script` console command to
  * delay the next execution of the function into the next console tick.
@@ -84,7 +175,13 @@ if (!("Entities" in this)) return;
 
   // If we're paused (engine frame time is zero), decrement session offset
   // This effectively times paused ticks, albeit not entirely accurately
-  if (FrameTime() == 0.0) ::__elSessionOffset --;
+  if (FrameTime() == 0.0) {
+    ::__elSessionOffset --;
+    // The line below will only take effect during console pauses
+    // This effectively double-ticks 30 TPS pauses to normalize all pauses to 60 TPS
+    // TODO: Might cause freeze/crash after long pause! Investigate.
+    EntFire("worldspawn", "RunScriptCode", "if (FrameTime() == 0.0) ::__elSessionOffset--");
+  }
 
   // Print the current session time (the time since the last load)
   // This is monitored in main.js to sum up times of different segments

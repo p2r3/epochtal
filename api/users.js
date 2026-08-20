@@ -102,7 +102,7 @@ module.exports = async function (args, request) {
       const logPath = `${epochtal.file.profiles}/${steamid}/profile.log`;
       if (!fs.existsSync(logPath)) return "ERR_NOTFOUND";
 
-      return Response(Bun.file(logPath));
+      return new Response(Bun.file(logPath));
 
     }
 

@@ -202,9 +202,12 @@
   cursor: pointer;
 }
 
+.dangerous-button {
+  color: rgb(255, 80, 80);
+  border-color: rgb(255, 80, 80);
+}
 #lobby-force-button {
   display: none;
-  color: rgb(255, 80, 80);
 }
 
 #lobby-chat-container {

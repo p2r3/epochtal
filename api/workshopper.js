@@ -49,11 +49,12 @@ module.exports = async function (args, request) {
 
     case "random": {
       const source = args[1];
-      const map = await workshopper(["random"]);
+      // A "+" character indicates a co-op pair
+      const map = await workshopper(["random", source.includes("+")]);
 
       if (source) {
         if (!(source in randomMapSources)) {
-          randomMapSources[source] = [null, null];
+          randomMapSources[source] = [null, map];
         } else {
           randomMapSources[source][0] = randomMapSources[source][1];
           randomMapSources[source][1] = map;
