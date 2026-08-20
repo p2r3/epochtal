@@ -257,6 +257,32 @@ async function calculatePointsDelta (context = epochtal) {
 }
 
 /**
+ * Applies the elo change to a user
+ *
+ * @param steamid
+ * @param cat
+ * @param weekNumber
+ * @param {Object} catDeltaElo The elo delta for each player
+ * @param {unknown} context The context object, defaults to epochtal
+ * @returns {Promise<Object>} The user profile, in case further actions with it are required
+ */
+async function applyPointsDeltaForUser (steamid, cat, weekNumber, catDeltaElo, context = epochtal) {
+  const profile = await profiledata(["get", steamid], context);
+
+  if (!(cat in profile.statistics)) profile.statistics[cat] = [];
+  if (!(cat in profile.weeks)) profile.weeks[cat] = [];
+
+  profile.statistics[cat].push(catDeltaElo[cat][steamid]);
+
+  profile.weeks[cat].push(weekNumber);
+  if (!profile.weeks.total.includes(weekNumber)) {
+    profile.weeks.total.push(weekNumber);
+  }
+
+  return profile;
+}
+
+/**
  * Handles the `points` utility call. This utility is used to manage user points/elo.
  *
  * The following subcommands are available:
@@ -317,17 +343,7 @@ module.exports = async function (args, context = epochtal) {
       for (const cat in catDeltaElo) {
         for (const steamid in catDeltaElo[cat]) {
 
-          const profile = await profiledata(["get", steamid], context);
-
-          if (!(cat in profile.statistics)) profile.statistics[cat] = [];
-          if (!(cat in profile.weeks)) profile.weeks[cat] = [];
-
-          profile.statistics[cat].push(catDeltaElo[cat][steamid]);
-
-          profile.weeks[cat].push(weekNumber);
-          if (!profile.weeks.total.includes(weekNumber)) {
-            profile.weeks.total.push(weekNumber);
-          }
+          const profile = await applyPointsDeltaForUser(steamid, cat, weekNumber, catDeltaElo, context);
 
           // Recalculate the display points for the user
           users[steamid].points[cat] = calculateDisplayPoints(profile.statistics[cat]);
@@ -363,19 +379,7 @@ module.exports = async function (args, context = epochtal) {
 
         for (const cat in catDeltaElo) {
           for (const steamid in catDeltaElo[cat]) {
-
-            const profile = await profiledata(["get", steamid], context);
-
-            if (!(cat in profile.statistics)) profile.statistics[cat] = [];
-            if (!(cat in profile.weeks)) profile.weeks[cat] = [];
-
-            profile.statistics[cat].push(catDeltaElo[cat][steamid]);
-
-            profile.weeks[cat].push(weekNumber);
-            if (!profile.weeks.total.includes(weekNumber)) {
-              profile.weeks.total.push(weekNumber);
-            }
-
+            await applyPointsDeltaForUser(steamid, cat, weekNumber, catDeltaElo, context);
           }
         }
 

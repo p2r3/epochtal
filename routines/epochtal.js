@@ -17,6 +17,7 @@ const profilelog = require("../util/profilelog.js");
 const points = require("../util/points.js");
 const curator = require("../util/curator.js");
 const {CONFIG} = require("../config.ts");
+const {sanitizeForDiscord} = require("../common.js");
 
 // Scheduled routines are designed to revert all changes upon failing or to fail invisibly
 // This causes messy try/catches, but is better than leaving the system in a half-broken state
@@ -122,9 +123,9 @@ async function releaseMap (context) {
     await profilelog(["build", steamid], context);
   }
 
-  // Load the curated workshop map set, pick 5 for voting
+  // Load the curated workshop map set, pick some for voting
   const allmaps = await Bun.file(`${CONFIG.DIR.DATA}/maps.json`).json();
-  const VOTING_MAPS_COUNT = 5;
+  const VOTING_MAPS_COUNT = CONFIG.VOTING_MAPS_COUNT;
 
   UtilPrint("epochtal(releaseMap): Building voting map list...");
   const votingmaps = [];
@@ -359,8 +360,7 @@ async function releaseMap (context) {
   await Bun.write(context.file.log, "");
 
   // Announce the new week on Discord
-  // HACK: Hardcoded role ID for now, must fix ASAP!!
-  await discord(["announce", "<@&1363136773592580158> " + announceText.replaceAll(/[*@_~`#[\]()\-.>\\:]/g, "\\$&")], context);
+  await discord(["announce", CONFIG.DISCORD.PING.ANNOUNCE + " " + sanitizeForDiscord(announceText)], context);
 
   return "SUCCESS";
 

@@ -1,28 +1,4 @@
 /**
- * Converts demo ticks to a string representation
- *
- * @param {number} t The number of ticks
- * @returns {string} The formatted string
- */
-function ticksToString (t) {
-
-  // Split the ticks into hours, minutes, and seconds
-  let output = "";
-  const hrs = Math.floor(t / 216000),
-    min = Math.floor(t / 3600),
-    sec = t % 3600 / 60;
-
-  // Format the output string
-  if (hrs !== 0) output += `${hrs}:${min % 60 < 10 ? "0" : ""}${min % 60}:`;
-  else if (min !== 0) output += `${min}:`;
-  if (sec < 10) output += "0";
-  output += sec.toFixed(3);
-
-  return output;
-
-}
-
-/**
  * Converts demo ticks into minutes, seconds, and milliseconds
  *
  * @param {number} t The number of ticks
@@ -257,4 +233,61 @@ function inViewportPercent(element, offsetbottom = 0, marginbottom = 0, marginto
   topPercent = Math.min(100, Math.max(0, topPercent));
   bottomPercent = Math.min(100, Math.max(0, bottomPercent));
   return Math.min(topPercent, bottomPercent);
+}
+
+/**
+ * Sets up required logic to open a CLI when Ctrl+Tilde is pressed.
+ *
+ * @returns void
+ */
+function handleCliPopup() {
+  let cliKeysControl = false;
+  let cliKeysTilde = false;
+
+  const keyDownFunc = function (e) {
+    if (e.key === "Control") cliKeysControl = true;
+    if (e.key === "`") cliKeysTilde = true;
+    if (cliKeysControl && cliKeysTilde) {
+
+      const features = "popup=yes,width=640,height=400,left=20,top=20";
+
+      const popupWindow = window.open("/admin/cli/index.html", "_blank", features);
+      if (popupWindow) popupWindow.focus();
+
+      cliKeysControl = false;
+      cliKeysTilde = false;
+
+    }
+  };
+
+  const keyUpFunc = function (e) {
+    if (e.key === "Control") cliKeysControl = false;
+    if (e.key === "`") cliKeysTilde = false;
+  };
+
+  window.addEventListener("keydown", keyDownFunc);
+  window.addEventListener("keyup", keyUpFunc);
+}
+
+/**
+ * Makes whoami api call and changes the login button to a logout button if the user is logged in
+ *
+ * @returns {Promise<Object>} Result of the whoami api call
+ */
+async function handleWhoami() {
+  const whoami = await (await fetch("/api/users/whoami")).json();
+
+  // Change the login button to a logout button if the user is logged in
+  if (whoami !== null) {
+
+    const loginButton = document.querySelector("#login-button");
+
+    loginButton.innerHTML = "Log out";
+    loginButton.onclick = function () {
+      window.location.href = '/api/auth/logout';
+    };
+
+  }
+
+  return whoami;
 }

@@ -1,52 +1,11 @@
 const UtilError = require("./error.js");
+const shared = require("../pages/shared.js");
 
 const fs = require("node:fs");
 
 const archive = require("./archive.js");
 const weeklog = require("./weeklog.js");
 const profiledata = require("./profiledata.js");
-
-/**
- * Parses a profilelog buffer into an array of objects
- *
- * @param {Uint8Array} buffer Buffer containing profilelog data
- * @param {string[]} categoryList List of categories
- * @returns {object[]} Array of objects representing profilelog entries
- */
-function decodeLog (buffer, categoryList) {
-
-  const log = [];
-
-  // each entry is 10 bytes long
-  for (let i = 0; i < buffer.length; i += 10) {
-
-    const entry = {};
-
-    // 1 byte - category index
-    entry.category = categoryList[buffer[i]];
-
-    // 4 bytes - run time in ticks
-    entry.time = 0;
-    for (let j = 0; j < 4; j ++) {
-      entry.time += buffer[i + 1 + j] * Math.pow(256, 3 - j);
-    }
-
-    // 1 byte - portal count
-    entry.portals = buffer[i + 5];
-
-    // 4 bytes - seconds since start of week 0
-    entry.timestamp = 0;
-    for (let j = 0; j < 4; j ++) {
-      entry.timestamp += buffer[i + 6 + j] * Math.pow(256, 3 - j);
-    }
-
-    log.push(entry);
-
-  }
-
-  return log;
-
-}
 
 /**
  * Encodes a profilelog entry object array into a buffer
@@ -187,7 +146,7 @@ module.exports = async function (args, context = epochtal) {
       const buffer = new Uint8Array(await file.arrayBuffer());
 
       // Decode profile log and return
-      return decodeLog(buffer, profile.categories);
+      return shared.decodeProfileLog(buffer, profile.categories);
 
     }
 
