@@ -55,6 +55,8 @@ function applyTargetQuery (targetQuery, entity, entities, entitiesFromTargetQuer
 
   targetQuery = (targetQuery ?? "").toLowerCase();
 
+  if (targetQuery === "") return [];
+
   // The entities referred to by !activator and !caller depend on the input-output chain,
   // so assume they can refer to any entity
   if (targetQuery === "!activator" || targetQuery === "!caller") return entities;
@@ -141,18 +143,7 @@ function traceConnections (entity, outputs, entities, entitiesThatArePermanently
       // If the entity is disabled, 'FireUser[X]' is the only input that can cause an output to fire, and that
       // was handled above
       else if (entitiesThatArePermanentlyDisabled.has(targetEntity)) continue;
-      // For all entities, these inputs can't fire any outputs
-      else if (["enableportalfunnel", "becomemonster", "kill", "exitdisabledstate", "selfdestructimmediately", "explode"].includes(input))
-        targetOutputs = [];
-      // For all entities, the inputs 'Dissolve' and 'SilentDissolve' can fire no output other than 'OnFizzled'
-      // (some entities can't even fire that)
-      else if (["dissolve", "silentdissolve"].includes(input))
-        targetOutputs = ["onfizzled"];
-      // For all entities, the input 'Disable' can fire no output other than 'OnDisable' and 'OnDisabled' (some
-      // entities can't even fire either of those)
-      else if (input === "disable")
-        targetOutputs = ["ondisable", "ondisabled"];
-      // For other inputs, use the input-output behavior of this entity's class
+      // Use the input-output behavior of this entity's class
       else switch (targetEntity.classname) {
         // Logic relays map 'Trigger' to 'OnTrigger', and 'TriggerWithParameter' to 'OnTriggerParameter'
         case "logic_relay":
@@ -161,7 +152,7 @@ function traceConnections (entity, outputs, entities, entitiesThatArePermanently
           else if (input === "triggerwithparameter")
             targetOutputs = ["ontriggerparameter"];
           break;
-        // Proxies map 'ProxyRelay[x]' to 'OnProxyRelay[x]', and 'OnProxyRelay[x]' to 'OnProxyRelay[x]'
+        // Proxies map 'ProxyRelay[X]' to 'OnProxyRelay[X]', and 'OnProxyRelay[X]' to 'OnProxyRelay[X]'
         case "func_instance_io_proxy":
           if (input.startsWith("proxyrelay")) {
             const index = input.slice("proxyrelay".length);
@@ -197,6 +188,19 @@ function traceConnections (entity, outputs, entities, entitiesThatArePermanently
           else if (input === "close")
             targetOutputs = ["onclose", "onfullyclose"];
           break;
+        case "prop_floor_button":
+          if (input === "pressin")
+            targetOutputs = ["onpressed", "onpressedblue", "onpressedorange"];
+          else if (input === "pressout")
+            targetOutputs = ["onunpressed"];
+        case "trigger_portal_cleanser":
+          if (input === "fizzletouchingportals")
+            targetOutputs = ["onfizzle"];
+        case "path_track":
+          if (input === "inpass")
+            targetOutputs = ["onpass"];
+          else if (input === "inteleport")
+            targetOutputs = ["onteleport"];
         case "logic_coop_manager":
           if (input === "setstateatrue" || input === "setstatebtrue")
             targetOutputs = ["onchangetoalltrue", "onchangetoanytrue"];
@@ -247,11 +251,40 @@ function traceConnections (entity, outputs, entities, entitiesThatArePermanently
         case "logic_auto":
           targetOutputs = [];
           break;
-        // For all other cases, assume all the entity's outputs can be fired
-        // This makes sure we trace all possible connections
+
+        // For classes whose input-output behavior is not specified above
         default:
-          targetOutputs = Object.keys(targetEntity.outputs ?? {});
-          break;
+          // For all entities, these inputs can't fire any outputs
+          if (["enableportalfunnel", "becomemonster", "kill", "exitdisabledstate", "selfdestructimmediately", "explode", "becomeragdoll", "enable", "disable", "disablemotion", "addoutput"].includes(input))
+            targetOutputs = [];
+          // For all entities, the inputs 'Dissolve' and 'SilentDissolve' can fire no output other than 'OnFizzled'
+          // (some entities can't even fire that)
+          else if (["dissolve", "silentdissolve"].includes(input))
+            targetOutputs = ["onfizzled"];
+          // For all entities, the input 'BallCaught' can fire no output other than 'OnBallCaught'
+          // (some entities can't even fire that)
+          else if (input === "ballcaught")
+            targetOutputs = ["onballcaught"];
+          // For all entities, the input 'Ignite' can fire no output other than 'OnIgnite'
+          // (some entities can't even fire that)
+          else if (input === "ignite")
+            targetOutputs = ["onignite"];
+          // For all entities, the input 'Break' can fire no output other than 'OnBreak'
+          // (some entities can't even fire that)
+          else if (input === "break")
+            targetOutputs = ["onbreak"];
+          // For all entities, the input 'EnableMotion' can fire no output other than 'OnMotionEnabled' and 'OnAwakened'
+          // (some entities can't even fire either of these)
+          else if (input === "enablemotion")
+            targetOutputs = ["onmotionenabled", "onawakened"];
+          // For all entities, the input 'SetHealth' can fire no output other than these
+          // (some entities can't even fire any of these)
+          else if (input === "sethealth")
+            targetOutputs = ["onhealthchanged", "onbreak", "ondamaged", "ondamagedbyplayersquad", "onhalfhealth", "ondeath", "onwake", "ondeploy"];
+          // For all other cases, assume all the entity's outputs can be fired
+          // This makes sure we trace all possible connections
+          else
+            targetOutputs = Object.keys(targetEntity.outputs ?? {});
       }
       // Continue tracing from these outputs, mutating reachableEntityInputs to add any additional
       // entity-input-values reached
@@ -306,6 +339,158 @@ async function getEveryPeTIEntity () {
  * @returns {string} `s` with every digit character removed, or "" if `s` is nullish
  */
 const removeAllNumbers = (s) => (s ?? "").replace(/\d+/g, "");
+
+
+/**
+ * A rule for checking if an entity is a standard entity that ends a PeTI or BEEmod map.
+ * Values must be normalized by lowercasing and removing all numbers.
+ * 
+ * @typedef {object} StandardPeTIOrBEEmodMapEnd
+ * @property {string} classname Classname of entity must match this value
+ * @property {string[]} [targetnames] Normalized targetname of entity must match one in this list; omit to skip targetname check
+ * @property {number[][]} [locations] Origin coordinates of entity must match one coordinate set in this list; omit to skip origin check
+ * @property {string[]} [outputSome] At least one normalized target query of the entity must appear in this list
+ * @property {string[]} [outputEvery] Every item in this list must match a normalized target query of the entity
+ */
+
+/**
+ * Rules defining standard entities that end PeTI or BEEmod maps.
+ * @type {StandardPeTIOrBEEmodMapEnd[]}
+ */
+const STANDARD_PETI_OR_BEEMOD_MAP_END = [
+  // Standard PeTI box trigger (singleplayer PeTI, singleplayer BEEmod, coop PeTI)
+  {
+    classname: "trigger_once",
+    targetnames: ["transition_trigger"],
+    locations: [[-2436, -2436, -64], [-2692, -2692, -64], [-2936, -2936, -64]],
+    outputSome: ["@transition_script"]
+  },
+  // Standard singleplayer airlock-exit-BEEmod elevator triggers
+  {
+    classname: "trigger_multiple",
+    targetnames: [""],
+    locations: [[-2032, -1968, -108], [-2032, -1968.5, -42.5]],
+    outputSome: ["elev_exit-departure_elevator-exit_man", "instanceauto-departure_elevator-exit_man"]
+  },
+  // Alternative standard singleplayer airlock-exit-BEEmod elevator triggers
+  {
+    classname: "trigger_multiple",
+    targetnames: [""],
+    locations: [[-2000, -2000, -108], [-2000, -2000.5, -42.5]],
+    outputSome: ["elev_exit-exit_man", "instanceauto-exit_man"]
+  },
+  // Standard cooperative PeTI ending trigger
+  {
+    classname: "trigger_playerteam",
+    targetnames: ["instanceauto-orange-trigger_exit_lift", "instanceauto-blue-trigger_exit_lift"],
+    locations: [[-1976, -2141.99, -17.87], [-1976, -2132, -31.54], [-1976, -1858.01, -17.87], [-1976, -1868, -31.54]],
+    outputSome: ["instanceauto-orange-branch_door", "instanceauto-blue-branch_door"]
+  },
+  // Standard cooperative BEEmod ending trigger
+  {
+    classname: "trigger_playerteam",
+    targetnames: ["coop_exit-orange-trigger_exit_lift", "coop_exit-blue-trigger_exit_lift"],
+    locations: [[-1592, -2141.99, -145.87], [-1592, -1858.01, -145.87]],
+    outputSome: ["coop_exit-orange-branch_door", "coop_exit-blue-branch_door"]
+  },
+  // Standard cooperative PeTI restart trigger
+  {
+    classname: "trigger_once",
+    targetnames: ["instanceauto-restart_trigger"],
+    outputSome: ["@restart_relay"]
+  },
+  // Standard singleplayer PeTI path track
+  {
+    classname: "path_track",
+    targetnames: ["elev_exit-departure_elevator-elevator__path_", "instanceauto-departure_elevator-elevator__path_"],
+    locations: [[-2032, -2032, 432]],
+    outputSome: ["elev_exit-departure_elevator-elevator__player_teleport", "instanceauto-departure_elevator-elevator__player_teleport"]
+  },
+  // Standard airlock-exit-BEEmod path track
+  {
+    classname: "path_track",
+    targetnames: ["elev_exit-departure_elevator-elevator__path_", "instanceauto-departure_elevator-elevator__path_"],
+    locations: [[-2032, -2032, 432]],
+    outputEvery: ["@relay_pti_level_end", "@clientcommand", "@preview_complete_message"]
+  },
+  // Standard singleplayer PeTI branch listener
+  {
+    classname: "logic_branch_listener",
+    targetnames: [""],
+    locations: [[-2032, -2032, -64]],
+    outputEvery: ["@glados", "@relay_pti_level_end", "instanceauto-departure_elevator-close", "instanceauto-departure_elevator-elevator_", "instanceauto-departure_elevator-elevator_doorclose_playerclip", "instanceauto-departure_elevator-floor_clip", "instanceauto-departure_elevator-signs_off"]
+  }
+];
+
+/**
+ * Checks if an entity is a standard entity that ends a PeTI or BEEmod map.
+ * Used in order to exclude standard entities when checking for ways to end a PeTI or BEEmod
+ * map, as these standard entities can only be used if the exit door can be passed.
+ *
+ * @param {object} entity Entity to check
+ * @returns {boolean} `true` if the entity is a standard PeTI or BEEmod entity that ends the map, `false` otherwise
+ */
+function isStandardMapEndEntity (entity) {
+
+  const tgName = removeAllNumbers((entity.targetname ?? "").toLowerCase());
+  const connections = iterableOfConnectionsFromEntityOutputs(entity, Object.keys(entity.outputs ?? {}));
+  const targetQueries = connections.map(c => removeAllNumbers(c[0]));
+
+  for (const rule of STANDARD_PETI_OR_BEEMOD_MAP_END) {
+    if (rule.classname !== entity.classname) continue;
+
+    if (rule.targetnames != null && !rule.targetnames.includes(tgName)) continue;
+
+    if (rule.locations != null) {
+      if (!Array.isArray(entity.origin)) continue;
+      if (!rule.locations.some(loc => loc.every((v, i) => v === entity.origin[i]))) continue;
+    }
+
+    if (rule.outputSome != null) {
+      if (!rule.outputSome.some(t => targetQueries.includes(t))) continue;
+    }
+    if (rule.outputEvery != null) {
+      if (!rule.outputEvery.every(t => targetQueries.includes(t))) continue;
+    }
+
+    return true;
+  }
+  return false;
+
+}
+
+
+// Entities that cannot fire an output without first receiving an input
+const passthroughEntityClasses = new Set(["filter_activator_class", "filter_activator_context", "filter_activator_model", "filter_activator_name", "filter_activator_team", "filter_damage_type", "filter_enemy", "filter_multi", "func_instance_io_proxy", "logic_branch", "logic_case", "logic_compare", "logic_coop_manager", "logic_multicompare", "math_counter", "math_remap", "point_broadcastclientcommand", "point_clientcommand", "point_servercommand", "point_template"]);
+/**
+ * Returns whether an entity can fire an output without first receiving an input
+ * (e.g. a trigger can when something touches it).
+ *
+ * @param {object} entity Entity to check
+ * @param {Set<object>} entitiesThatArePermanentlyDisabled Entities that are disabled and can never be enabled during the map
+ * @returns {boolean} `true` if this entity may start an input-output chain, `false` otherwise
+ */
+function canStartInputOutputChain (entity, entitiesThatArePermanentlyDisabled) {
+
+  if (entitiesThatArePermanentlyDisabled.has(entity)) return false;
+
+  // If this entity is of a class that cannot fire an output without first receiving an input, then
+  // this entity cannot start an input-output chain.
+  if (passthroughEntityClasses.has(entity.classname)) return false;
+  if (entity.classname === "logic_relay") {
+    // If this entity is a logic relay that handles the output of a BEEmod lifeform sensor, then
+    // a packed script file constructs the name of this entity, and fires its outputs when the
+    // player passes through the sensor. Since we do not trace that path, we treat this lifeform
+    // sensor output relay as being able to fire an output without first receiving an input.
+    if (removeAllNumbers((entity.targetname ?? "").toLowerCase()) === "pro_lfs-out") return true;
+    // A logic relay can start an input-output chain only if it has an 'OnSpawn' output.
+    if (Object.keys(entity.outputs ?? {}).some(output => output === "onspawn")) return true;
+    return false;
+  }
+
+  return true;
+
+}
 
 /**
  * Determines whether a map was made with BEEmod (or is in any way non–standard PeTI), by checking whether
@@ -413,8 +598,6 @@ const stepOneBlockBack = (block, direction) => ({
   z: block.z - 128 * direction.z
 });
 
-
-
 /**
  * Converts a block position object to a block string key (for use in sets or maps).
  *
@@ -430,8 +613,10 @@ const stringKeyFromBlock = (block) => `${block.x},${block.y},${block.z}`;
  * @returns {{ x: number, y: number, z: number }} Lower corner of the block
  */
 function blockFromStringKey (key) {
+
   const [x, y, z] = key.split(",").map(Number);
   return { x, y, z };
+
 }
 
 /**
@@ -488,9 +673,7 @@ function findSolidBlocksInStandardPeTIMap (planes, brushes, brushsides) {
       // have a thin side but are still included) - this only discards brushes that have a thin side that is
       // necessary to (or is earlier in the brushsides lump than some side that is necessary to) bound the
       // brush.
-      if (side.thin != 0) {
-        break;
-      }
+      if (side.thin != 0) break;
 
       const plane = planes[side.planenum];
       if (plane == null) break;
@@ -516,8 +699,8 @@ function findSolidBlocksInStandardPeTIMap (planes, brushes, brushsides) {
     // Only consider brushes that are fully inside a single 128x128x128 block
     // Since we also want to include brushes that occupy the full 128x128x128, ensure the upper corner's
     // coordinates are rounded down if they're at the boundary of a block
-    const lowerBlock = findLowerCornerOfBlock({ x: minX, y: minY, z: minZ });
-    const upperBlock = findLowerCornerOfBlock({ x: maxX - 1e-1, y: maxY - 1e-1, z: maxZ - 1e-1 });
+    const lowerBlock = findLowerCornerOfBlock({ x: minX + 0.2, y: minY + 0.2, z: minZ + 0.2 });
+    const upperBlock = findLowerCornerOfBlock({ x: maxX - 0.2, y: maxY - 0.2, z: maxZ - 0.2 });
     if (!vecEquals(lowerBlock, upperBlock)) continue;
 
     // There are many blocks around the entrance elevator and exit elevator which are far from the puzzle.
@@ -566,7 +749,7 @@ function findAllReachableBlocks (startLocation, occupiedLocations, bounds, isSta
     || (bounds.maxZ - bounds.minZ) > EXPLORABLE_REGION_DIMENSION_LIMIT
   ) return null;
 
-  const withinBounds = (b) => bounds.minX <= b.x && b.x <= bounds.maxX && bounds.minY <= b.y && b.y <= bounds.maxY && bounds.minZ <= b.z && b.z <= bounds.maxZ;
+  const withinBounds = (c) => bounds.minX <= c.x && c.x <= bounds.maxX && bounds.minY <= c.y && c.y <= bounds.maxY && bounds.minZ <= c.z && c.z <= bounds.maxZ;
 
   // Convert the start location to the lower corner of the 128*128*128 cell that contains it
   const startBlock = findLowerCornerOfBlock(startLocation);
@@ -575,11 +758,11 @@ function findAllReachableBlocks (startLocation, occupiedLocations, bounds, isSta
 
   // Adjacent non-obstructed blocks are in the same region, so the search can take a step in one axis direction
   const deltas = [[128, 0, 0], [-128, 0, 0], [0, 128, 0], [0, -128, 0], [0, 0, 128], [0, 0, -128]];
-  // If the player starts in this region, then even if another block can only be reached by a step in 2 axis
-  // directions at once, light, darkness, gel, or the appearance of a texture can seep through the shared edge to
-  // alert the player that there is a non-obstructed block on the other side. With that knowledge, the player may be
-  // able to portal bump straight there using the floor or the ceiling, or get there via e.g. mid-portal
-  // teleportation, spinning PPD. So the search can step in two axis directions at once if this is the start region.
+  // If the player starts in this region, then even if another block can only be reached by a step in 2 axis directions
+  // at once, light, darkness, gel, or the appearance of a texture can seep through the shared edge to alert the player
+  // that there is a non-obstructed block on the other side. With that knowledge, the player may be able to portal bump
+  // straight there using the floor or the ceiling, or get there via e.g. mid-portal teleportation, spinning PPD, NaN
+  // bounce. So the search can step in two axis directions at once if this is the start region.
   if (isStartRegion) deltas.push(
     [128, 128, 0], [128, -128, 0], [-128, 128, 0], [-128, -128, 0],
     [128, 0, 128], [128, 0, -128], [-128, 0, 128], [-128, 0, -128],
@@ -654,19 +837,21 @@ function flagForManualReview (reason) {}
  * Returns the solvability of the map given that the exit door starts closed and the conditions required to
  * open it cannot be satisfied.
  * If the map has a standard unskippable exit, this is sufficient to declare the map unsolvable.
- * If the map does not have a standard unskippable exit, the map may be solvable via skipping past the exit
- * door (with e.g. PPD, propless SPPD, mid-portal teleportation) or via a trigger that ends the map - so
- * flag the map for manual review.
+ * If the map does not have a standard unskippable exit, the map may be solvable by skipping past the exit
+ * door (via e.g. PPD, propless SPPD, mid-portal teleportation) or via a different method of ending the map
+ * - so flag the map for manual review.
  * 
  * @param {boolean} isStandardUnskippableExit Whether or not the map has a standard unskippable exit
  * @returns {boolean} `false` if the map is determined to be unsolvable, `true` otherwise
  */
 function solvabilityGivenClosedExitDoorCannotBeOpened (isStandardUnskippableExit) {
+
   if (isStandardUnskippableExit) return false;
   else {
-    flagForManualReview("Closed exit door cannot be opened, but the exit does not have the standard unskippable structure, so skipping past the exit door or exiting the map via a trigger may allow the map to be solved");
+    flagForManualReview("Closed exit door cannot be opened, but the exit does not have the standard unskippable structure, so skipping past the exit door or ending the map via a different method may allow the map to be solved");
     return true;
   }
+
 }
 
 /**
@@ -701,14 +886,14 @@ async function isMapSolvable (data, context = epochtal) {
   // DOWNLOAD THE REQUIRED LUMPS FROM THE MAP'S BSP
   // --------------------------------------------------------------------------------------------------------------- //
 
-  // For Hammer maps, we need the pakfile lump to check for script or config files that can end the map
+  // We need the entities lump to examine the entities, inputs and outputs
+  // We need the pakfile lump to examine the script and config files
   // For PeTI maps, we need the planes, brushes and brushsides lumps to allow pathfinding through the map
-  // We also need entities for all maps
   const requiredLumpNames = (
     isHammerMap ? ["entities", "pakfile"]
-    : ["entities", "planes", "brushes", "brushsides"]
+                : ["entities", "pakfile", "planes", "brushes", "brushsides"]
   );
-  const { entities, planes, brushes, brushsides, pakfile } = await curator(["lumps", data, requiredLumpNames], context);
+  const { entities, pakfile, planes, brushes, brushsides } = await curator(["lumps", data, requiredLumpNames], context);
 
 
   // --------------------------------------------------------------------------------------------------------------- //
@@ -721,6 +906,7 @@ async function isMapSolvable (data, context = epochtal) {
   // - Find all entities that can be enabled via outputs during the map
   const entitiesWhoseNameCanChange = new Set();
   const entitiesThatCanEnableDuringMap = new Set();
+  const entitiesWhoseSpawnflagsCanChangeDuringMap = new Set();
   for (const entity of entities) {
     // Iterate over all this entity's connections
     for (const output of Object.keys(entity.outputs ?? {})) {
@@ -728,16 +914,22 @@ async function isMapSolvable (data, context = epochtal) {
 
         if (input === "addoutput") {
           const v = value.trim();
-          // If firing a certain input would change the name or class of the target entities, record that, so
-          // that if it's a Hammer map we can later assume that there is some way to fire all outputs from
-          // these target entities (in standard PeTI and BEEmod maps, the connections we are checking for don't
-          // rely on changing names of entities, so we won't use this information)
+          // If firing a certain input would change the name or class of the target entities, record that, so that
+          // if it's a Hammer map we can later assume that there is some way to fire all outputs from these target
+          // entities (in standard PeTI and BEEmod maps, the connections we are checking for don't rely on changing
+          // names of entities, so we won't use this information in all cases of checking input-output paths)
           if (v.startsWith("targetname ") || v.startsWith("classname ")) {
             for (const targetEntity of applyTargetQuery(targetQuery, entity, entities))
               entitiesWhoseNameCanChange.add(targetEntity);
           }
-          // If firing a certain input would add a new output to the target entities, then just add that output
-          // to the target entities before we start tracing connections so that all tracing can use that output
+          // If firing a certain input would change the spawnflags of the target entities, record that, so that we
+          // don't rely on these target entities' spawnflags being unchanging
+          else if (v.startsWith("spawnflags ")) {
+            for (const targetEntity of applyTargetQuery(targetQuery, entity, entities))
+              entitiesWhoseSpawnflagsCanChangeDuringMap.add(targetEntity);
+          }
+          // If firing a certain input would add a new output to the target entities, then just add that output to
+          // the target entities before we start tracing connections so that all tracing can use that output
           else if (v.includes(" ")) {
             const [newOutput, newConnection] = v.split(/\s+/);
             if (newConnection.includes(",") || newConnection.includes(":")) {
@@ -756,6 +948,13 @@ async function isMapSolvable (data, context = epochtal) {
         else if (input === "enable" || input === "toggle") {
           for (const targetEntity of applyTargetQuery(targetQuery, entity, entities))
             entitiesThatCanEnableDuringMap.add(targetEntity);
+          // Make sure any broken June 2012 exits get counted as airlock-structured, because they are
+          // automatically fixed by the system
+          if (targetQuery === "doorexit1-relay_leaving_level") {
+            for (const e of entities)
+              if (removeAllNumbers((e.targetname ?? "").toLowerCase()) === "instanceauto-relay_leaving_level")
+                entitiesThatCanEnableDuringMap.add(e);
+          }
         }
         // If firing a certain input would run the command ent_fire, convert that to a standard output
         else if (input === "command") {
@@ -779,6 +978,7 @@ async function isMapSolvable (data, context = epochtal) {
   // If it's a Hammer map, read and cache any packed script/config files (lowercased)
   const packedScriptTexts = [];
   let scriptFileCanEnableEntities = false;
+  let scriptFileCanChangeSpawnflags = false;
   if (isHammerMap) {
     if (pakfile != null && pakfile.files.length > 0) {
       // Cache the contents of each script and config file
@@ -797,23 +997,22 @@ async function isMapSolvable (data, context = epochtal) {
       }
       // Check whether a packed script or config file can enable entities during the map
       for (const stringBuf of packedScriptTexts) {
-        if (stringBuf.includes("enable") || stringBuf.includes("toggle")) {
+        if (stringBuf.includes("enable") || stringBuf.includes("toggle"))
           scriptFileCanEnableEntities = true;
-          break;
-        }
+        if (stringBuf.includes("spawnflags"))
+          scriptFileCanChangeSpawnflags = true;
       }
     }
   }
 
   // Determine which entities are permanently disabled throughout the entire map - connections will not be
   // traced through such entities
-  let entitiesThatArePermanentlyDisabled;
-  if (scriptFileCanEnableEntities)
-    entitiesThatArePermanentlyDisabled = new Set();
-  else {
-    entitiesThatArePermanentlyDisabled = new Set(
-      entities.filter(e => e.startdisabled == 1 && !entitiesThatCanEnableDuringMap.has(e))
-    );
+  const entitiesThatArePermanentlyDisabled = new Set();
+  if (!scriptFileCanEnableEntities) {
+    for (const entity of entities) {
+      if (entity.startdisabled == 1 && !entitiesThatCanEnableDuringMap.has(entity))
+        entitiesThatArePermanentlyDisabled.add(entity);
+    }
   }
 
 
@@ -824,17 +1023,21 @@ async function isMapSolvable (data, context = epochtal) {
   for (const entity of entities) {
     let targetedEntityInputs;
     if (entitiesThatArePermanentlyDisabled.has(entity)) targetedEntityInputs = [];
-    else if (entity.classname === "logic_auto") {
-      const startOfMapOutputs = ["onmapspawn", "onnewgame", "onmaptransition"];
-      // Since a logic auto can only fire these particular outputs at the start of the map,
-      // assume logic relays' parameters are at their initial values when tracing these
-      // connections - unless this is a Hammer map, where logic autos may both alter these values
+    else if (entity.classname === "logic_auto" || entity.classname === "logic_relay") {
+      // (Note that a logic relay's 'OnSpawn' output should only actually be restricted to firing at the
+      // start of the map if no point template that has a templateXX property containing this logic relay
+      // can receive the input 'ForceSpawn', and no env_entity_maker that has an entitytemplate property
+      // containing one of those point templates can receive the input 'ForceSpawn', and no packed script
+      // or config file has the required keywords to perform this behaviour. But this is not implemented.)
+      const startOfMapOutputs = (entity.classname === "logic_auto" ? ["onmapspawn", "onnewgame", "onmaptransition"] : ["onspawn"]);
+      // Since these particular outputs can only be fired at the start of the map, assume every logic
+      // relay's parameters are at their initial values the entire time when tracing these connections -
+      // unless this is a Hammer map, where these start-of-map connections may both alter these values
       // and use these values, so logic relays' parameters may be used at a non-starting value
       const useValuesAtMapSpawn = !isHammerMap;
       const mapSpawnTargets = traceConnections(entity, startOfMapOutputs, entities, entitiesThatArePermanentlyDisabled, entitiesFromTargetQueryCache, useValuesAtMapSpawn);
 
-      // Trace the other outputs of this logic auto without any assumption about the parameters 
-      // of logic relays
+      // Trace the other outputs without any assumption about the parameters of logic relays
       const otherOutputs = Object.keys(entity.outputs ?? {}).filter((output) => !startOfMapOutputs.includes(output));
       const nonMapSpawnTargets = traceConnections(entity, otherOutputs, entities, entitiesThatArePermanentlyDisabled, entitiesFromTargetQueryCache);
 
@@ -852,85 +1055,142 @@ async function isMapSolvable (data, context = epochtal) {
 
 
 
-  // Entities that cannot fire outputs without being targeted
-  const passthroughEntityClasses = new Set(["filter_activator_class", "filter_activator_context", "filter_activator_model", "filter_activator_name", "filter_activator_team", "filter_damage_type", "filter_enemy", "filter_multi", "func_instance_io_proxy", "logic_branch", "logic_case", "logic_compare", "logic_multicompare", "logic_relay", "math_counter", "math_remap", "point_broadcastclientcommand", "point_clientcommand", "point_servercommand", "point_template"]);
-
   // --------------------------------------------------------------------------------------------------------------- //
-  // HAMMER MAP CHECK: TO BE SOLVABLE, THE MAP MUST HAVE SOME METHOD OF RUNNING A FUNCTION THAT CAN END THE MAP
+  // CHECK WHETHER THE MAP HAS ANY METHOD OF RUNNING A FUNCTION THAT CAN END THE MAP
   // This can be done via an entity that runs a script-related command, or via a packed script or config file
   // --------------------------------------------------------------------------------------------------------------- //
 
-  // Check for entity connections with an input and value that can run a function that can end the map
-  if (isHammerMap) {
+  // Check for entities whose input-output can lead to an input and value that can run a function to end the map
 
-    const completionCommands = ["command", "runscriptcode", "callscriptfunction"];
-    // Some Hammer maps display "End of Playtest" or "Test complete. Restarting..." instead of finishing properly
-    // The system automatically fixes these maps' endings, so these maps are not filtered out
-    const completionFunctions = ["requestmaprating", "callvote", "transitionfrommap"];
-    const completionDisplayMessages = ["@preview_complete_message", "preview_complete_message", "@end_of_playtest_text", "end_of_playtest_text"];
+  const completionCommands = ["command", "runscriptcode", "callscriptfunction"];
+  // Some Hammer maps display "End of Playtest" or "Test complete. Restarting..." instead of finishing properly
+  // The system automatically fixes these maps' endings, so these maps are not filtered out
+  const completionFunctions = ["requestmaprating", "callvote", "transitionfrommap"];
+  const completionDisplayMessages = ["@preview_complete_message", "preview_complete_message", "@end_of_playtest_text", "end_of_playtest_text"];
 
-    const passthroughEntitiesThatCanEndMap = new Set();
+  const entitiesThatCanEndMapButNeedHelpFromScript = [];
 
-    for (const entity of entities) {
-      const targetedEntityInputs = targetedEntityInputsByEntity.get(entity);
-      for (const entityInput of targetedEntityInputs) {
-        const tgEntityName = (entityInput.entity.targetname ?? "").toLowerCase();
-        const input = entityInput.input;
-        const value = entityInput.value;
-        // See if this connection can end the map
-        if (
-          (completionCommands.includes(input) && completionFunctions.some(fn => value.includes(fn)))
-          || (completionDisplayMessages.includes(tgEntityName) && input === "display")
-        ) {
-          // If the entity that eventually leads to this entity-input-value cannot itself fire outputs without being
-          // targeted, then we have not found a way to initiate an input-output chain that can end the map - add
-          // this entity to a list so that if no entity can start such an input-output chain, we can later check
-          // whether there's a different way to fire this entity
-          if (passthroughEntityClasses.has(entity.classname)) passthroughEntitiesThatCanEndMap.add(entity);
-          // If the entity that eventually leads to this entity-input-value can fire outputs without being targeted
-          // (e.g. a trigger can fire an output when an entity touches it), the map may be solvable with an
-          // input-output chain starting from this entity
-          else return true;
+  let mapEndCanBeFired = false;
+
+  for (const entity of entities) {
+    const targetedEntityInputs = targetedEntityInputsByEntity.get(entity);
+    for (const entityInput of targetedEntityInputs) {
+      const tgEntityTgName = (entityInput.entity.targetname ?? "").toLowerCase();
+      const input = entityInput.input;
+      const value = entityInput.value;
+      // See if this connection can end the map
+      if (
+        (completionCommands.includes(input) && completionFunctions.some(fn => value.includes(fn)))
+        || (completionDisplayMessages.includes(tgEntityTgName) && input === "display")
+      ) {
+
+        // If this is a standard PeTI or BEEmod map, we don't assume the map is solvable just because of
+        // the standard entities that end a standard PeTI or BEEmod map.
+        // This is because to be able to achieve these standard end conditions, we still need to check
+        // that the player can pass the exit door.
+        if (!isHammerMap && isStandardMapEndEntity(entity)) continue;
+
+        // If this entity, whose output leads to a chain that can end the map, cannot start an input-output
+        // chain, add this entity to a list so that we can later check whether there's a different way to
+        // fire this entity
+
+        if (!canStartInputOutputChain(entity, entitiesThatArePermanentlyDisabled)) {
+          entitiesThatCanEndMapButNeedHelpFromScript.push(entity);
+          continue;
         }
+
+        // If this entity is permanently disabled, it cannot start an input-output chain
+        // (now that we've traced connections in the map, we use a slightly more detailed check for whether
+        // this entity is permanently disabled)
+        if (entity.startdisabled == 1 && !scriptFileCanEnableEntities) {
+          let canBecomeEnabled = false;
+          for (const e of entities) {
+            if (canStartInputOutputChain(e, entitiesThatArePermanentlyDisabled)) {
+              if (targetedEntityInputsByEntity.get(e).some(entityInput =>
+                entityInput.entity === entity && ["enable", "toggle"].includes(entityInput.input)
+              )) {
+                canBecomeEnabled = true;
+                break;
+              }
+            }
+          }
+          if (!canBecomeEnabled) {
+            entitiesThatCanEndMapButNeedHelpFromScript.push(entity);
+            continue;
+          }
+        }
+
+        // If this is a trigger that can never actually be triggered by something touching it, it cannot
+        // start an input-output chain
+        const triggersWhereSpawnflags4096IndicatesCannotBeTouched = ["trigger_hurt", "trigger_multiple", "trigger_once", "trigger_playerteam", "trigger_playermovement", "trigger_proximity", "trigger_push", "trigger_remove", "trigger_teleport", "trigger_vphysics_motion", "trigger_wind"];
+        if (
+          triggersWhereSpawnflags4096IndicatesCannotBeTouched.includes(entity.classname)
+          && entity.spawnflags == 4096 && !scriptFileCanChangeSpawnflags
+        ) {
+          entitiesThatCanEndMapButNeedHelpFromScript.push(entity);
+          continue;
+        }
+
+
+        // If this entity, whose output leads to a chain that can end the map, can start an input-output
+        // chain (i.e. it can fire an output without receiving an input), the map may be solvable with an
+        // input-output chain starting from this entity
+
+        mapEndCanBeFired = true;
+        break;
+
       }
     }
+    if (mapEndCanBeFired) break;
+  }
 
-    // If this entity that can end the map can have its name or class change during
-    // the map, assume there is a way to fire it
-    for (const entity of passthroughEntitiesThatCanEndMap) {
+  // If this entity that can end the map can have its name or class change during
+  // the map, assume there is a way to fire it
+  if (!mapEndCanBeFired) {
+    for (const entity of entitiesThatCanEndMapButNeedHelpFromScript) {
       if (entitiesWhoseNameCanChange.has(entity)) {
-        flagForManualReview("The only entity/ies that can fire an output to end the Hammer map aren't firable by any other entity, with their current name - but they can have their targetname or classname changed during the map, so they may be firable by another entity (the map also may be beatable via a packed script or config file firing an entity or running a function - this was not yet checked)");
-        return true;
+        if (isHammerMap) flagForManualReview("The only entity/ies that can fire an output to end the Hammer map aren't firable by any other entity, given their initial name - but they can have their targetname or classname changed during the map, so they may be firable by another entity (the map also may be completable via a packed script or config file firing an entity or running a function - this was not yet checked)");
+        mapEndCanBeFired = true;
+        break;
       }
     }
+  }
 
-    // Check if the pakfile lump has any script file (*.nut) or config file (*.cfg)
-    // containing a function that can end the map
+  // Check if the pakfile lump has any script file (*.nut) or config file (*.cfg)
+  // containing a function that can end the map
+  if (!mapEndCanBeFired) {
     for (const scriptText of packedScriptTexts) {
       for (const fn of completionFunctions) {
         if (scriptText.includes(fn)) {
-          flagForManualReview("Script or config file may be able to run a function that can end the map (or fire an entity that can end the map - this was not yet checked)");
-          return true;
+          if (isHammerMap) flagForManualReview("Script or config file may be able to run a function that can end the map (or fire an entity that can end the map - this was not yet checked)");
+          mapEndCanBeFired = true;
+          break;
         }
       }
+      if (mapEndCanBeFired) break;
     }
-    // Check if the pakfile lump has any script file (*.nut) or config file (*.cfg)
-    // containing a reference to an entity that has an input that can end the map
+  }
+  // Check if the pakfile lump has any script file (*.nut) or config file (*.cfg)
+  // containing a reference to an entity that has an output that can end the map
+  if (!mapEndCanBeFired) {
     for (const scriptText of packedScriptTexts) {
-      for (const e of passthroughEntitiesThatCanEndMap) {
+      for (const e of entitiesThatCanEndMapButNeedHelpFromScript) {
         const tgName = (e.targetname ?? "").toLowerCase();
         const clsName = (e.classname ?? "").toLowerCase();
         if ((tgName && scriptText.includes(tgName)) || (clsName && scriptText.includes(clsName))) {
-          flagForManualReview("Script or config file may be able to fire an entity that can end the map");
-          return true;
+          if (isHammerMap) flagForManualReview("Script or config file may be able to fire an entity that can end the map");
+          mapEndCanBeFired = true;
+          break;
         }
       }
+      if (mapEndCanBeFired) break;
     }
-
-    // If the Hammer map has no mechanism that can end the map, it is unsolvable
-    return false;
-
   }
+
+  // If a Hammer map has no mechanism that can end the map, it is unsolvable
+  // If this is a non-Hammer map, it may still have a standard mechanism to end the map that was not counted
+  if (isHammerMap) return mapEndCanBeFired;
+
 
 
   const isBEEmodMap = await checkWhetherBEEmod(entities);
@@ -943,7 +1203,7 @@ async function isMapSolvable (data, context = epochtal) {
   // exit door, allowing both players to progress through the exit airlock door. This makes many of
   // these maps solvable by one player skipping past the exit door via e.g. PPD, propless SPPD,
   // mid-portal teleportation. For this reason, all cooperative BEEmod maps are assumed to be
-  // solvable (and some code has not been written to analyse these maps' exits).
+  // solvable (and some code has not been written to analyze these maps' exits).
   if (isCoop && isBEEmodMap) return true;
 
 
@@ -1168,33 +1428,70 @@ async function isMapSolvable (data, context = epochtal) {
     for (const laserInput of targetedEntityInputs.filter(o =>
       o.entity.classname === "env_portal_laser" && (o.input === "toggle" || o.input === "turnon")
     )) {
-      // Many lasers have entities such as a func_instance_io_proxy, a math_counter and a logic_branch
-      // that connect to them but cannot fire outputs without being targeted by another entity. This
-      // doesn't mean that anything can actually start an input-output chain to trigger the laser
-      // during the map.
-      // Also, a logic_auto controls whether the laser is triggered on at the start of the map, but
-      // that doesn't mean anything can actually trigger the laser during the map.
-      if (!passthroughEntityClasses.has(entity.classname) && entity.classname !== "logic_auto") {
-        // Record which entity classes activate each laser
-        entireMapLasersWithAnyConnection.add(laserInput.entity);
-        if (entity.classname === "prop_laser_catcher" || entity.classname === "prop_laser_relay")
-          entireMapLasersWithCatcherOrRelayConnection.add(laserInput.entity);
-      }
-      else if (entity.classname === "logic_branch") {
+      // Many lasers have entities that connect to them but cannot fire outputs without being targeted by
+      // another entity (e.g. func_instance_io_proxy, math_counter, logic_branch). This doesn't mean that
+      // anything can actually start an input-output chain to trigger the laser during the map.
+      if (canStartInputOutputChain(entity, entitiesThatArePermanentlyDisabled)) {
         // This is the first condition that could make a laser start enabled:
-        // A logic_branch with initialvalue 1 links to the laser.
-        // This is the condition used by standard PeTI maps.
-        if (entity.initialvalue == 1) entireMapLasersThatStartOn.add(laserInput.entity);
+        // A logic auto, or a logic relay with an 'OnSpawn' output, turns on or toggles the laser.
+        if (entity.classname === "logic_auto" || entity.classname === "logic_relay") {
+          entireMapLasersThatStartOn.add(laserInput.entity);
+        }
+        // A logic_auto controls whether the laser is triggered on at the start of the map, but that
+        // doesn't mean anything can actually trigger the laser during the map.
+        else {
+          // Record which entity classes activate each laser.
+          entireMapLasersWithAnyConnection.add(laserInput.entity);
+          if (entity.classname === "prop_laser_catcher" || entity.classname === "prop_laser_relay")
+            entireMapLasersWithCatcherOrRelayConnection.add(laserInput.entity);
+        }
       }
     }
 
     // This is the second condition that could make a laser start enabled:
-    // The laser's startstate is 0 (or is a reference to an instance variable that may be 0).
-    // This condition is used in some BEEmod maps.
-    if (
-      entity.classname === "env_portal_laser"
-      && (entity.startstate == 0 || String(entity.startstate ?? "").startsWith("$"))
-    ) entireMapLasersThatStartOn.add(entity);
+    // The laser's startstate is 0, or its startstate is a reference to an instance variable that may be
+    // 0 (in which case startstate would begin with '$'), or the laser doesn't have a startstate field.
+    if (entity.classname === "env_portal_laser" && entity.startstate != 1)
+      entireMapLasersThatStartOn.add(entity);
+  }
+
+
+  // --------------------------------------------------------------------------------------------------------------- //
+  // FIND WHETHER THE EXIT DOOR AND EACH LASER ARE TARGETED THROUGH AN OR-GATE OR INVOLVE PERMANENT ACTIVATION
+  // --------------------------------------------------------------------------------------------------------------- //
+
+
+  const entireMapLasersTargetedThroughORGate = new Set();
+  let exitTargetedThroughORGate = false;
+  let exitInvolvesPermanentActivation = false;
+  for (const entity of entities) {
+    // OR-gates are implemented via a math_counter using the output OnChangedFromMin
+    if (entity.classname === "math_counter") {
+      const ORGateOutputs = ["onchangedfrommin"];
+      // Find the entity inputs that can be fired by an input-output chain from an OR-gate
+      const targetedEntityInputs = traceConnections(entity, ORGateOutputs, entities, entitiesThatArePermanentlyDisabled, entitiesFromTargetQueryCache);
+      // For each entity reached, activating it may require an OR-gate of activations of testing elements
+      for (const entityInput of targetedEntityInputs) {
+        if (entityInput.entity.classname === "env_portal_laser"
+          && (entityInput.input === "toggle" || entityInput.input === "turnon")) {
+          entireMapLasersTargetedThroughORGate.add(entityInput.entity);
+        }
+        else if (entityInput.entity.targetname === "@exit_door" && entityInput.input === "open")
+          exitTargetedThroughORGate = true;
+      }
+    }
+    // Permanent activation latches are implemented via a logic_coop_manager using an output other than 'FireUser[X]'
+    else if (entity.classname === "logic_coop_manager") {
+      const permanentActivationOutputs = ["onchangetoalltrue", "onchangetoanytrue", "onchangetoallfalse", "onchangetoanyfalse"];
+      // Find the entity inputs that can be fired by an input-output chain from a permanent latch
+      const targetedEntityInputs = traceConnections(entity, permanentActivationOutputs, entities, entitiesThatArePermanentlyDisabled, entitiesFromTargetQueryCache);
+      // For each entity reached, activating it may require activating at least one testing element that
+      // stays permanently activated
+      for (const entityInput of targetedEntityInputs) {
+        if (entityInput.entity.targetname === "@exit_door" && entityInput.input === "open")
+          exitInvolvesPermanentActivation = true;
+      }
+    }
   }
 
 
@@ -1206,7 +1503,7 @@ async function isMapSolvable (data, context = epochtal) {
   // Find which logic relays can be triggered during the map
   const logicRelaysThatCanBeTriggered = new Set();
   for (const entity of entities) {
-    if (passthroughEntityClasses.has(entity.classname)) continue;
+    if (!canStartInputOutputChain(entity, entitiesThatArePermanentlyDisabled)) continue;
     const targetedEntityInputs = targetedEntityInputsByEntity.get(entity);
     for (const entityInput of targetedEntityInputs) {
       if (entityInput.entity.classname === "logic_relay" && entityInput.input === "trigger")
@@ -1243,7 +1540,7 @@ async function isMapSolvable (data, context = epochtal) {
 
   const buttonsThatCanBeFired = new Set();
   for (const entity of entities) {
-    if (passthroughEntityClasses.has(entity.classname)) continue;
+    if (!canStartInputOutputChain(entity, entitiesThatArePermanentlyDisabled)) continue;
     const targetedEntityInputs = targetedEntityInputsByEntity.get(entity);
     for (const entityInput of targetedEntityInputs) {
       if (
@@ -1269,9 +1566,12 @@ async function isMapSolvable (data, context = epochtal) {
 
   // If the start region does not contain an exit, declare the map unsolvable
   // If this is a BEEmod map, the start and exit (as well as all entities) are considered to be in region 0
-  if (![...entranceRegionNumbers].some(i => exitRegionNumbers.has(i))) {
+  if (![...entranceRegionNumbers].some(i => exitRegionNumbers.has(i)))
     return false;
-  }
+
+  // If connections to the exit door pass through an OR-gate, assume the exit door can be opened
+  if (exitTargetedThroughORGate)
+    return true;
 
 
   // In standard PeTI maps and some BEEmod maps, the exit door has to BECOME fully closed in order for
@@ -1281,7 +1581,7 @@ async function isMapSolvable (data, context = epochtal) {
   // complete the map.
 
   // However, in some BEEmod map types, the exit does not have this standard airlock structure.
-  // In these maps, skipping past the exit door while it's closed (with e.g. mid-portal teleportation,
+  // In these maps, skipping past the exit door while it's closed (via e.g. mid-portal teleportation,
   // PPD, propless SPPD) allows the player to continue - so if we can't satisfy the conditions to open
   // the exit door, but the exit does not have the standard airlock structure, flag the map for manual
   // review.
@@ -1292,37 +1592,27 @@ async function isMapSolvable (data, context = epochtal) {
   // check - and we are not running pathfinding on BEEmod maps, so these maps won't be declared
   // unsolvable if the exit door is unreachable.
 
-  let hasStandardAirlockExit = false;
-  const exitDoorEntity = entities.find(e => e.classname === "prop_testchamber_door" && e.targetname === "@exit_door");
-  if (exitDoorEntity !== undefined) {
-    // See if this is the standard airlock structure (where @exit_door has to be open or opening so
-    // that it can then fully close, allowing @exit_airlock_door to open)
-    for (const entityInput of targetedEntityInputsByEntity.get(exitDoorEntity)) {
-      if (entityInput.entity.targetname === "@exit_airlock_door" && entityInput.input === "open")
-        hasStandardAirlockExit = true;
-    }
-  }
-
-  // Standard PeTI maps and most BEEmod maps have a logic_branch_listener that fires 'trigger' on the
-  // standard PeTI exit relay to end the map.
-  // However, some BEEmod maps have a trigger that fires 'trigger' on that exit relay - the trigger
-  // may be positioned anywhere and activated by anything, so we assume that these maps do not have
-  // unskippable exits.
-  let hasTriggerThatEndsMap = false;
-  for (const entity of entities.filter(e => (e.classname ?? "").startsWith("trigger_"))) {
-    if (targetedEntityInputsByEntity.get(entity).some(entityInput =>
-      entityInput.entity.targetname === "@relay_pti_level_end" && entityInput.input === "trigger"
-    )) {
-      hasTriggerThatEndsMap = true;
-      break;
-    }
-  }
-
   // (Most cooperative BEEmod maps actually shouldn't count as having an unskippable exit, because they
   // have a trigger past the first exit door that opens that first exit door, meaning that skipping
   // past the first exit door allows the players to progress - but cooperative BEEmod maps are already
   // assumed to be solvable anyway.)
-  const hasStandardUnskippableExit = hasStandardAirlockExit && !hasTriggerThatEndsMap;
+
+  let exitDoorCanOpenAirlockDoor = false;
+  let triggerCanOpenAirlockDoor = false;
+  // See if this is the standard airlock structure (where @exit_door has to be open or opening so
+  // that it can then fully close, allowing @exit_airlock_door to open)
+  for (const entity of entities) {
+    if (!canStartInputOutputChain(entity, entitiesThatArePermanentlyDisabled)) continue;
+    for (const entityInput of targetedEntityInputsByEntity.get(entity)) {
+      if (entityInput.entity.targetname === "@exit_airlock_door" && entityInput.input === "open") {
+        if (entity.classname === "prop_testchamber_door" && entity.targetname === "@exit_door")
+          exitDoorCanOpenAirlockDoor = true;
+        else if ((entity.classname ?? "").startsWith("trigger_"))
+          triggerCanOpenAirlockDoor = true;
+      }
+    }
+  }
+  const isStandardUnskippableExit = exitDoorCanOpenAirlockDoor && !triggerCanOpenAirlockDoor && !mapEndCanBeFired;
 
 
   // Some standard PeTI maps (not BEEmod) that were last updated in June 2012 have a broken
@@ -1340,19 +1630,6 @@ async function isMapSolvable (data, context = epochtal) {
 
   // If there is no standard exit door, as in some BEEmod themes, the map is considered solvable
   if (numExitDoors === 0) return true;
-
-
-  // If the exit door is open on singleplayer or unlocked on cooperative by default, the map is
-  // considered solvable (the method of checking used here doesn't work for cooperative BEEmod maps,
-  // but those maps are already assumed to be solvable anyway)
-  if (
-    entities.some(e =>
-      removeAllNumbers(e.targetname) === "doorexit-branch_toggle"
-      && ((isCoop && e.initialvalue == 0) || (!isCoop && e.initialvalue == 1))
-    )
-  ) {
-    return true;
-  }
 
 
   // Find which entities are required to unlock the exit door
@@ -1381,22 +1658,32 @@ async function isMapSolvable (data, context = epochtal) {
   }
 
 
+  // If the exit door is open on singleplayer or unlocked on cooperative by default, the map is
+  // considered solvable (the method of checking used here doesn't work for cooperative BEEmod maps,
+  // but those maps are already assumed to be solvable anyway)
+  if (isCoop) {
+    if (entities.some(e =>
+      removeAllNumbers(e.targetname) === "doorexit-branch_toggle" && e.initialvalue == 0)
+    ) return true;
+  }
+  else {
+    if ([...entitiesThatUnlockExitDoor].some(e => e.classname === "logic_auto"))
+      return true;
+  }
+
   // If nothing connects to the exit door (which is closed by default if this part of the code
   // is reached), the exit cannot be opened
   let exitConnected = false;
-  for (const entity of entities) {
+  for (const entity of entitiesThatUnlockExitDoor) {
     // In order for something to be able to open the exit door, there must be an entity that
     // can start the output chain that opens it (e.g. just having a func_instance_io_proxy
     // that can open the door is not sufficient)
-    if (passthroughEntityClasses.has(entity.classname)) continue;
-    // See whether this entity can open the exit door
-    if (entitiesThatUnlockExitDoor.has(entity)) {
-      exitConnected = true;
-      break;
-    }
+    if (!canStartInputOutputChain(entity, entitiesThatArePermanentlyDisabled)) continue;
+    exitConnected = true;
+    break;
   }
   if (!exitConnected) {
-    return solvabilityGivenClosedExitDoorCannotBeOpened(hasStandardUnskippableExit);
+    return solvabilityGivenClosedExitDoorCannotBeOpened(isStandardUnskippableExit);
   }
 
 
@@ -1404,20 +1691,17 @@ async function isMapSolvable (data, context = epochtal) {
   // via player position, it can be stuck by Orange several times in order to unlock the door,
   // regardless of what else is connected to the door
   if (isCoop) {
-    for (const entity of entities) {
-      if (passthroughEntityClasses.has(entity.classname)) continue;
-      // Check that this entity is connected to the exit door
-      if (entitiesThatUnlockExitDoor.has(entity)) {
-        // If it's a standard PeTI entity that can connect to the exit door, it can only be
-        // stuck via player position if it's a floor button in the region reachable by players
-        if (criticalEntities.includes(entity)) {
-          if (entity.classname === "prop_floor_button" && entranceRegionNumbers.has(regionByCriticalEntity.get(entity)))
-            return true;
-        }
-        // If it's not a standard PeTI entity that can connect to the exit door, assume it can
-        // be stuck via player position
-        else return true;
+    for (const entity of entitiesThatUnlockExitDoor) {
+      if (!canStartInputOutputChain(entity, entitiesThatArePermanentlyDisabled)) continue;
+      // If it's a standard PeTI entity that can connect to the exit door, it can only be
+      // stuck via player position if it's a floor button in the region reachable by players
+      if (criticalEntities.includes(entity)) {
+        if (entity.classname === "prop_floor_button" && entranceRegionNumbers.has(regionByCriticalEntity.get(entity)))
+          return true;
       }
+      // If it's not a standard PeTI entity that can connect to the exit door, assume it can
+      // be stuck via player position
+      else return true;
     }
   }
 
@@ -1501,7 +1785,7 @@ async function isMapSolvable (data, context = epochtal) {
         // In standard PeTI maps, if a cube has a dropper its targetname contains "cube_dropper".
         // In some BEEmod maps, if a cube has a dropper its targetname starts with "cd" (sometimes containing
         // "cube_dropper", sometimes not).
-        const tgName = (entity.targetname ?? "");
+        const tgName = (entity.targetname ?? "").toLowerCase();
         const boxIsInDropper = tgName.includes("cube_dropper") || tgName.startsWith("cd");
 
         // If this cube is inside a standard PeTI dropper that can never drop, ignore this cube.
@@ -1510,11 +1794,12 @@ async function isMapSolvable (data, context = epochtal) {
         if (!cubesThatCannotBeExtracted.has(entity)) {
 
           // If this is a prop_weighted_cube with cubetype 3, it is a sphere.
-          // If this is a prop_weighted_cube whose model contains "bumbleball", it is a BEEmod bumbleball,
-          // which can also activate a sphere button, so count this as a sphere.
+          // If this is a prop_weighted_cube with a sphere-shaped model (e.g. "bumbleball", "rusty_ball,
+          // clean_sphere"), it is a BEEmod sphere-shaped item that can activate a sphere button, so also
+          // count this as a sphere.
           if (
             entity.classname === "prop_weighted_cube"
-            && (entity.cubetype == 3 || (entity.model ?? "").includes("bumbleball"))
+            && (entity.cubetype == 3 || (entity.model ?? "").includes("ball") || (entity.model ?? "").includes("sphere"))
           ) {
             sphereCount++;
             if (boxIsInDropper) hasSphereDropperThatCanDrop = true;
@@ -1529,6 +1814,7 @@ async function isMapSolvable (data, context = epochtal) {
             if (entity.classname === "prop_weighted_cube" && entity.cubetype == 2)
               containsReflectorCubeByRegion[regionNumber] = true;
           }
+
         }
       }
 
@@ -1562,7 +1848,8 @@ async function isMapSolvable (data, context = epochtal) {
     const hasLaserThatCanBeTurnedOnWithoutLaserCatcherOrRelay = [...lasers].some(
       laser => entireMapLasersWithAnyConnection.has(laser) && !entireMapLasersWithCatcherOrRelayConnection.has(laser)
     );
-    if (hasLaserThatStartsOn || hasLaserThatCanBeTurnedOnWithoutLaserCatcherOrRelay)
+    const hasLaserTargetedThroughORGate = [...lasers].some(laser => entireMapLasersTargetedThroughORGate.has(laser));
+    if (hasLaserThatStartsOn || hasLaserThatCanBeTurnedOnWithoutLaserCatcherOrRelay || hasLaserTargetedThroughORGate)
       regionsThatCouldBeFirstToActivateLaser.push(regionNumber);
 
     // --------------------------------------------------------------------------------------------------------------- //
@@ -1571,7 +1858,7 @@ async function isMapSolvable (data, context = epochtal) {
 
     // The exit requires pressing a pedestal button in this region but this region is unreachable
     if (hasExitPedestalButton && !entranceRegionNumbers.has(regionNumber)) {
-      return solvabilityGivenClosedExitDoorCannotBeOpened(hasStandardUnskippableExit);
+      return solvabilityGivenClosedExitDoorCannotBeOpened(isStandardUnskippableExit);
     }
 
     // Each block can have up to 6 buttons that are required for the exit, and multiple can be
@@ -1614,19 +1901,20 @@ async function isMapSolvable (data, context = epochtal) {
 
     // No cube dropper and not enough cubes to satisfy required cube buttons
     if (!hasCubeDropperThatCanDrop && cubeCount < wholeRegionCubesRequired) {
-      return solvabilityGivenClosedExitDoorCannotBeOpened(hasStandardUnskippableExit);
+      return solvabilityGivenClosedExitDoorCannotBeOpened(isStandardUnskippableExit);
     }
 
     // No sphere dropper and not enough spheres to satisfy required sphere buttons
     if (!hasSphereDropperThatCanDrop && sphereCount < wholeRegionSpheresRequired) {
-      return solvabilityGivenClosedExitDoorCannotBeOpened(hasStandardUnskippableExit);
+      return solvabilityGivenClosedExitDoorCannotBeOpened(isStandardUnskippableExit);
     }
 
     // If there are no cube droppers or sphere droppers,
     // then when the remaining cubes and spheres (after satisfying required cube buttons and sphere buttons)
     // are used to try to satisfy remaining required floor buttons,
-    // then any left-over floor buttons must be satisfiable by a player sticking them (or, in some BEEmod
-    // map types, standing on them and quickly passing through the exit door before it closes)
+    // then any left-over floor buttons must be satisfiable by a player sticking them - or, in some BEEmod
+    // map types, standing on them and quickly passing through the exit door (or through a portal that has
+    // been bumped to be past the exit door) before it closes
     if (!hasCubeDropperThatCanDrop && !hasSphereDropperThatCanDrop) {
       const availableCubes = cubeCount - wholeRegionCubesRequired;
       const availableSpheres = sphereCount - wholeRegionSpheresRequired;
@@ -1640,13 +1928,12 @@ async function isMapSolvable (data, context = epochtal) {
         // If it's singleplayer mode (without SLA):
         //   No more than one stick can be performed to open the exit door after all cubes and spheres have been
         //   placed on as many buttons as possible.
-        //   If it's a standard PeTI map that has the exit door logic from before June 4 2012 or the exit door
-        //   logic from June 4-6 2012, the exit door cannot be stuck open at all.
+        //   If it's a standard PeTI map that has exit door logic from early days of the workshop, the exit door
+        //   cannot be stuck open at all.
         // If it's cooperative mode:
         //   Maps with buttons targeting the exit door that can be stuck by the player have already been handled.
-        if (!isBEEmodMap && entities.some(entity =>
-          targetedEntityInputsByEntity.get(entity).some(t => t.entity.targetname === "doorexit1-relay_leaving_level")
-        )) numPossibleSticks = 0;
+        if (!isBEEmodMap && !entities.some(e => e.targetname === "@door_wants_close"))
+          numPossibleSticks = 0;
         else numPossibleSticks = 1;
       }
       // If this is not the region reachable by the player, then no button sticks in this region can open the exit
@@ -1655,8 +1942,8 @@ async function isMapSolvable (data, context = epochtal) {
 
       // If not enough button sticks can be performed to satisfy the remaining required buttons in this region, the
       // exit door cannot be opened
-      if (remainingToBeStuck > numPossibleSticks) {
-        return solvabilityGivenClosedExitDoorCannotBeOpened(hasStandardUnskippableExit);
+      if (!exitInvolvesPermanentActivation && remainingToBeStuck > numPossibleSticks) {
+        return solvabilityGivenClosedExitDoorCannotBeOpened(isStandardUnskippableExit);
       }
     }
   }
@@ -1665,7 +1952,6 @@ async function isMapSolvable (data, context = epochtal) {
   // --------------------------------------------------------------------------------------------------------------- //
   // SOLVABILITY CHECKS THAT APPLY ACROSS ALL REGIONS BUT USE DATA COLLECTED IN EACH REGION
   // --------------------------------------------------------------------------------------------------------------- //
-
 
   // Perform a breadth-first search across regions (not blocks), starting from all regions that
   // could be the first to have an enabled laser, and progressing to regions that have a laser that
@@ -1705,7 +1991,7 @@ async function isMapSolvable (data, context = epochtal) {
       flagForManualReview("Sequence of laser activations requires reflector cube sending laser from one region to another");
       return true;
     }
-    return solvabilityGivenClosedExitDoorCannotBeOpened(hasStandardUnskippableExit);
+    return solvabilityGivenClosedExitDoorCannotBeOpened(isStandardUnskippableExit);
   }
 
   return true;
@@ -1768,7 +2054,7 @@ module.exports = async function (args, context = epochtal) {
       }
 
 
-      // Analyse the map to determine its solvability
+      // Analyze the map to determine its solvability
       return isMapSolvable(data, context);
 
     }
