@@ -859,14 +859,12 @@ function solvabilityGivenClosedExitDoorCannotBeOpened (isStandardUnskippableExit
  * (or is found to have a different issue that requires it to be filtered out of the map pool).
  * This function is separate from the manual blacklist, which is also used to filter out maps.
  * 
- * For Hammer maps: returns `false` if there is no way to run a function that ends the map (via entity input, or via
- * a script or config file).
- *
- * For BEEmod maps: returns `false` if there is no way to satisfy the conditions required to open the exit door and no
- * method to complete the map without opening the exit door.
- * 
- * For standard PeTI maps: returns `false` if there is no path from the start to the exit or no way to
- * satisfy the conditions required to open the exit door.
+ * A map is deemed unsolvable if any of these is found to be true:
+ * - There is no way to run a function that ends the map via entity input or via a script or config file, apart from
+ *    the standard PeTI and BEEmod methods.
+ * - (only for standard PeTI and BEEmod maps) There is no way to satisfy the conditions required to open the exit door
+ *    and no method to complete the map without opening the exit door.
+ * - (only for standard PeTI maps) There is no path from the start to the exit.
  * 
  * There are other playability issues that can cause a map to be filtered out even though it may be solvable:
  * - Standard PeTI maps where the player has to travel to a completely disconnected region (the player would have to
