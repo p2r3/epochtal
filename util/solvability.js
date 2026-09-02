@@ -1498,6 +1498,7 @@ async function isMapSolvable (data, context = epochtal) {
   // --------------------------------------------------------------------------------------------------------------- //
   // FIND WHICH CUBES ARE STUCK INSIDE STANDARD PeTI CUBE DROPPERS THAT CAN NEVER OPEN
   // These are cubes whose droppers are not on auto-drop and cannot be triggered during the map
+  // On cooperative mode, these cubes can still be extracted
   // --------------------------------------------------------------------------------------------------------------- //
 
   // Find which logic relays can be triggered during the map
@@ -1514,7 +1515,7 @@ async function isMapSolvable (data, context = epochtal) {
   // Each standard PeTI cube dropper has a logic relay that is responsible for dropping the cube
   // Find which cubes have a dropper where this logic relay can never be triggered
 
-  const cubesThatCannotBeExtracted = new Set();
+  const cubesWhoseDropperCanNeverOpen = new Set();
   // Loop over each cube that has a dropper
   // Note that in standard PeTI and BEEmod maps, even frankenturrets show up in the entities lump as
   // a prop_weighted_cube if they have a cube dropper
@@ -1528,7 +1529,7 @@ async function isMapSolvable (data, context = epochtal) {
     // If there is no way to trigger this logic relay, this cube cannot be extracted from its dropper
     // This accounts for both auto-drop and triggering the dropper later in the map
     if (associatedLogicRelay != null && !logicRelaysThatCanBeTriggered.has(associatedLogicRelay))
-      cubesThatCannotBeExtracted.add(standardPeTICubeWithDropper);
+      cubesWhoseDropperCanNeverOpen.add(standardPeTICubeWithDropper);
   }
 
 
@@ -1788,34 +1789,36 @@ async function isMapSolvable (data, context = epochtal) {
         const tgName = (entity.targetname ?? "").toLowerCase();
         const boxIsInDropper = tgName.includes("cube_dropper") || tgName.startsWith("cd");
 
-        // If this cube is inside a standard PeTI dropper that can never drop, ignore this cube.
-        // A cube stuck in its dropper can still block a laser, reflect a laser within its own region, or be
-        // used for a PPD boost, but these do not affect any solvability checks that are performed.
-        if (!cubesThatCannotBeExtracted.has(entity)) {
+        // If this cube is inside a standard PeTI dropper that can never drop, then if it's singleplayer the
+        // cube can never be extracted while if it's cooperative the cube can be extracted via e.g. quantum
+        // crouch, SPPD.
+        // A cube stuck in its dropper on singleplayer can still block a laser, reflect a laser within its
+        // own region, or be used for a PPD boost, but we still ignore such a cube since it does not affect
+        // any solvability checks that are performed.
+        if (!isCoop && cubesWhoseDropperCanNeverOpen.has(entity)) continue;
 
-          // If this is a prop_weighted_cube with cubetype 3, it is a sphere.
-          // If this is a prop_weighted_cube with a sphere-shaped model (e.g. "bumbleball", "rusty_ball,
-          // clean_sphere"), it is a BEEmod sphere-shaped item that can activate a sphere button, so also
-          // count this as a sphere.
-          if (
-            entity.classname === "prop_weighted_cube"
-            && (entity.cubetype == 3 || (entity.model ?? "").includes("ball") || (entity.model ?? "").includes("sphere"))
-          ) {
-            sphereCount++;
-            if (boxIsInDropper) hasSphereDropperThatCanDrop = true;
-          }
-          // Otherwise, this is a cube-shaped cube.
-          // A frankenturret will show up in the entities lump as a prop_monster_box if it has no dropper, or
-          // as a prop_weighted_cube with cubetype 6 if it has a dropper - either way, we count it as a cube.
-          else {
-            cubeCount++;
-            if (boxIsInDropper) hasCubeDropperThatCanDrop = true;
-            // Check if this cube is specifically a reflector cube
-            if (entity.classname === "prop_weighted_cube" && entity.cubetype == 2)
-              containsReflectorCubeByRegion[regionNumber] = true;
-          }
-
+        // If this is a prop_weighted_cube with cubetype 3, it is a sphere.
+        // If this is a prop_weighted_cube with a sphere-shaped model (e.g. "bumbleball", "rusty_ball,
+        // clean_sphere"), it is a BEEmod sphere-shaped item that can activate a sphere button, so also
+        // count this as a sphere.
+        if (
+          entity.classname === "prop_weighted_cube"
+          && (entity.cubetype == 3 || (entity.model ?? "").includes("ball") || (entity.model ?? "").includes("sphere"))
+        ) {
+          sphereCount++;
+          if (boxIsInDropper) hasSphereDropperThatCanDrop = true;
         }
+        // Otherwise, this is a cube-shaped cube.
+        // A frankenturret will show up in the entities lump as a prop_monster_box if it has no dropper, or
+        // as a prop_weighted_cube with cubetype 6 if it has a dropper - either way, we count it as a cube.
+        else {
+          cubeCount++;
+          if (boxIsInDropper) hasCubeDropperThatCanDrop = true;
+          // Check if this cube is specifically a reflector cube
+          if (entity.classname === "prop_weighted_cube" && entity.cubetype == 2)
+            containsReflectorCubeByRegion[regionNumber] = true;
+        }
+
       }
 
       // Find any laser emitters
