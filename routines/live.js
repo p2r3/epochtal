@@ -43,6 +43,8 @@ async function rebuildPackage (context) {
   let mapspawn = await Bun.file(`${defaults}/mapspawn.nut`).text();
   mapspawn = `const EPOCHTAL_URL = "${address}";\n\n` + mapspawn;
   await Bun.write(`${portal2}/scripts/vscripts/mapspawn.nut`, mapspawn);
+  // Copy airlock fixup map list
+  fs.copyFileSync(`${defaults}/june_2012_airlock_fixup.nut`, `${portal2}/scripts/vscripts/june_2012_airlock_fixup.nut`);
 
   // Write the server's HTTP address to a file
   await Bun.write(`${portal2}/address.txt`, address);
