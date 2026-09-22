@@ -10,18 +10,21 @@ const controllerInit = async function () {
 
   const playRunButton = document.querySelector("#button-play");
   /**
-   * Sends a request to display the specified run details on-stream
+   * Updates selected runner details and sends a request to display the specified run details on-stream
    *
    * @param {string} category Name of the category in which the run is
    * @param {string} steamid SteamID of the respective runner
    * @param {"demo"|"video"|null} proof Run proof type
+   * @param {boolean} [isControllerSync=false] Is action being from a different instance of the controller
    */
-  window.selectRunner = function (category, steamid, proof) {
+  window.selectRunner = function (category, steamid, proof, isControllerSync) {
 
-    window.sendToController({
-      action: "run",
-      category, steamid
-    });
+    if(!isControllerSync) {
+      window.sendToController({
+        action: "run",
+        category, steamid, proof
+      });
+    }
 
     // Enable the "Play Selected Run" button
     playRunButton.style.pointerEvents = "auto";
@@ -59,10 +62,12 @@ const controllerInit = async function () {
   };
 
   // Sends a request to display the leaderboard on-stream
-  window.returnToLeaderboard = async function () {
+  window.returnToLeaderboard = async function (isControllerSync) {
 
-    window.sendToController({ action: "start" });
-    window.sendToController({ type: "cmd", value: "stopdemo" });
+    if(!isControllerSync) {
+      window.sendToController({action: "start"});
+      window.sendToController({type: "cmd", value: "stopdemo"});
+    }
 
     // Disable the "Play Selected Run" button
     playRunButton.style.pointerEvents = "none";
@@ -230,8 +235,6 @@ const controllerInit = async function () {
   const controllerMessageHandler = async function (event) {
 
     const data = JSON.parse(event.data);
-    // Messages intended for the controller will have an "update" key
-    if (!("update" in data)) return;
 
     switch (data.update) {
 
@@ -263,6 +266,33 @@ const controllerInit = async function () {
         } else {
           videoPlaypause.className = "fa-solid fa-play";
         }
+        return;
+      }
+
+    }
+
+    switch (data.action) {
+
+      case "category": {
+        categoriesOptions.value = data.name;
+        await updateLeaderboard(data.name);
+        return;
+      }
+      case "run": {
+        // Sync selected category, if got desynced
+        if(categoriesOptions.value !== data.category) {
+          categoriesOptions.value = data.category;
+          await updateLeaderboard(data.category);
+        }
+        window.selectRunner(data.category, data.steamid, data.proof, true);
+        return;
+      }
+      case "start": {
+        window.returnToLeaderboard(true);
+        return;
+      }
+      case "play": {
+        videoControlsContainer.style.display = "";
         return;
       }
 
