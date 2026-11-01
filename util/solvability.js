@@ -158,7 +158,7 @@ function traceConnections (entity, outputs, entities, entitiesThatArePermanently
             const index = input.slice("proxyrelay".length);
             targetOutputs = ["onproxyrelay" + index];
           }
-          if (input.startsWith("onproxyrelay")) {
+          else if (input.startsWith("onproxyrelay")) {
             targetOutputs = [input];
           }
           break;
@@ -758,11 +758,12 @@ function findAllReachableBlocks (startLocation, occupiedLocations, bounds, isSta
 
   // Adjacent non-obstructed blocks are in the same region, so the search can take a step in one axis direction
   const deltas = [[128, 0, 0], [-128, 0, 0], [0, 128, 0], [0, -128, 0], [0, 0, 128], [0, 0, -128]];
-  // If the player starts in this region, then even if another block can only be reached by a step in 2 axis directions
-  // at once, light, darkness, gel, or the appearance of a texture can seep through the shared edge to alert the player
-  // that there is a non-obstructed block on the other side. With that knowledge, the player may be able to portal bump
-  // straight there using the floor or the ceiling, or get there via e.g. mid-portal teleportation, spinning PPD, NaN
-  // bounce. So the search can step in two axis directions at once if this is the start region.
+  // If the player starts in this region, then even if another block can only be reached by a step in 2 axis
+  // directions at once, light, darkness or gel can seep through the shared edge (or something on the other
+  // side can just be slightly visible) to alert the player that there is a non-obstructed block on the other
+  // side. With that knowledge, the player may be able to portal bump straight there using the floor or the
+  // ceiling, or get there via e.g. mid-portal teleportation, spinning PPD, NaN bounce. So the search can step
+  // in two axis directions at once if this is the start region.
   if (isStartRegion) deltas.push(
     [128, 128, 0], [128, -128, 0], [-128, 128, 0], [-128, -128, 0],
     [128, 0, 128], [128, 0, -128], [-128, 0, 128], [-128, 0, -128],
@@ -860,8 +861,7 @@ function solvabilityGivenClosedExitDoorCannotBeOpened (isStandardUnskippableExit
  * This function is separate from the manual blacklist, which is also used to filter out maps.
  * 
  * A map is deemed unsolvable if any of these is found to be true:
- * - There is no way to run a function that ends the map via entity input or via a script or config file, apart from
- *    the standard PeTI and BEEmod methods.
+ * - There is no way to run a function that ends the map via entity input or via a script or config file.
  * - (only for standard PeTI and BEEmod maps) There is no way to satisfy the conditions required to open the exit door
  *    and no method to complete the map without opening the exit door.
  * - (only for standard PeTI maps) There is no path from the start to the exit.
@@ -973,38 +973,37 @@ async function isMapSolvable (data, context = epochtal) {
     }
   }
 
-  // If it's a Hammer map, read and cache any packed script/config files (lowercased)
+  // Read and cache any packed script/config files (lowercased)
   const packedScriptTexts = [];
   let scriptFileCanEnableEntities = false;
   let scriptFileCanChangeSpawnflags = false;
-  if (isHammerMap) {
-    if (pakfile != null && pakfile.files.length > 0) {
-      // Cache the contents of each script and config file
-      try {
-        for (const file of pakfile.files) {
-          if (file.path.endsWith(".nut") || file.path.endsWith(".cfg")) {
-            const buf = await file.buffer();
-            packedScriptTexts.push(buf.toString("utf8").toLowerCase());
-          }
+  if (pakfile != null && pakfile.files.length > 0) {
+    // Cache the contents of each script and config file
+    try {
+      for (const file of pakfile.files) {
+        if (file.path.endsWith(".nut") || file.path.endsWith(".cfg")) {
+          const buf = await file.buffer();
+          const text = buf.toString("utf8").toLowerCase();
+          packedScriptTexts.push(text);
         }
-      } catch (_) {
-        // If Pakfile read fails in a Hammer map, don't declare that this map is unsolvable - flag the map
-        // for manual review
-        flagForManualReview("Hammer map's packed files failed to be read");
-        return true;
       }
-      // Check whether a packed script or config file can enable entities during the map
-      for (const stringBuf of packedScriptTexts) {
-        if (stringBuf.includes("enable") || stringBuf.includes("toggle"))
-          scriptFileCanEnableEntities = true;
-        if (stringBuf.includes("spawnflags"))
-          scriptFileCanChangeSpawnflags = true;
-      }
+    } catch (_) {
+      // If Pakfile read fails, don't declare that this map is unsolvable - flag the map for
+      // manual review
+      flagForManualReview("Files packed into the map failed to be read");
+      return true;
+    }
+    // Check whether a packed script or config file can enable entities during the map
+    for (const stringBuf of packedScriptTexts) {
+      if (stringBuf.includes("enable") || stringBuf.includes("toggle"))
+        scriptFileCanEnableEntities = true;
+      if (stringBuf.includes("spawnflags"))
+        scriptFileCanChangeSpawnflags = true;
     }
   }
 
-  // Determine which entities are permanently disabled throughout the entire map - connections will not be
-  // traced through such entities
+  // Determine which entities are permanently disabled throughout the entire map - connections
+  // will not be traced through such entities
   const entitiesThatArePermanentlyDisabled = new Set();
   if (!scriptFileCanEnableEntities) {
     for (const entity of entities) {
@@ -1068,7 +1067,8 @@ async function isMapSolvable (data, context = epochtal) {
 
   const entitiesThatCanEndMapButNeedHelpFromScript = [];
 
-  let mapEndCanBeFired = false;
+  let mapEndCanBeFiredUsingStandardEndEntity = false;
+  let mapEndCanBeFiredUsingNonStandardEndEntity = false;
 
   for (const entity of entities) {
     const targetedEntityInputs = targetedEntityInputsByEntity.get(entity);
@@ -1081,12 +1081,6 @@ async function isMapSolvable (data, context = epochtal) {
         (completionCommands.includes(input) && completionFunctions.some(fn => value.includes(fn)))
         || (completionDisplayMessages.includes(tgEntityTgName) && input === "display")
       ) {
-
-        // If this is a standard PeTI or BEEmod map, we don't assume the map is solvable just because of
-        // the standard entities that end a standard PeTI or BEEmod map.
-        // This is because to be able to achieve these standard end conditions, we still need to check
-        // that the player can pass the exit door.
-        if (!isHammerMap && isStandardMapEndEntity(entity)) continue;
 
         // If this entity, whose output leads to a chain that can end the map, cannot start an input-output
         // chain, add this entity to a list so that we can later check whether there's a different way to
@@ -1134,21 +1128,25 @@ async function isMapSolvable (data, context = epochtal) {
         // chain (i.e. it can fire an output without receiving an input), the map may be solvable with an
         // input-output chain starting from this entity
 
-        mapEndCanBeFired = true;
-        break;
+        if (isStandardMapEndEntity(entity))
+          mapEndCanBeFiredUsingStandardEndEntity = true;
+        else {
+          mapEndCanBeFiredUsingNonStandardEndEntity = true;
+          break;
+        }
 
       }
     }
-    if (mapEndCanBeFired) break;
+    if (mapEndCanBeFiredUsingNonStandardEndEntity) break;
   }
 
   // If this entity that can end the map can have its name or class change during
   // the map, assume there is a way to fire it
-  if (!mapEndCanBeFired) {
+  if (!mapEndCanBeFiredUsingNonStandardEndEntity) {
     for (const entity of entitiesThatCanEndMapButNeedHelpFromScript) {
       if (entitiesWhoseNameCanChange.has(entity)) {
         if (isHammerMap) flagForManualReview("The only entity/ies that can fire an output to end the Hammer map aren't firable by any other entity, given their initial name - but they can have their targetname or classname changed during the map, so they may be firable by another entity (the map also may be completable via a packed script or config file firing an entity or running a function - this was not yet checked)");
-        mapEndCanBeFired = true;
+        mapEndCanBeFiredUsingNonStandardEndEntity = true;
         break;
       }
     }
@@ -1156,40 +1154,49 @@ async function isMapSolvable (data, context = epochtal) {
 
   // Check if the pakfile lump has any script file (*.nut) or config file (*.cfg)
   // containing a function that can end the map
-  if (!mapEndCanBeFired) {
+  if (!mapEndCanBeFiredUsingNonStandardEndEntity) {
     for (const scriptText of packedScriptTexts) {
       for (const fn of completionFunctions) {
         if (scriptText.includes(fn)) {
-          if (isHammerMap) flagForManualReview("Script or config file may be able to run a function that can end the map (or fire an entity that can end the map - this was not yet checked)");
-          mapEndCanBeFired = true;
+          if (isHammerMap) flagForManualReview("Script or config file may be able to run a function that can end the Hammer map (or fire an entity that can end the map - this was not yet checked)");
+          mapEndCanBeFiredUsingNonStandardEndEntity = true;
           break;
         }
       }
-      if (mapEndCanBeFired) break;
+      if (mapEndCanBeFiredUsingNonStandardEndEntity) break;
     }
   }
   // Check if the pakfile lump has any script file (*.nut) or config file (*.cfg)
   // containing a reference to an entity that has an output that can end the map
-  if (!mapEndCanBeFired) {
+  if (!mapEndCanBeFiredUsingNonStandardEndEntity) {
     for (const scriptText of packedScriptTexts) {
       for (const e of entitiesThatCanEndMapButNeedHelpFromScript) {
         const tgName = (e.targetname ?? "").toLowerCase();
         const clsName = (e.classname ?? "").toLowerCase();
         if ((tgName && scriptText.includes(tgName)) || (clsName && scriptText.includes(clsName))) {
-          if (isHammerMap) flagForManualReview("Script or config file may be able to fire an entity that can end the map");
-          mapEndCanBeFired = true;
+          if (isHammerMap) flagForManualReview("Script or config file may be able to fire an entity that can end the Hammer map");
+          mapEndCanBeFiredUsingNonStandardEndEntity = true;
           break;
         }
       }
-      if (mapEndCanBeFired) break;
+      if (mapEndCanBeFiredUsingNonStandardEndEntity) break;
     }
   }
 
-  // If a Hammer map has no mechanism that can end the map, it is unsolvable
-  // If this is a non-Hammer map, it may still have a standard mechanism to end the map that was not counted
+  const mapEndCanBeFired = mapEndCanBeFiredUsingStandardEndEntity || mapEndCanBeFiredUsingNonStandardEndEntity;
+
+  // If this is a Hammer map, treat it as solvable if and only if there is a mechanism that can end the map
+
   if (isHammerMap) return mapEndCanBeFired;
 
 
+  // If this is a standard PeTI or BEEmod map:
+
+  // If there is no mechanism that can end the map, the map is unsolvable
+  if (!mapEndCanBeFired) return false;
+  // If there is a mechanism that can end the map, continue with checks to determine whether the player can
+  // pass the exit door
+  // (we later make use of the information of whether the map can be ended using a non-standard entity)
 
   const isBEEmodMap = await checkWhetherBEEmod(entities);
 
@@ -1611,7 +1618,7 @@ async function isMapSolvable (data, context = epochtal) {
       }
     }
   }
-  const isStandardUnskippableExit = exitDoorCanOpenAirlockDoor && !triggerCanOpenAirlockDoor && !mapEndCanBeFired;
+  const isStandardUnskippableExit = exitDoorCanOpenAirlockDoor && !triggerCanOpenAirlockDoor && !mapEndCanBeFiredUsingNonStandardEndEntity;
 
 
   // Some standard PeTI maps (not BEEmod) that were last updated in June 2012 have a broken
@@ -1687,8 +1694,11 @@ async function isMapSolvable (data, context = epochtal) {
 
 
   // If it's cooperative mode and something that is connected to the exit door is triggerable
-  // via player position, it can be stuck by Orange several times in order to unlock the door,
-  // regardless of what else is connected to the door
+  // via player position, it can be stuck by Orange once and then can still be activated again
+  // in order to unlock the door. This means that any one condition that unlocks the exit door
+  // may be skipped, so the map should only be declared unsolvable if there are at least two
+  // unachievable conditions.
+  let oneConditionCanBeSkipped = false;
   if (isCoop) {
     for (const entity of entitiesThatUnlockExitDoor) {
       if (!canStartInputOutputChain(entity, entitiesThatArePermanentlyDisabled)) continue;
@@ -1696,18 +1706,18 @@ async function isMapSolvable (data, context = epochtal) {
       // stuck via player position if it's a floor button in the region reachable by players
       if (criticalEntities.includes(entity)) {
         if (entity.classname === "prop_floor_button" && entranceRegionNumbers.has(regionByCriticalEntity.get(entity)))
-          return true;
+          oneConditionCanBeSkipped = true;
       }
       // If it's not a standard PeTI entity that can connect to the exit door, assume it can
       // be stuck via player position
-      else return true;
+      else oneConditionCanBeSkipped = true;
     }
   }
 
 
 
   // Data for the whole map, collected across all regions
-  const regionsWithExitLaserCatcherOrRelay = [];
+  const exitLaserCatchersOrRelaysByRegion = new Array(numRegions).fill(0);
   const regionsThatCouldBeFirstToActivateLaser = [];
   const regionsWithLasersActivatedByReceiverInGivenRegion = Array.from({ length: numRegions }, () => new Set());
   const containsReflectorCubeByRegion = new Array(numRegions).fill(false);
@@ -1721,7 +1731,7 @@ async function isMapSolvable (data, context = epochtal) {
 
   for (let regionNumber = 0; regionNumber < numRegions; regionNumber++) {
 
-    let hasExitPedestalButton = false;
+    let numExitPedestalButtons = 0;
     let hasCubeDropperThatCanDrop = false, hasSphereDropperThatCanDrop = false;
     let cubeCount = 0, sphereCount = 0;
     // Each of these maps a block to the set of orientations that have a button within
@@ -1734,7 +1744,6 @@ async function isMapSolvable (data, context = epochtal) {
       map.set(key, set);
     }
 
-    let hasExitLaserCatcherOrRelay = false;
     const lasers = new Set();
 
     // --------------------------------------------------------------------------------------------------------------- //
@@ -1768,11 +1777,11 @@ async function isMapSolvable (data, context = epochtal) {
         }
 
         else if (entity.classname === "prop_button") { // Pedestal button
-          hasExitPedestalButton = true;
+          numExitPedestalButtons += 1;
         }
 
         else if (entity.classname === "prop_laser_catcher" || entity.classname === "prop_laser_relay") { // Laser catcher or relay
-          hasExitLaserCatcherOrRelay = true;
+          exitLaserCatchersOrRelaysByRegion[regionNumber] += 1;
         }
       }
 
@@ -1841,8 +1850,6 @@ async function isMapSolvable (data, context = epochtal) {
       }
     }
 
-    if (hasExitLaserCatcherOrRelay) regionsWithExitLaserCatcherOrRelay.push(regionNumber);
-
     // Check whether this region has a laser that can activate before any other laser in the entire map
     // (meaning either it starts on or it can be activated without the requirement of another laser).
     const hasLaserThatStartsOn = [...lasers].some(laser => entireMapLasersThatStartOn.has(laser));
@@ -1858,8 +1865,14 @@ async function isMapSolvable (data, context = epochtal) {
     // --------------------------------------------------------------------------------------------------------------- //
 
     // The exit requires pressing a pedestal button in this region but this region is unreachable
-    if (hasExitPedestalButton && !entranceRegionNumbers.has(regionNumber)) {
-      return solvabilityGivenClosedExitDoorCannotBeOpened(isStandardUnskippableExit);
+    if (!entranceRegionNumbers.has(regionNumber)) {
+      while (numExitPedestalButtons > 0) {
+        if (oneConditionCanBeSkipped) {
+          oneConditionCanBeSkipped = false;
+          numExitPedestalButtons -= 1;
+        }
+        else return solvabilityGivenClosedExitDoorCannotBeOpened(isStandardUnskippableExit);
+      }
     }
 
     // Each block can have up to 6 buttons that are required for the exit, and multiple can be
@@ -1901,13 +1914,25 @@ async function isMapSolvable (data, context = epochtal) {
     }
 
     // No cube dropper and not enough cubes to satisfy required cube buttons
-    if (!hasCubeDropperThatCanDrop && cubeCount < wholeRegionCubesRequired) {
-      return solvabilityGivenClosedExitDoorCannotBeOpened(isStandardUnskippableExit);
+    if (!hasCubeDropperThatCanDrop) {
+      while (cubeCount < wholeRegionCubesRequired) {
+        if (oneConditionCanBeSkipped) {
+          oneConditionCanBeSkipped = false;
+          wholeRegionCubesRequired -= 1;
+        }
+        else return solvabilityGivenClosedExitDoorCannotBeOpened(isStandardUnskippableExit);
+      }
     }
 
     // No sphere dropper and not enough spheres to satisfy required sphere buttons
-    if (!hasSphereDropperThatCanDrop && sphereCount < wholeRegionSpheresRequired) {
-      return solvabilityGivenClosedExitDoorCannotBeOpened(isStandardUnskippableExit);
+    if (!hasSphereDropperThatCanDrop) {
+      while (sphereCount < wholeRegionSpheresRequired) {
+        if (oneConditionCanBeSkipped) {
+          oneConditionCanBeSkipped = false;
+          wholeRegionSpheresRequired -= 1;
+        }
+        else return solvabilityGivenClosedExitDoorCannotBeOpened(isStandardUnskippableExit);
+      }
     }
 
     // If there are no cube droppers or sphere droppers,
@@ -1919,32 +1944,44 @@ async function isMapSolvable (data, context = epochtal) {
     if (!hasCubeDropperThatCanDrop && !hasSphereDropperThatCanDrop) {
       const availableCubes = cubeCount - wholeRegionCubesRequired;
       const availableSpheres = sphereCount - wholeRegionSpheresRequired;
-      const remainingToBeStuck = Math.max(0, wholeRegionAnythingRequired - availableCubes - availableSpheres);
+      let remainingToBeStuck = Math.max(0, wholeRegionAnythingRequired - availableCubes - availableSpheres);
 
       let numPossibleSticks;
       // If this is the region reachable by the player, then after all cubes and spheres have been placed on as
       // many buttons as possible, the player can perform button sticks on additional buttons in this region to
       // open the exit door
       if (entranceRegionNumbers.has(regionNumber)) {
-        // If it's singleplayer mode (without SLA):
-        //   No more than one stick can be performed to open the exit door after all cubes and spheres have been
-        //   placed on as many buttons as possible.
-        //   If it's a standard PeTI map that has exit door logic from early days of the workshop, the exit door
-        //   cannot be stuck open at all.
-        // If it's cooperative mode:
-        //   Maps with buttons targeting the exit door that can be stuck by the player have already been handled.
-        if (!isBEEmodMap && !entities.some(e => e.targetname === "@door_wants_close"))
+        // In singleplayer:
+        //   Without SLA, no more than one stick can be performed to open the exit door given that
+        //   all cubes and spheres have already been placed on as many buttons as possible.
+        // In cooperative mode:
+        //   Button sticks in cooperative mode have already been considered (they allow any one condition to be
+        //   skipped).
+        //   Additionally, one floor button (regardless of whether it has already been used for a stick) can be
+        //   activated by a player standing on it, allowing the other player to pass through the exit door, and
+        //   this keeps the exit door open for the player who was standing on the button. This usage of a floor
+        //   button is treated as a 'possible stick' in this part of the code, so one stick is considered to be
+        //   possible in cooperative mode as well as singleplayer.
+        // If it's a standard PeTI map that has exit door logic from early days of the workshop, the exit door
+        // cannot be stuck open at all (this only affects singleplayer).
+        if (!isCoop && !isBEEmodMap && !entities.some(e => e.targetname === "@door_wants_close"))
           numPossibleSticks = 0;
         else numPossibleSticks = 1;
       }
-      // If this is not the region reachable by the player, then no button sticks in this region can open the exit
-      // door after all cubes and spheres have been placed on as many buttons as possible
+      // If this is not the region reachable by the player, then no button sticks in this region can open the
+      // exit door after all cubes and spheres have been placed on as many buttons as possible
       else numPossibleSticks = 0;
 
-      // If not enough button sticks can be performed to satisfy the remaining required buttons in this region, the
-      // exit door cannot be opened
-      if (!exitInvolvesPermanentActivation && remainingToBeStuck > numPossibleSticks) {
-        return solvabilityGivenClosedExitDoorCannotBeOpened(isStandardUnskippableExit);
+      // If not enough button sticks can be performed to satisfy the remaining required floor buttons in this
+      // region, the exit door cannot be opened
+      if (!exitInvolvesPermanentActivation) {
+        while (numPossibleSticks < remainingToBeStuck) {
+          if (oneConditionCanBeSkipped) {
+            oneConditionCanBeSkipped = false;
+            remainingToBeStuck -= 1;
+          }
+          else return solvabilityGivenClosedExitDoorCannotBeOpened(isStandardUnskippableExit);
+        }
       }
     }
   }
@@ -1960,11 +1997,12 @@ async function isMapSolvable (data, context = epochtal) {
   // This will find all regions that can have an enabled laser.
 
   // If some region has a laser receiver that connects to the exit door but can never have an
-  // enabled laser emitter, then the map is unsolvable... unless some region with a reflector cube
-  // can have an enabled laser emitter - there is a chance the map may, without the player having to
-  // touch the cube directly, make the cube point against a solid wall, causing the laser to pass
-  // through one brush and enter another nearby region. This could make the map solvable without the
-  // player needing to know the location of any separate region, so flag the map for manual review.
+  // enabled laser emitter, then that exit condition can never be satisfied... unless some region
+  // with a reflector cube can have an enabled laser emitter - in that case, there is a chance the
+  // map may, without the player having to touch the cube directly, make the cube point against a
+  // solid wall, causing the laser to pass through one brush and enter another nearby region. This
+  // could make the map solvable without the player needing to know the location of any separate
+  // region, so flag the map for manual review.
 
   const visited = new Array(numRegions).fill(false);
   for (const r of regionsThatCouldBeFirstToActivateLaser) visited[r] = true;
@@ -1987,12 +2025,18 @@ async function isMapSolvable (data, context = epochtal) {
       }
     }
   }
-  if (regionsWithExitLaserCatcherOrRelay.some(region => !visited[region])) {
-    if (activatedSomeLaserInRegionWithReflectorCube) {
-      flagForManualReview("Sequence of laser activations requires reflector cube sending laser from one region to another");
-      return true;
+  for (let regionNumber = 0; regionNumber < numRegions; regionNumber++) {
+    if (exitLaserCatchersOrRelaysByRegion[regionNumber] > 0 && !visited[regionNumber]) {
+      if (oneConditionCanBeSkipped && exitLaserCatchersOrRelaysByRegion[regionNumber] === 1)
+        oneConditionCanBeSkipped = false;
+      else {
+        if (activatedSomeLaserInRegionWithReflectorCube) {
+          flagForManualReview("Sequence of laser activations requires reflector cube sending laser from one region to another");
+          return true;
+        }
+        return solvabilityGivenClosedExitDoorCannotBeOpened(isStandardUnskippableExit);
+      }
     }
-    return solvabilityGivenClosedExitDoorCannotBeOpened(isStandardUnskippableExit);
   }
 
   return true;
