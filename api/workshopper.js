@@ -92,7 +92,7 @@ module.exports = async function (args, request) {
         buffer[1] === 0x42 &&
         buffer[2] === 0x53 &&
         buffer[3] === 0x50
-      ) return response;
+      ) return new Response(buffer);
 
       const directory = await unzipper.Open.buffer(buffer);
       return new Response(directory.files[0].stream());
