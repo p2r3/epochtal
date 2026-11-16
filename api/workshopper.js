@@ -86,17 +86,14 @@ module.exports = async function (args, request) {
         return new Response("ERR_STEAMAPI (2)", { status: 500 });
       }
 
-      const contentDisposition = response.headers.get("content-disposition");
-      if (!contentDisposition) {
-        return new Response("ERR_STEAMAPI (3)", { status: 500 });
-      }
-
-      const isZipped = contentDisposition.endsWith(".bsp.zip;");
-      if (!isZipped) {
-        return response;
-      }
-
       const buffer = await response.bytes();
+      if ( // "VBSP"
+        buffer[0] === 0x56 &&
+        buffer[1] === 0x42 &&
+        buffer[2] === 0x53 &&
+        buffer[3] === 0x50
+      ) return response;
+
       const directory = await unzipper.Open.buffer(buffer);
       return new Response(directory.files[0].stream());
     }
