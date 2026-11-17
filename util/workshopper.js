@@ -247,15 +247,15 @@ async function autoRebuildRandomMapCache () {
 autoRebuildRandomMapCache();
 
 // Log any impossible maps found, and re-fetch another map
-async function handleImpossibleMap (mapid, coop = false) {
+async function handleImpossibleMap (mapid, coop = false, errors = []) {
   const impossible = await Bun.file(`${__dirname}/../data/impossible.json`).json();
   if (!impossible.includes(mapid)) impossible.push(mapid);
   await Bun.write(`${__dirname}/../data/impossible.json`, JSON.stringify(impossible));
-  return await fetchRandomMap(null, coop);
+  return await fetchRandomMap(null, coop, errors);
 }
 
 // Fetches a truly random singleplayer map from the Steam workshop
-async function fetchRandomMap (node = null, coop = false) {
+async function fetchRandomMap (node = null, coop = false, errors = []) {
 
   const relevantMapCache = coop ? randomMapCacheCoop : randomMapCache;
 
@@ -269,19 +269,20 @@ async function fetchRandomMap (node = null, coop = false) {
   }
 
   // If no maps found in this node, reroll the entire selection
-  if (node.total === 0) return await fetchRandomMap(null, coop);
+  if (node.total === 0) return await fetchRandomMap(null, coop, errors);
 
   // If the map count in this node is within the query limit, pick a map
   if (node.total <= 50000) {
 
     // Query for exactly one random map in this node's time range
+    const randomPage = Math.floor(Math.random() * node.total) + 1;
     const queryParams = {
       query_type: 1,
       appid: 620,
       requiredtags: [coop ? "Cooperative" : "Singleplayer"],
       excludedtags: [coop ? "Singleplayer" : "Cooperative"],
       numperpage: 1,
-      page: Math.floor(Math.random() * node.total) + 1,
+      page: randomPage,
       return_details: true,
       date_range_created: {
         timestamp_start: node.start,
@@ -289,23 +290,43 @@ async function fetchRandomMap (node = null, coop = false) {
       }
     };
     const baseQuery = `${STEAM_API}/IPublishedFileService/QueryFiles/v1/?key=${CONFIG.API_KEY.STEAM}&input_json=${encodeURIComponent(JSON.stringify(queryParams))}`;
-    const { response } = await (await fetch(baseQuery)).json();
+    let response;
+    try {
+      response = (await (await fetch(baseQuery)).json()).response;
+    } catch (e) {
+      errors.push(`QueryFiles failed for page ${randomPage} between ${new Date(node.start).toLocaleDateString()} and ${new Date(node.end).toLocaleDateString()}.`);
+      return "ERR_WORKSHOP";
+    }
     // Some queries don't return anything, reroll
-    if (!("publishedfiledetails" in response)) return await fetchRandomMap(null, coop);
+    if (!("publishedfiledetails" in response)) {
+      errors.push(`QueryFiles returned blank for page ${randomPage} between ${new Date(node.start).toLocaleDateString()} and ${new Date(node.end).toLocaleDateString()}.`);
+      return await fetchRandomMap(null, coop, errors);
+    }
     const data = response.publishedfiledetails[0];
+    const mapid = data.publishedfileid;
+    const date = new Date(data.time_created * 1000).toLocaleDateString();
 
     // If we've picked a deleted map, reroll
-    if (data.result !== 1) return await fetchRandomMap(null, coop);
+    if (data.result !== 1) {
+      errors.push(`Map ${mapid} (${date}) has result number ${data.result}. (Deleted map?)`);
+      return await fetchRandomMap(null, coop, errors);
+    }
 
     // Some maps can't be downloaded, reroll
     const firstByteOfFileFetch = await fetch(data.file_url, { headers: { Range: "bytes=0-0" } });
     // If the map can be downloaded, 206 is expected (or 200 if the header was ignored)
     const downloadable = (firstByteOfFileFetch.status === 206 || firstByteOfFileFetch.status === 200);
-    if (!downloadable) return await fetchRandomMap(null, coop);
+    if (!downloadable) {
+      errors.push(`Map ${mapid} (${date}) not downloadable, status code ${firstByteOfFileFetch.status}.`);
+      return await fetchRandomMap(null, coop, errors);
+    }
 
     // Determine whether the map can be completed
     if (await solvability(["solvability", data], epochtal)) return data;
-    else return await handleImpossibleMap(data.publishedfileid, coop);
+    else {
+      errors.push(`Map ${mapid} (${date}) is not solvable.`);
+      return await handleImpossibleMap(data.publishedfileid, coop, errors);
+    }
 
   }
 
@@ -314,9 +335,9 @@ async function fetchRandomMap (node = null, coop = false) {
 
   // Pick the left or right branch of the tree with a weighted probability
   if (Math.random() < node.left.total / node.total) {
-    return await fetchRandomMap(node.left, coop);
+    return await fetchRandomMap(node.left, coop, errors);
   } else {
-    return await fetchRandomMap(node.right, coop);
+    return await fetchRandomMap(node.right, coop, errors);
   }
 
 }
@@ -385,9 +406,11 @@ module.exports = async function (args, context = epochtal) {
       relevantMapCache.map = null;
 
       // Cache a result for the next query
-      fetchRandomMap(null, coop).then(result => {
+      const cacheErorrs = [];
+      fetchRandomMap(null, coop, cacheErorrs).then(result => {
         // Leave cache blank in case of an error
         if (typeof result === "string") return;
+        result.errors = cacheErorrs;
         relevantMapCache.map = result;
       }).catch(e => {});
 
@@ -397,10 +420,19 @@ module.exports = async function (args, context = epochtal) {
       }
 
       // Otherwise, perform the query on the spot
-      const output = await fetchRandomMap(null, coop);
+      const errors = [];
+      let output = null, attempts = 3;
+      while (!output && attempts > 0) {
+        try {
+          output = await fetchRandomMap(null, coop, errors);
+        } catch (e) { console.warn(e) }
+        attempts --;
+      }
+      if (!output) output = "ERR_UNKNOWN";
       if (typeof output === "string") {
         throw new UtilError(output, args, context);
       }
+      output.errors = errors;
       return output;
 
     }
