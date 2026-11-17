@@ -10,16 +10,16 @@ const controllerInit = async function () {
 
   const playRunButton = document.querySelector("#button-play");
   /**
-   * Updates selected runner details and sends a request to display the specified run details on-stream
+   * Sends a request to display the specified run details on-stream
    *
    * @param {string} category Name of the category in which the run is
    * @param {string} steamid SteamID of the respective runner
    * @param {"demo"|"video"|null} proof Run proof type
-   * @param {boolean} [isControllerSync=false] Is action being from a different instance of the controller
+   * @param {boolean} [sendRequest=true] Whether to send a request, or just silently update the controller
    */
-  window.selectRunner = function (category, steamid, proof, isControllerSync) {
+  window.selectRunner = function (category, steamid, proof, sendRequest=true) {
 
-    if(!isControllerSync) {
+    if (sendRequest) {
       window.sendToController({
         action: "run",
         category, steamid, proof
@@ -61,10 +61,14 @@ const controllerInit = async function () {
 
   };
 
-  // Sends a request to display the leaderboard on-stream
-  window.returnToLeaderboard = async function (isControllerSync) {
+  /**
+   * Sends a request to display the leaderboard on-stream
+   *
+   * @param {boolean} [sendRequest=true] Whether to send a request, or just silently update the controller
+   */
+  window.returnToLeaderboard = async function (sendRequest=true) {
 
-    if(!isControllerSync) {
+    if (sendRequest) {
       window.sendToController({action: "start"});
       window.sendToController({type: "cmd", value: "stopdemo"});
     }
@@ -280,15 +284,15 @@ const controllerInit = async function () {
       }
       case "run": {
         // Sync selected category, if got desynced
-        if(categoriesOptions.value !== data.category) {
+        if (categoriesOptions.value !== data.category) {
           categoriesOptions.value = data.category;
           await updateLeaderboard(data.category);
         }
-        window.selectRunner(data.category, data.steamid, data.proof, true);
+        window.selectRunner(data.category, data.steamid, data.proof, false);
         return;
       }
       case "start": {
-        window.returnToLeaderboard(true);
+        window.returnToLeaderboard(false);
         return;
       }
       case "play": {
