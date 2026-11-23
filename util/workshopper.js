@@ -322,9 +322,10 @@ async function fetchRandomMap (node = null, coop = false, errors = []) {
     }
 
     // Determine whether the map can be completed
-    if (await solvability(["solvability", data], epochtal)) return data;
+    const solvabilityResult = await solvability(["solvability", data], epochtal);
+    if (solvabilityResult.solvability) return data;
     else {
-      errors.push(`Map ${mapid} (${date}) is not solvable.`);
+      errors.push(`Map ${mapid} (${date}) is filtered, reason: ${solvabilityResult.reason}.`);
       return await handleImpossibleMap(data.publishedfileid, coop, errors);
     }
 

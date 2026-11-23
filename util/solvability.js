@@ -843,14 +843,17 @@ function flagForManualReview (reason) {}
  * - so flag the map for manual review.
  *
  * @param {boolean} isStandardUnskippableExit Whether or not the map has a standard unskippable exit
- * @returns {boolean} `false` if the map is determined to be unsolvable, `true` otherwise
+ * @param {string} reasonDoorCannotBeOpened Why the closed exit door cannot be opened
+ * @returns {{ solvability: boolean, reason: string|null }}
+ *   `solvability` is `false` and `reason` is the reason why the map is unsolvable, if the exit cannot be skipped
+ *   `solvability` is `true` and `reason` is `null` otherwise
  */
-function solvabilityGivenClosedExitDoorCannotBeOpened (isStandardUnskippableExit) {
+function solvabilityGivenClosedExitDoorCannotBeOpened (isStandardUnskippableExit, reasonDoorCannotBeOpened) {
 
-  if (isStandardUnskippableExit) return false;
+  if (isStandardUnskippableExit) return { solvability: false, reason: reasonDoorCannotBeOpened + ", and exit door must be opened" };
   else {
     flagForManualReview("Closed exit door cannot be opened, but the exit does not have the standard unskippable structure, so skipping past the exit door or ending the map via a different method may allow the map to be solved");
-    return true;
+    return { solvability: true, reason: null };
   }
 
 }
@@ -874,7 +877,9 @@ function solvabilityGivenClosedExitDoorCannotBeOpened (isStandardUnskippableExit
  *
  * @param {object} data Workshop map data
  * @param {unknown} context The context object, defaults to epochtal
- * @returns {Promise<boolean>} `true` if the map MAY BE solvable, `false` if the map IS FOUND TO BE unsolvable or should be filtered out for a different reason
+ * @returns {Promise<{ solvability: boolean, reason: string|null }>}
+ *   `solvability` is `true` and `reason` is `null` if the map MAY BE solvable
+ *   `solvability` is `false` and `reason` is the reason why, if the map IS FOUND TO BE unsolvable or should be filtered out due to a different concern
  */
 async function isMapSolvable (data, context = epochtal) {
 
@@ -991,7 +996,7 @@ async function isMapSolvable (data, context = epochtal) {
       // If Pakfile read fails, don't declare that this map is unsolvable - flag the map for
       // manual review
       flagForManualReview("Files packed into the map failed to be read");
-      return true;
+      return { solvability: true, reason: null };
     }
     // Check whether a packed script or config file can enable entities during the map
     for (const stringBuf of packedScriptTexts) {
@@ -1185,17 +1190,17 @@ async function isMapSolvable (data, context = epochtal) {
 
   const mapEndCanBeFired = mapEndCanBeFiredUsingStandardEndEntity || mapEndCanBeFiredUsingNonStandardEndEntity;
 
-  // If this is a Hammer map, treat it as solvable if and only if there is a mechanism that can end the map
-
-  if (isHammerMap) return mapEndCanBeFired;
-
-
-  // If this is a standard PeTI or BEEmod map:
-
   // If there is no mechanism that can end the map, the map is unsolvable
-  if (!mapEndCanBeFired) return false;
-  // If there is a mechanism that can end the map, continue with checks to determine whether the player can
-  // pass the exit door
+  if (!mapEndCanBeFired)
+    return { solvability: false, reason: "No entity that can end the map can be fired" };
+
+  // If this is a Hammer map, we do no further checks
+  if (isHammerMap)
+    return { solvability: true, reason: null };
+
+
+  // If this is a standard PeTI or BEEmod map, even if there is a mechanism that can end the map we
+  // continue with checks to determine whether the player can pass the exit door
   // (we later make use of the information of whether the map can be ended using a non-standard entity)
 
   const isBEEmodMap = await checkWhetherBEEmod(entities);
@@ -1209,7 +1214,7 @@ async function isMapSolvable (data, context = epochtal) {
   // these maps solvable by one player skipping past the exit door via e.g. PPD, propless SPPD,
   // mid-portal teleportation. For this reason, all cooperative BEEmod maps are assumed to be
   // solvable (and some code has not been written to analyze these maps' exits).
-  if (isCoop && isBEEmodMap) return true;
+  if (isCoop && isBEEmodMap) return { solvability: true, reason: null };
 
 
   // --------------------------------------------------------------------------------------------------------------- //
@@ -1567,17 +1572,17 @@ async function isMapSolvable (data, context = epochtal) {
   // player may not realize they did SLA to change which exit door's world portal worked
   const numExitDoors = entities.filter(e => e.classname === "prop_testchamber_door" && e.targetname === "@exit_door").length;
   if (!isCoop && numExitDoors > 1) {
-    return false;
+    return { solvability: false, reason: "Multiple exit doors in singleplayer may lead to accidental SLA issues" };
   }
 
   // If the start region does not contain an exit, declare the map unsolvable
   // If this is a BEEmod map, the start and exit (as well as all entities) are considered to be in region 0
   if (![...entranceRegionNumbers].some(i => exitRegionNumbers.has(i)))
-    return false;
+    return { solvability: false, reason: "Exit door in unfindable region, and exit door must be reached" };
 
   // If connections to the exit door pass through an OR-gate, assume the exit door can be opened
   if (exitTargetedThroughORGate)
-    return true;
+    return { solvability: true, reason: null };
 
 
   // In standard PeTI maps and some BEEmod maps, the exit door has to BECOME fully closed in order for
@@ -1635,7 +1640,8 @@ async function isMapSolvable (data, context = epochtal) {
 
 
   // If there is no standard exit door, as in some BEEmod themes, the map is considered solvable
-  if (numExitDoors === 0) return true;
+  if (numExitDoors === 0)
+    return { solvability: true, reason: null };
 
 
   // Find which entities are required to unlock the exit door
@@ -1670,11 +1676,11 @@ async function isMapSolvable (data, context = epochtal) {
   if (isCoop) {
     if (entities.some(e =>
       removeAllNumbers(e.targetname) === "doorexit-branch_toggle" && e.initialvalue == 0)
-    ) return true;
+    ) return { solvability: true, reason: null };
   }
   else {
     if ([...entitiesThatUnlockExitDoor].some(e => e.classname === "logic_auto"))
-      return true;
+      return { solvability: true, reason: null };
   }
 
   // If nothing connects to the exit door (which is closed by default if this part of the code
@@ -1689,7 +1695,7 @@ async function isMapSolvable (data, context = epochtal) {
     break;
   }
   if (!exitConnected) {
-    return solvabilityGivenClosedExitDoorCannotBeOpened(isStandardUnskippableExit);
+    return solvabilityGivenClosedExitDoorCannotBeOpened(isStandardUnskippableExit, "Nothing connects to closed exit door");
   }
 
 
@@ -1871,7 +1877,7 @@ async function isMapSolvable (data, context = epochtal) {
           oneConditionCanBeSkipped = false;
           numExitPedestalButtons -= 1;
         }
-        else return solvabilityGivenClosedExitDoorCannotBeOpened(isStandardUnskippableExit);
+        else return solvabilityGivenClosedExitDoorCannotBeOpened(isStandardUnskippableExit, "Required pedestal button in unfindable region");
       }
     }
 
@@ -1920,7 +1926,7 @@ async function isMapSolvable (data, context = epochtal) {
           oneConditionCanBeSkipped = false;
           wholeRegionCubesRequired -= 1;
         }
-        else return solvabilityGivenClosedExitDoorCannotBeOpened(isStandardUnskippableExit);
+        else return solvabilityGivenClosedExitDoorCannotBeOpened(isStandardUnskippableExit, "Required cube button cannot be activated");
       }
     }
 
@@ -1931,7 +1937,7 @@ async function isMapSolvable (data, context = epochtal) {
           oneConditionCanBeSkipped = false;
           wholeRegionSpheresRequired -= 1;
         }
-        else return solvabilityGivenClosedExitDoorCannotBeOpened(isStandardUnskippableExit);
+        else return solvabilityGivenClosedExitDoorCannotBeOpened(isStandardUnskippableExit, "Required sphere button cannot be activated");
       }
     }
 
@@ -1980,7 +1986,7 @@ async function isMapSolvable (data, context = epochtal) {
             oneConditionCanBeSkipped = false;
             remainingToBeStuck -= 1;
           }
-          else return solvabilityGivenClosedExitDoorCannotBeOpened(isStandardUnskippableExit);
+          else return solvabilityGivenClosedExitDoorCannotBeOpened(isStandardUnskippableExit, "Required floor button cannot be activated after any required cube buttons and sphere buttons are activated");
         }
       }
     }
@@ -2032,14 +2038,14 @@ async function isMapSolvable (data, context = epochtal) {
       else {
         if (activatedSomeLaserInRegionWithReflectorCube) {
           flagForManualReview("Sequence of laser activations requires reflector cube sending laser from one region to another");
-          return true;
+          return { solvability: true, reason: null };
         }
-        return solvabilityGivenClosedExitDoorCannotBeOpened(isStandardUnskippableExit);
+        return solvabilityGivenClosedExitDoorCannotBeOpened(isStandardUnskippableExit, "Required laser receiver cannot be powered");
       }
     }
   }
 
-  return true;
+  return { solvability: true, reason: null };
 
 }
 
@@ -2051,7 +2057,7 @@ async function isMapSolvable (data, context = epochtal) {
  *
  * @param {string[]} args The arguments for the call
  * @param {unknown} context The context on which to execute the call (defaults to epochtal)
- * @returns {Promise<boolean>} The output of the call
+ * @returns {Promise<{ solvability: boolean, reason: string|null }>} The output of the call
  */
 module.exports = async function (args, context = epochtal) {
 
@@ -2091,7 +2097,7 @@ module.exports = async function (args, context = epochtal) {
           // and the time when that verifier added the map to the blacklist)
           const mapLastUpdated = data.time_updated * 1000;
           const ONE_DAY_MS = 24 * 60 * 60 * 1000;
-          if (entry.date != null && entry.date.getTime() > mapLastUpdated + ONE_DAY_MS) return false;
+          if (entry.date != null && entry.date.getTime() > mapLastUpdated + ONE_DAY_MS) return { solvability: false, reason: "Manually blacklisted, and map hasn't been updated since"};
         }
       } catch (_) {
         // If the blacklist read fails, log an error but continue to the main solvability check
