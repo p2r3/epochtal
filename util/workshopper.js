@@ -178,7 +178,8 @@ async function rebuildRandomMapCache (node = null, coop = false) {
   }
 
   // Calculate midpoint of this node's date range
-  const half = Math.floor((node.start + node.end) / 2);
+  // Truncate to nearest minute (Steam workshop search has a precision of one minute)
+  const half = Math.floor((node.start + node.end) / 120) * 60;
 
   // Create branches for this node containing timestamp ranges
   node.left = {
@@ -204,12 +205,12 @@ async function rebuildRandomMapCache (node = null, coop = false) {
   const leftParams = structuredClone(baseParams);
   leftParams.date_range_created = {
     timestamp_start: node.start,
-    timestamp_end: half
+    timestamp_end: half - 1
   };
   const rightParams = structuredClone(baseParams);
   rightParams.date_range_created = {
     timestamp_start: half,
-    timestamp_end: node.end
+    timestamp_end: node.end - 1
   };
 
   // Fetch totals for both the left and right branches in parallel
